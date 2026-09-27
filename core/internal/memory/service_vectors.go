@@ -14,8 +14,10 @@ type VectorResult struct {
 	ID        string         `json:"id"`
 	Content   string         `json:"content"`
 	Metadata  map[string]any `json:"metadata"`
-	Score     float64        `json:"score"` // cosine similarity (1.0 = identical)
+	Score     float64        `json:"score"` // cosine similarity, or ts_rank_cd for keyword hits
 	CreatedAt time.Time      `json:"created_at"`
+	// RetrievalMode is semantic (pgvector) or keyword (PostgreSQL full text).
+	RetrievalMode string `json:"retrieval_mode,omitempty"`
 }
 
 // SemanticSearchOptions constrains pgvector recall so durable memory can be
@@ -30,6 +32,14 @@ type SemanticSearchOptions struct {
 	Types               []string
 	AllowGlobal         bool
 	AllowLegacyUnscoped bool
+	// ExcludeClasses drops rows whose knowledge_class is listed.
+	ExcludeClasses []string
+	// ExcludeSensitivity drops rows with a listed sensitivity_class unless the
+	// row's team_id matches TeamID.
+	ExcludeSensitivity []string
+	// GoalSets admits goal-scoped rows (non-empty target_goal_sets) only when
+	// they intersect; rows without target_goal_sets are unaffected.
+	GoalSets []string
 }
 
 // StoreVector persists an embedding into context_vectors for future RAG retrieval.
@@ -66,74 +76,9 @@ func (s *Service) SemanticSearchWithOptions(ctx context.Context, queryVec []floa
 		limit = 5
 	}
 
-	tenantID := strings.TrimSpace(opts.TenantID)
-	if tenantID == "" {
-		tenantID = "default"
-	}
-
 	vecStr := formatVector(queryVec)
-	clauses := []string{"embedding IS NOT NULL"}
-	args := []any{vecStr}
-	nextArg := 2
-
-	clauses = append(clauses, fmt.Sprintf("COALESCE(metadata->>'tenant_id', 'default') = $%d", nextArg))
-	args = append(args, tenantID)
-	nextArg++
-
-	teamID := strings.TrimSpace(opts.TeamID)
-	agentID := strings.TrimSpace(opts.AgentID)
-	runID := strings.TrimSpace(opts.RunID)
-	visibility := strings.ToLower(strings.TrimSpace(opts.Visibility))
-
-	if runID != "" {
-		clauses = append(clauses, fmt.Sprintf("metadata->>'run_id' = $%d", nextArg))
-		args = append(args, runID)
-		nextArg++
-	}
-
-	if len(opts.Types) > 0 {
-		typeParts := make([]string, 0, len(opts.Types))
-		for _, raw := range opts.Types {
-			value := strings.TrimSpace(raw)
-			if value == "" {
-				continue
-			}
-			typeParts = append(typeParts, fmt.Sprintf("metadata->>'type' = $%d", nextArg))
-			args = append(args, value)
-			nextArg++
-		}
-		if len(typeParts) > 0 {
-			clauses = append(clauses, "("+strings.Join(typeParts, " OR ")+")")
-		}
-	}
-
-	switch {
-	case teamID != "" || agentID != "":
-		scopeParts := make([]string, 0, 4)
-		if opts.AllowGlobal {
-			scopeParts = append(scopeParts, "COALESCE(metadata->>'visibility', '') = 'global'")
-		}
-		if teamID != "" {
-			scopeParts = append(scopeParts, fmt.Sprintf("(metadata->>'team_id' = $%d AND COALESCE(NULLIF(metadata->>'visibility', ''), 'team') IN ('team', 'global'))", nextArg))
-			args = append(args, teamID)
-			nextArg++
-		}
-		if agentID != "" {
-			scopeParts = append(scopeParts, fmt.Sprintf("(metadata->>'agent_id' = $%d AND COALESCE(NULLIF(metadata->>'visibility', ''), 'private') = 'private')", nextArg))
-			args = append(args, agentID)
-			nextArg++
-		}
-		if opts.AllowLegacyUnscoped {
-			scopeParts = append(scopeParts, "(NOT (metadata ? 'visibility') AND NOT (metadata ? 'team_id') AND NOT (metadata ? 'agent_id'))")
-		}
-		if len(scopeParts) > 0 {
-			clauses = append(clauses, "("+strings.Join(scopeParts, " OR ")+")")
-		}
-	case visibility != "":
-		clauses = append(clauses, fmt.Sprintf("COALESCE(metadata->>'visibility', '') = $%d", nextArg))
-		args = append(args, visibility)
-		nextArg++
-	}
+	scope, args, nextArg := recallScopeClauses(opts, []any{vecStr}, 2)
+	clauses := append([]string{"embedding IS NOT NULL"}, scope...)
 
 	query := `
 		SELECT id, content, metadata, 1 - (embedding <=> $1::vector) AS score, created_at
@@ -159,6 +104,7 @@ func (s *Service) SemanticSearchWithOptions(ctx context.Context, queryVec []floa
 		if len(metaJSON) > 0 {
 			_ = json.Unmarshal(metaJSON, &r.Metadata)
 		}
+		r.RetrievalMode = RecallModeSemantic
 		results = append(results, r)
 	}
 	return results, nil

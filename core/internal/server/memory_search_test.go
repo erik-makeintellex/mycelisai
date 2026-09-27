@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/memory"
 )
@@ -13,11 +14,11 @@ import (
 func TestHandleMemorySearch_MissingQuery(t *testing.T) {
 	s := newTestServer() // Cognitive and Mem nil — but missing query fires first
 	rr := doRequest(t, http.HandlerFunc(s.HandleMemorySearch), "GET", "/api/v1/memory/search", "")
-	// Method check fires first (GET is correct), then nil Cognitive → 503
+	// Method check fires first (GET is correct), then nil memory service → 503
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
-func TestHandleMemorySearch_NilCognitive(t *testing.T) {
+func TestHandleMemorySearch_NilMemoryService(t *testing.T) {
 	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleMemorySearch), "GET", "/api/v1/memory/search?q=hello", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
@@ -29,15 +30,22 @@ func TestHandleMemorySearch_EmbeddingUnavailableDegradesCleanly(t *testing.T) {
 		Config:   &cognitive.BrainConfig{Profiles: map[string]string{}},
 		Adapters: map[string]cognitive.LLMProvider{},
 	}
-	s.Mem = &memory.Service{}
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	s.Mem = memory.NewServiceWithDB(db)
+	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}))
 
 	rr := doRequest(t, http.HandlerFunc(s.HandleMemorySearch), "GET", "/api/v1/memory/search?q=hello", "")
 	assertStatus(t, rr, http.StatusOK)
 
 	var result map[string]any
 	assertJSON(t, rr, &result)
-	if result["degraded"] == nil {
-		t.Fatalf("expected degraded payload when embeddings are unavailable")
+	if result["degraded"] == nil || result["retrieval_mode"] != "keyword" {
+		t.Fatalf("expected keyword recall with a degraded note when embeddings are unavailable: %+v", result)
 	}
 	if count := result["count"].(float64); count != 0 {
 		t.Fatalf("expected zero results, got %v", count)

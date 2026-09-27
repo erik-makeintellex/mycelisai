@@ -309,3 +309,8 @@ Root-model follow-through (2026-09-25): S6b merged at `3228ce15` after live proo
 - Merged to `dev`: P1 `319df5b1`, S6c `52494cc2`, S6d `d0da49a1`, A2a `529dfd93`. Not pushed; owner pushes. BACKEND.md Area Contracts consolidated into one section (382 lines).
 - Retained stack and vLLM are down by owner request; dev-bus NATS ran as disposable `mycelis-devbus-nats` on 14222. S6c live proof is pending an owner-approved restart.
 - Process: merge gates are now fatal on core.test, max-lines, and diff-check; writer brief rule 11 bans filesystem-root searches after two orphaned `find /` shells ran overnight.
+
+### M1 maintained memory without embeddings — 2026-09-27 (writer handoff, unmerged)
+- Keyword recall is now the non-embedding floor: governed-context injection, `search_memory`, `recall`, and `/api/v1/memory/search` use `memory.RecallGoverned` (PostgreSQL `ts_rank_cd`; hybrid with pgvector only when `Router.EmbeddingAvailable` passes, 5-minute negative cache). Deployment-context saves are one transaction with honest `embedding_status`; admin backfill route plus opportunistic backfill; `context_sources` citation on chat replies; `diary_*` renamed to `worklog_*` (write aliases + marker-gated TAXONOMY block).
+- Proof (disposable pg16, `MYCELIS_MEMORY_TEST_DSN`): 18 `RealDB` Go tests incl. the Juniper & Rye weekend-special acceptance with a chat-only fake router; schema taxonomy tests. Live retained-stack acceptance and isolated first boot are lead-run and still pending.
+- Embeddings stay DEFERRED to E03/E04: M1 certifies keyword recall only, not semantic quality.

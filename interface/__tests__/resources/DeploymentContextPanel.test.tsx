@@ -2,257 +2,144 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DeploymentContextPanel from "@/components/resources/DeploymentContextPanel";
 
+const KEYWORD_ONLY = "Saved. Soma can recall this by keywords; semantic search needs an embedding engine.";
+
+type Reply = { ok: boolean; status?: number; body: unknown };
+
+function routeFetch({ admin = false, save, entries = [] }: { admin?: boolean; save?: Reply; entries?: unknown[] }) {
+    return vi.fn(async (url: string, init?: RequestInit) => {
+        const reply = (r: Reply) => ({ ok: r.ok, status: r.status ?? (r.ok ? 200 : 500), json: async () => r.body, text: async () => JSON.stringify(r.body) });
+        if (url === "/auth/session") {
+            return reply({ ok: true, body: { data: { user: { role: admin ? "admin" : "operator" } } } });
+        }
+        if (init?.method === "POST" && save) {
+            return reply(save);
+        }
+        return reply({ ok: true, body: { entries, count: entries.length, semantic_search: "unavailable" } });
+    });
+}
+
+const listCalls = (fetchMock: ReturnType<typeof routeFetch>) =>
+    fetchMock.mock.calls.filter(([url, init]) => String(url).startsWith("/api/v1/memory/deployment-context") && !init?.method).length;
+
+const postBody = (fetchMock: ReturnType<typeof routeFetch>) =>
+    JSON.parse(fetchMock.mock.calls.find(([, init]) => init?.method === "POST")?.[1]?.body as string);
+
+async function fillAndSave(title = "Juniper & Rye Bakery") {
+    await waitFor(() => expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined());
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: title } });
+    fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Weekend special: blueberry-lavender scones, 3 for $10." } });
+    fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
+}
+
 describe("DeploymentContextPanel", () => {
-    const fetchMock = vi.fn();
+    let fetchMock: ReturnType<typeof routeFetch>;
 
-    beforeEach(() => {
+    beforeEach(() => sessionStorage.clear());
+    afterEach(() => vi.unstubAllGlobals());
+
+    const mount = (options: Parameters<typeof routeFetch>[0]) => {
+        fetchMock = routeFetch(options);
         vi.stubGlobal("fetch", fetchMock);
-        sessionStorage.clear();
-    });
-
-    afterEach(() => {
-        vi.unstubAllGlobals();
-        fetchMock.mockReset();
-    });
-
-    it("compresses intake fields behind focused tabs", async () => {
-        fetchMock.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ entries: [] }),
-        });
-
         render(<DeploymentContextPanel />);
+    };
 
-        await waitFor(() => {
-            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
-        });
-
-        expect(screen.getByRole("tablist", { name: "Deployment context intake steps" })).toBeDefined();
-        expect(screen.getByRole("tab", { name: /Content/i }).getAttribute("aria-selected")).toBe("true");
-        expect(screen.getByRole("tabpanel", { name: "Content fields" })).toBeDefined();
+    it("shows only title, content, and who can use it by default", async () => {
+        mount({});
+        await waitFor(() => expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined());
         expect(screen.getByLabelText("Title")).toBeDefined();
-        expect(screen.queryByLabelText("Knowledge Class")).toBeNull();
-        expect(screen.queryByLabelText("Visibility")).toBeNull();
-        expect(screen.getByRole("region", { name: "Loaded governed context list" })).toBeDefined();
-
-        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
-        expect(screen.getByRole("tab", { name: /Use as/i }).getAttribute("aria-selected")).toBe("true");
-        expect(screen.getByLabelText("Knowledge Class")).toBeDefined();
-        expect(screen.queryByLabelText("Content")).toBeNull();
-
-        fireEvent.click(screen.getByRole("tab", { name: /Access/i }));
-        expect(screen.getByRole("tab", { name: /Access/i }).getAttribute("aria-selected")).toBe("true");
-        expect(screen.getByLabelText("Visibility")).toBeDefined();
-        expect(screen.getByLabelText("Target Goal Sets")).toBeDefined();
+        expect(screen.getByLabelText("Content")).toBeDefined();
+        const audience = screen.getByRole("radiogroup", { name: "Who can use this" });
+        expect(audience.textContent).toContain("Whole organization");
+        expect(audience.textContent).toContain("My team");
+        expect(audience.textContent).toContain("Only me");
+        expect(screen.queryByLabelText("Use as")).toBeNull();
+        expect(screen.queryByLabelText("Source kind")).toBeNull();
+        expect(screen.queryByLabelText("Sensitivity")).toBeNull();
+        expect(screen.queryByText(/^Saved. |Saved for future Soma use/)).toBeNull();
     });
 
-    it("renders existing deployment context entries", async () => {
-        window.history.pushState(null, "", "/dashboard");
-        fetchMock.mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({
-                entries: [{
-                    artifact_id: "ctx-1",
-                    knowledge_class: "customer_context",
-                    title: "Deployment Brief",
-                    source_label: "operator provided",
-                    source_kind: "user_document",
-                    visibility: "global",
-                    sensitivity_class: "role_scoped",
-                    trust_class: "user_provided",
-                    chunk_count: 2,
-                    vector_count: 2,
-                    content_preview: "Mycelis should run with governed MCP access.",
-                    content_length: 58,
-                    content_domain: "operations",
-                    target_goal_sets: ["deployment readiness"],
-                    created_at: "2026-04-04T12:00:00Z",
-                }],
-            }),
+    it("reveals the classification behind More options with the renamed labels", async () => {
+        mount({});
+        await waitFor(() => expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined());
+        fireEvent.click(screen.getByRole("button", { name: /More options/i }));
+        expect(screen.getByLabelText("Use as")).toBeDefined();
+        expect(screen.getByLabelText("Sensitivity")).toBeDefined();
+        expect(screen.getByLabelText("Target goal sets")).toBeDefined();
+        expect(screen.getByRole("option", { name: "Work log entry" })).toBeDefined();
+        expect(screen.getByRole("option", { name: "Work log" })).toBeDefined();
+        expect(screen.getByRole("option", { name: "Health & safety" })).toBeDefined();
+        expect(screen.queryByRole("option", { name: /Diary/i })).toBeNull();
+    });
+
+    it("shows a visible error and no Saved state when the save fails, then reloads the list", async () => {
+        mount({ save: { ok: false, status: 400, body: { error: "embed deployment context chunk 1: embedding failed" } } });
+        await fillAndSave();
+        const alert = await screen.findByRole("alert");
+        expect(alert.textContent).toContain("embedding failed");
+        expect(screen.queryByText(/^Saved. |Saved for future Soma use/)).toBeNull();
+        await waitFor(() => expect(listCalls(fetchMock)).toBe(2));
+    });
+
+    it("shows a 503 save failure as an alert", async () => {
+        mount({ save: { ok: false, status: 503, body: { error: "deployment context store unavailable" } } });
+        await fillAndSave();
+        expect((await screen.findByRole("alert")).textContent).toContain("store unavailable");
+        expect(screen.queryByText(/^Saved. |Saved for future Soma use/)).toBeNull();
+    });
+
+    it("shows the honest keyword-only status after a save without embeddings", async () => {
+        mount({ save: { ok: true, status: 201, body: {
+            artifact_id: "ctx-1", knowledge_class: "customer_context", title: "Juniper & Rye Bakery", chunk_count: 1, vector_count: 0,
+            embedding_status: "pending", retrieval_modes: ["keyword"], status_message: KEYWORD_ONLY,
+        } } });
+        await fillAndSave();
+        await waitFor(() => expect(screen.getByText(KEYWORD_ONLY)).toBeDefined());
+        expect(screen.queryByRole("alert")).toBeNull();
+        await waitFor(() => expect(listCalls(fetchMock)).toBe(2));
+    });
+
+    it("defaults a non-admin to customer context", async () => {
+        mount({ save: { ok: true, body: { title: "x", status_message: KEYWORD_ONLY } } });
+        await fillAndSave();
+        await waitFor(() => expect(screen.getByText(KEYWORD_ONLY)).toBeDefined());
+        expect(postBody(fetchMock)).toMatchObject({ knowledge_class: "customer_context", visibility: "global", source_kind: "user_note" });
+    });
+
+    it("uses admin defaults when the session is a root admin", async () => {
+        mount({ admin: true, save: { ok: true, body: { title: "x", status_message: KEYWORD_ONLY } } });
+        await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/auth/session")).toBe(true));
+        await fillAndSave();
+        await waitFor(() => expect(screen.getByText(KEYWORD_ONLY)).toBeDefined());
+        expect(postBody(fetchMock)).toMatchObject({
+            knowledge_class: "company_knowledge", source_kind: "user_note", visibility: "global",
+            sensitivity_class: "role_scoped", trust_class: "trusted_internal",
         });
+    });
 
-        render(<DeploymentContextPanel />);
+    it("maps Only me to private visibility", async () => {
+        mount({ save: { ok: true, body: { title: "x", status_message: KEYWORD_ONLY } } });
+        await waitFor(() => expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined());
+        fireEvent.click(screen.getByRole("radio", { name: "Only me" }));
+        await fillAndSave();
+        await waitFor(() => expect(screen.getByText(KEYWORD_ONLY)).toBeDefined());
+        expect(postBody(fetchMock).visibility).toBe("private");
+    });
 
-        await waitFor(() => {
-            expect(screen.getByText("Deployment Brief")).toBeDefined();
-            expect(screen.getByText(/governed MCP access/i)).toBeDefined();
-            expect(screen.getByText(/2 vectors/i)).toBeDefined();
-            expect(screen.getByText(/goal: deployment readiness/i)).toBeDefined();
-        });
-
+    it("renders saved entries with their honest search status", async () => {
+        mount({ entries: [{
+            artifact_id: "ctx-1", knowledge_class: "company_knowledge", title: "Juniper & Rye Bakery", source_label: "operator provided",
+            source_kind: "worklog_entry", visibility: "global", sensitivity_class: "role_scoped", trust_class: "user_provided",
+            chunk_count: 1, vector_count: 0, content_preview: "Weekend special: blueberry-lavender scones.", content_length: 44,
+            target_goal_sets: ["spring launch"], created_at: "2026-09-27T12:00:00Z", embedding_status: "pending",
+        }] });
+        await waitFor(() => expect(screen.getByText("Juniper & Rye Bakery")).toBeDefined());
+        expect(screen.getByText("Keyword search")).toBeDefined();
+        expect(screen.getByText(/Work log entry/)).toBeDefined();
+        expect(screen.getByText(/goal: spring launch/i)).toBeDefined();
         fireEvent.click(screen.getByRole("button", { name: /Ask Soma with this/i }));
-        const pending = JSON.parse(sessionStorage.getItem("mycelis:pending-soma-output-continuation") ?? "{}");
-        expect(pending).toMatchObject({
-            title: "Deployment Brief",
-            reference: "memory/deployment-context/ctx-1",
-            proof: "user_provided",
-            sourceLabel: "saved context source",
+        expect(JSON.parse(sessionStorage.getItem("mycelis:pending-soma-output-continuation") ?? "{}")).toMatchObject({
+            title: "Juniper & Rye Bakery", reference: "memory/deployment-context/ctx-1",
         });
-    });
-
-    it("submits new deployment context and refreshes the list", async () => {
-        fetchMock
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ entries: [] }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    artifact_id: "ctx-2",
-                    knowledge_class: "company_knowledge",
-                    title: "Security Notes",
-                    chunk_count: 1,
-                    vector_count: 1,
-                }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    entries: [{
-                        artifact_id: "ctx-2",
-                        knowledge_class: "company_knowledge",
-                        title: "Security Notes",
-                        source_label: "operator provided",
-                        source_kind: "user_document",
-                        visibility: "global",
-                        sensitivity_class: "role_scoped",
-                        trust_class: "user_provided",
-                        chunk_count: 1,
-                        vector_count: 1,
-                        content_preview: "Restrict web access by trust class.",
-                        content_length: 36,
-                        created_at: "2026-04-04T12:30:00Z",
-                    }],
-                }),
-            });
-
-        render(<DeploymentContextPanel />);
-
-        await waitFor(() => {
-            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
-        });
-
-        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Security Notes" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
-        fireEvent.change(screen.getByLabelText("Knowledge Class"), { target: { value: "company_knowledge" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Content/i }));
-        fireEvent.change(screen.getByLabelText("Content"), { target: { value: "Restrict web access by trust class." } });
-        fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
-
-        await waitFor(() => {
-            expect(fetchMock).toHaveBeenCalledTimes(3);
-            expect(screen.getByText("Security Notes")).toBeDefined();
-            expect(screen.getByText(/Loaded Security Notes as approved company knowledge into 1 vectors across 1 chunks/i)).toBeDefined();
-            expect(screen.getAllByText(/company knowledge/i).length).toBeGreaterThan(0);
-        });
-
-        const submitCall = fetchMock.mock.calls[1];
-        expect(submitCall?.[0]).toBe("/api/v1/memory/deployment-context");
-        expect(submitCall?.[1]?.method).toBe("POST");
-    });
-
-    it("submits private user content with goal-set metadata", async () => {
-        fetchMock
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ entries: [] }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    artifact_id: "ctx-private",
-                    knowledge_class: "user_private_context",
-                    title: "Finance Notes",
-                    chunk_count: 1,
-                    vector_count: 1,
-                }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ entries: [] }),
-            });
-
-        render(<DeploymentContextPanel />);
-
-        await waitFor(() => {
-            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
-        });
-
-        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
-        fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "finance_record" } });
-        fireEvent.change(screen.getByLabelText("Content Domain"), { target: { value: "finance" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Access/i }));
-        fireEvent.change(screen.getByLabelText("Target Goal Sets"), { target: { value: "tax planning, cash flow" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Content/i }));
-        const file = new File(["Invoice timing and savings goals."], "Finance Notes.md", { type: "text/markdown" });
-        fireEvent.change(screen.getByLabelText("Upload Text File"), { target: { files: [file] } });
-        await waitFor(() => {
-            expect(screen.getAllByDisplayValue("Finance Notes.md").length).toBeGreaterThan(0);
-        });
-        fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
-
-        await waitFor(() => {
-            expect(screen.getByText(/Loaded Finance Notes as private user content/i)).toBeDefined();
-        });
-
-        const submitBody = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
-        expect(submitBody.knowledge_class).toBe("user_private_context");
-        expect(submitBody.visibility).toBe("private");
-        expect(submitBody.sensitivity_class).toBe("restricted");
-        expect(submitBody.content_domain).toBe("finance");
-        expect(submitBody.target_goal_sets).toEqual(["tax planning", "cash flow"]);
-        expect(submitBody.content).toBe("Invoice timing and savings goals.");
-    });
-
-    it("submits reflection synthesis memory with private trusted defaults", async () => {
-        fetchMock
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ entries: [] }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({
-                    artifact_id: "ctx-reflection",
-                    knowledge_class: "reflection_synthesis",
-                    title: "Investor Workflow Shift",
-                    chunk_count: 1,
-                    vector_count: 1,
-                }),
-            })
-            .mockResolvedValueOnce({
-                ok: true,
-                json: async () => ({ entries: [] }),
-            });
-
-        render(<DeploymentContextPanel />);
-
-        await waitFor(() => {
-            expect(screen.getByText(/No long-term context sources saved yet/i)).toBeDefined();
-        });
-
-        fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Investor Workflow Shift" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Use as/i }));
-        fireEvent.change(screen.getByLabelText("Knowledge Class"), { target: { value: "reflection_synthesis" } });
-        fireEvent.change(screen.getByLabelText("Source Kind"), { target: { value: "trajectory_shift" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Access/i }));
-        fireEvent.change(screen.getByLabelText("Target Goal Sets"), { target: { value: "investor review" } });
-        fireEvent.click(screen.getByRole("tab", { name: /Content/i }));
-        fireEvent.change(screen.getByLabelText("Content"), { target: { value: "The user trajectory shifted toward team-managed media output demos." } });
-        fireEvent.click(screen.getByRole("button", { name: /Save context/i }));
-
-        await waitFor(() => {
-            expect(screen.getByText(/Loaded Investor Workflow Shift as reflection \/ synthesis memory/i)).toBeDefined();
-        });
-
-        const submitBody = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
-        expect(submitBody.knowledge_class).toBe("reflection_synthesis");
-        expect(submitBody.source_kind).toBe("trajectory_shift");
-        expect(submitBody.visibility).toBe("private");
-        expect(submitBody.sensitivity_class).toBe("restricted");
-        expect(submitBody.trust_class).toBe("trusted_internal");
-        expect(submitBody.content_domain).toBe("reflection");
-        expect(submitBody.target_goal_sets).toEqual(["investor review"]);
     });
 });

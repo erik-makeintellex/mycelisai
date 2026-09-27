@@ -22,6 +22,7 @@ type ProcessResult struct {
 	ProviderID       string                           `json:"provider_id,omitempty"`
 	ModelUsed        string                           `json:"model_used,omitempty"`
 	Consultations    []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	ContextSources   []protocol.ContextSourceRef      `json:"context_sources,omitempty"`
 }
 
 func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessage) string {
@@ -49,7 +50,7 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 		a.turnIndex = 0
 	}
 
-	req, profile := a.buildInferRequest(input, priorHistory)
+	req, profile, sources := a.buildInferRequest(input, priorHistory)
 	if requirement.active() {
 		req.Messages = append([]cognitive.ChatMessage{{Role: "system", Content: resultContractExecutionPrompt(requirement)}}, req.Messages...)
 	}
@@ -134,7 +135,8 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 	}
 
 	a.logTurn("assistant", responseText, providerID, modelUsed, "", nil, "", "")
-	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations}
+	return ProcessResult{Text: responseText, ToolsUsed: loop.toolsUsed, PlannedToolCalls: loop.plannedCalls, Artifacts: loop.artifacts, ProviderID: providerID, ModelUsed: modelUsed, Consultations: loop.consultations,
+		ContextSources: citeContextSources(sources, input, responseText)}
 }
 
 func dedupeAgentArtifacts(artifacts []protocol.ChatArtifactRef) []protocol.ChatArtifactRef {
@@ -234,15 +236,18 @@ func resultContractDegradedResponseText(requirement *teamResultRequirement) stri
 	return "Team work needs repair before it can be delivered."
 }
 
-func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string) {
+func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string, []ContextSource) {
 	sys := a.Manifest.SystemPrompt
 	if sys == "" {
 		sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
 	}
 	sys += agentProfileContextDirective(a.Manifest)
 	sys += runtimeResponseDirective()
+	var sources []ContextSource
 	if a.internalTools != nil {
-		sys += a.internalTools.withoutUndeclaredToolLines(a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input), a.Manifest.Tools)
+		runtimeContext, injected := a.internalTools.BuildContextWithSources(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
+		filtered := a.internalTools.withoutUndeclaredToolLines(runtimeContext, a.Manifest.Tools)
+		sys, sources = sys+filtered, keptContextSources(injected, filtered)
 	}
 	sys += a.buildToolsBlock(input)
 
@@ -276,7 +281,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 			TeamID:  a.TeamID,
 			AgentID: a.Manifest.ID,
 		},
-	}, profile
+	}, profile, sources
 }
 
 func agentProfileContextDirective(manifest protocol.AgentManifest) string {

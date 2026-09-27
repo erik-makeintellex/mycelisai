@@ -144,6 +144,7 @@ export function createCortexMissionChatSlice(
                         thread_events: envelope.payload?.thread_events,
                         brain: envelope.payload?.brain,
                         continuation_intent: envelope.payload?.continuation_intent,
+                        context_sources: envelope.payload?.context_sources,
                         proposal: normalizeProposalData(envelope.payload?.proposal),
                         proposal_status: envelope.payload?.proposal ? 'active' : undefined,
                     };

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mycelis/core/internal/memory"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID, currentInput string) {
@@ -23,9 +24,14 @@ func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID,
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Conversation summaries are only vector-indexed; skip without a working
+	// embedding engine instead of paying a failing round trip every turn.
+	if !r.brain.EmbeddingAvailable(ctx) {
+		return
+	}
 	vec, err := r.brain.Embed(ctx, query, "")
 	if err != nil {
-		return // silent - embedding not available
+		return
 	}
 
 	summaries, err := r.mem.RecallConversations(ctx, vec, agentID, 3)
@@ -54,112 +60,104 @@ func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID,
 	sb.WriteString("\n")
 }
 
-func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agentID, teamID, currentInput string) {
-	if r.brain == nil || r.mem == nil || strings.TrimSpace(currentInput) == "" {
-		return
-	}
+// governedClasses are the deployment-context vector classes. Leads receive
+// all of them; workers receive only customer and company knowledge.
+var (
+	governedClasses = []string{"customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis"}
+	workerClasses   = []string{"customer_context", "company_knowledge"}
+)
 
+// ContextSource is one governed source injected into a prompt, with the exact
+// excerpt the model saw (used to decide whether the reply used it).
+type ContextSource struct {
+	protocol.ContextSourceRef
+	Excerpt string
+}
+
+// governedRecallOptions scopes ambient recall. Goal-scoped rows are never
+// ambient; restricted rows reach a worker only from its own team.
+func governedRecallOptions(agentID, teamID string, lead bool) memory.SemanticSearchOptions {
+	opts := memory.SemanticSearchOptions{Limit: 5, TenantID: "default", TeamID: strings.TrimSpace(teamID),
+		AgentID: strings.TrimSpace(agentID), Types: governedClasses, AllowGlobal: true}
+	if !lead {
+		opts.Types = workerClasses
+		opts.ExcludeSensitivity = []string{"restricted"}
+	}
+	return opts
+}
+
+func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agentID, teamID, currentInput string, lead bool) []ContextSource {
+	if r.mem == nil || strings.TrimSpace(currentInput) == "" {
+		return nil
+	}
 	query := currentInput
 	if len(query) > 240 {
 		query = query[:240]
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
-	vec, err := r.brain.Embed(ctx, query, "")
-	if err != nil {
-		return
-	}
-
-	// Restrict retrieval to the governed deployment-context vector classes so
-	// ordinary Soma memory and durable company/customer knowledge never blur.
-	results, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
-		Limit:               5,
-		TenantID:            "default",
-		TeamID:              strings.TrimSpace(teamID),
-		AgentID:             strings.TrimSpace(agentID),
-		Types:               []string{"customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis"},
-		AllowGlobal:         true,
-		AllowLegacyUnscoped: false,
-	})
+	// Semantic when an embedding engine works; PostgreSQL keyword ranking otherwise.
+	results, _, err := r.mem.RecallGoverned(ctx, r.brain, query, governedRecallOptions(agentID, teamID, lead))
 	if err != nil || len(results) == 0 {
-		return
+		return nil
 	}
-
-	customerResults := make([]memory.VectorResult, 0, len(results))
-	companyResults := make([]memory.VectorResult, 0, len(results))
-	somaResults := make([]memory.VectorResult, 0, len(results))
-	privateResults := make([]memory.VectorResult, 0, len(results))
-	reflectionResults := make([]memory.VectorResult, 0, len(results))
-	for _, result := range results {
-		switch strings.TrimSpace(stringMeta(result.Metadata, "knowledge_class")) {
-		case "company_knowledge":
-			companyResults = append(companyResults, result)
-		case "soma_operating_context":
-			somaResults = append(somaResults, result)
-		case "user_private_context":
-			privateResults = append(privateResults, result)
-		case "reflection_synthesis":
-			reflectionResults = append(reflectionResults, result)
-		default:
-			customerResults = append(customerResults, result)
+	sections := []struct{ class, heading, fallback string }{
+		{"customer_context", "### Customer Context Store (operator-provided documents)", "operator provided"},
+		{"company_knowledge", "### Company Knowledge Store (approved Soma/company content)", "approved company knowledge"},
+		{"soma_operating_context", "### Admin-Shaped Soma Context (organization-owned Soma operating guidance)", "admin-shaped Soma context"},
+		{"user_private_context", "### User-Private Context Store (private records and goal-scoped references)", "private user context"},
+		{"reflection_synthesis", "### Reflection / Synthesis Memory (lessons, patterns, contradictions, and trajectory shifts)", "reflection synthesis"},
+	}
+	var sources []ContextSource
+	for _, section := range sections {
+		wrote := false
+		for _, result := range results {
+			class := stringMeta(result.Metadata, "knowledge_class")
+			if class != section.class && !(section.class == "customer_context" && !knownGovernedClass(class)) {
+				continue
+			}
+			if !wrote {
+				sb.WriteString(section.heading + "\n")
+				wrote = true
+			}
+			sources = append(sources, writeKnowledgeResult(sb, result, section.fallback))
+		}
+		if wrote {
+			sb.WriteString("\n")
 		}
 	}
-
-	if len(customerResults) > 0 {
-		sb.WriteString("### Customer Context Store (operator-provided documents)\n")
-		for _, result := range customerResults {
-			writeKnowledgeResult(sb, result, "operator provided")
-		}
-		sb.WriteString("\n")
-	}
-	if len(companyResults) > 0 {
-		sb.WriteString("### Company Knowledge Store (approved Soma/company content)\n")
-		for _, result := range companyResults {
-			writeKnowledgeResult(sb, result, "approved company knowledge")
-		}
-		sb.WriteString("\n")
-	}
-	if len(somaResults) > 0 {
-		sb.WriteString("### Admin-Shaped Soma Context (organization-owned Soma operating guidance)\n")
-		for _, result := range somaResults {
-			writeKnowledgeResult(sb, result, "admin-shaped Soma context")
-		}
-		sb.WriteString("\n")
-	}
-	if len(privateResults) > 0 {
-		sb.WriteString("### User-Private Context Store (private records and goal-scoped references)\n")
-		for _, result := range privateResults {
-			writeKnowledgeResult(sb, result, "private user context")
-		}
-		sb.WriteString("\n")
-	}
-	if len(reflectionResults) > 0 {
-		sb.WriteString("### Reflection / Synthesis Memory (lessons, patterns, contradictions, and trajectory shifts)\n")
-		for _, result := range reflectionResults {
-			writeKnowledgeResult(sb, result, "reflection synthesis")
-		}
-		sb.WriteString("\n")
-	}
+	sb.WriteString("When your reply uses one of these sources, cite it as [source: <title>]. Do not claim a source you did not use.\n\n")
+	return sources
 }
 
-func writeKnowledgeResult(sb *strings.Builder, result memory.VectorResult, fallbackSourceLabel string) {
-	title := "Knowledge entry"
-	sourceLabel := fallbackSourceLabel
-	if result.Metadata != nil {
-		if value, ok := result.Metadata["artifact_title"].(string); ok && strings.TrimSpace(value) != "" {
-			title = strings.TrimSpace(value)
-		}
-		if value, ok := result.Metadata["source_label"].(string); ok && strings.TrimSpace(value) != "" {
-			sourceLabel = strings.TrimSpace(value)
+func knownGovernedClass(class string) bool {
+	for _, known := range governedClasses {
+		if class == known {
+			return true
 		}
 	}
-	preview := strings.TrimSpace(result.Content)
-	if len(preview) > 220 {
-		preview = preview[:220] + "..."
+	return false
+}
+
+func writeKnowledgeResult(sb *strings.Builder, result memory.VectorResult, fallbackSourceLabel string) ContextSource {
+	title := "Knowledge entry"
+	if value := stringMeta(result.Metadata, "artifact_title"); value != "" {
+		title = value
+	}
+	sourceLabel := fallbackSourceLabel
+	if value := stringMeta(result.Metadata, "source_label"); value != "" {
+		sourceLabel = value
+	}
+	// One line per source, so prompt line filtering keeps or drops it whole.
+	preview := strings.Join(strings.Fields(result.Content), " ")
+	if len(preview) > 600 {
+		preview = preview[:600] + "..."
 	}
 	sb.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", title, sourceLabel, preview))
+	return ContextSource{Excerpt: preview, ContextSourceRef: protocol.ContextSourceRef{
+		ArtifactID: stringMeta(result.Metadata, "artifact_id"), Title: title,
+		KnowledgeClass: stringMeta(result.Metadata, "knowledge_class"), RetrievalMode: result.RetrievalMode,
+	}}
 }
 
 func stringMeta(meta map[string]any, key string) string {
@@ -170,4 +168,12 @@ func stringMeta(meta map[string]any, key string) string {
 		return strings.TrimSpace(value)
 	}
 	return ""
+}
+
+// goalSetArg accepts an explicit goal_set tool argument as a string or list.
+func goalSetArg(v any) []string {
+	if single := strings.TrimSpace(stringValue(v)); single != "" {
+		return []string{single}
+	}
+	return stringSlice(v)
 }

@@ -33,9 +33,9 @@ func TestHandleDeploymentContext_GetListsEntries(t *testing.T) {
 		"vector_count":      2,
 		"content_length":    42,
 	})
-	rows := sqlmock.NewRows([]string{"id", "title", "content", "metadata", "created_at"}).
-		AddRow("ctx-1", "Deployment Brief", "Service topology and MCP security settings.", meta, time.Now())
-	mock.ExpectQuery("SELECT id::text,\\s+title,\\s+content,\\s+metadata,\\s+created_at\\s+FROM artifacts").
+	rows := sqlmock.NewRows([]string{"id", "title", "content", "metadata", "created_at", "chunks", "embedded"}).
+		AddRow("ctx-1", "Deployment Brief", "Service topology and MCP security settings.", meta, time.Now(), 2, 1)
+	mock.ExpectQuery(`SELECT a.id::text,\s+a.title,\s+a.content,\s+a.metadata,\s+a.created_at,\s+c.chunks,\s+c.embedded\s+FROM artifacts a`).
 		WithArgs(12).
 		WillReturnRows(rows)
 
@@ -43,8 +43,9 @@ func TestHandleDeploymentContext_GetListsEntries(t *testing.T) {
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp struct {
-		Entries []map[string]any `json:"entries"`
-		Count   int              `json:"count"`
+		Entries        []map[string]any `json:"entries"`
+		Count          int              `json:"count"`
+		SemanticSearch string           `json:"semantic_search"`
 	}
 	assertJSON(t, rr, &resp)
 	if resp.Count != 1 || len(resp.Entries) != 1 {
@@ -55,6 +56,10 @@ func TestHandleDeploymentContext_GetListsEntries(t *testing.T) {
 	}
 	if resp.Entries[0]["knowledge_class"] != "company_knowledge" {
 		t.Fatalf("expected company_knowledge entry, got %+v", resp.Entries[0])
+	}
+	// The saved vector_count claim (2) is ignored: counts come from chunk rows.
+	if resp.Entries[0]["vector_count"] != float64(1) || resp.Entries[0]["embedding_status"] != "pending" || resp.SemanticSearch != "unavailable" {
+		t.Fatalf("expected honest counts and status, got %+v semantic=%q", resp.Entries[0], resp.SemanticSearch)
 	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {

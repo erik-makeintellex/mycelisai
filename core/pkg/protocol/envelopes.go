@@ -171,6 +171,8 @@ type ChatResponsePayload struct {
 	// ExecutionSummary is an additive operator contract for directed execution.
 	ExecutionSummary   *ExecutionSummary       `json:"execution_summary,omitempty"`
 	ContinuationIntent *ChatContinuationIntent `json:"continuation_intent,omitempty"`
+	// ContextSources lists governed context injected for this reply (M1).
+	ContextSources []ContextSourceRef `json:"context_sources,omitempty"`
 }
 
 // DelegationHint carries optional scoring metadata for task delegation.

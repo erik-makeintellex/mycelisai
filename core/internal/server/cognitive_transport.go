@@ -48,6 +48,8 @@ func chatAgentRequestTimeout() time.Duration {
 }
 
 func applyBrainProvenance(s *AdminServer, chatPayload *protocol.ChatResponsePayload, agentResult chatAgentResult) {
+	// Context sources travel with every reply, with or without brain provenance.
+	chatPayload.ContextSources = agentResult.ContextSources
 	if agentResult.ProviderID == "" || s.Cognitive == nil {
 		return
 	}

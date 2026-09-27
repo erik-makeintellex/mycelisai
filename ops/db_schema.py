@@ -168,3 +168,17 @@ TOKEN_SCHEMA_COMPATIBILITY_CHECKS += (
      f"AND pg_get_constraintdef(oid)='CHECK (((purpose IS NULL) OR (purpose = ANY (ARRAY[{_token_purposes}]))))';"),
 )
 SCHEMA_COMPATIBILITY_CHECKS += TOKEN_SCHEMA_COMPATIBILITY_CHECKS
+
+# TOKEN-complete is the baseline for the one-shot governed-context taxonomy rewrite.
+TOKEN_COMPLETE_SCHEMA_COMPATIBILITY_CHECKS = SCHEMA_COMPATIBILITY_CHECKS
+# Stored renames (old, new); Core keeps the old values as write aliases only.
+DEPLOYMENT_CONTEXT_TAXONOMY_RENAMES = (("diary_entry", "worklog_entry"), ("diary", "worklog"))
+DEPLOYMENT_CONTEXT_TAXONOMY_MARKER = "schema.deployment_context_taxonomy_v2"
+# Lexical-only memory stores chunks before (or without) an embedding: NULL must stay legal.
+TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS = (
+    ("context_vectors nullable embedding", "SELECT 1 FROM information_schema.columns WHERE table_schema='public' "
+     "AND table_name='context_vectors' AND column_name='embedding' AND udt_name='vector' AND is_nullable='YES';"),
+    ("deployment context taxonomy v2", "SELECT 1 FROM system_config "
+     f"WHERE key='{DEPLOYMENT_CONTEXT_TAXONOMY_MARKER}' AND value='1';"),
+)
+SCHEMA_COMPATIBILITY_CHECKS += TAXONOMY_SCHEMA_COMPATIBILITY_CHECKS

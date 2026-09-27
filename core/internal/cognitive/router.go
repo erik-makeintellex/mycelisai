@@ -37,6 +37,8 @@ type Router struct {
 	totalTokens  atomic.Int64 // cumulative tokens processed
 	windowStart  atomic.Int64 // unix nanoseconds of window start
 	windowTokens atomic.Int64 // tokens in current window
+
+	embedState embedAvailability // embedding probe verdict and negative cache
 }
 
 // RecordTokens adds to the cumulative and windowed token counters.
@@ -290,30 +292,30 @@ func (r *Router) Infer(req InferRequest) (*InferResponse, error) {
 }
 
 // Embed generates a text embedding vector using the first available EmbedProvider.
-// Resolution order: "embed" profile → first Ollama-compatible adapter → first adapter.
+// Resolution order: "embed" profile, then any adapter implementing EmbedProvider.
+// A recent failure short-circuits with ErrEmbeddingUnavailable (no round trip).
 func (r *Router) Embed(ctx context.Context, text string, model string) ([]float64, error) {
+	if r == nil || r.Config == nil {
+		return nil, ErrEmbeddingUnavailable
+	}
+	if r.embedState.blocked() {
+		return nil, ErrEmbeddingUnavailable
+	}
 	if model == "" {
 		model = DefaultEmbedModel
 	}
-
-	// 1. Try "embed" profile if configured
-	r.mu.RLock()
-	providerID, ok := r.Config.Profiles["embed"]
-	r.mu.RUnlock()
-	if ok {
-		if adapter, ok := r.Adapters[providerID]; ok {
-			if ep, ok := adapter.(EmbedProvider); ok {
-				return ep.Embed(ctx, text, model)
-			}
-		}
+	ep, ok := r.embedProvider()
+	if !ok {
+		r.embedState.record(false, "no embedding provider configured")
+		return nil, fmt.Errorf("no embedding provider available (need OpenAI-compatible adapter)")
 	}
-
-	// 2. Try any adapter that implements EmbedProvider
-	for _, adapter := range r.Adapters {
-		if ep, ok := adapter.(EmbedProvider); ok {
-			return ep.Embed(ctx, text, model)
+	vec, err := ep.Embed(ctx, text, model)
+	if err != nil {
+		if ctx.Err() == nil { // a caller's deadline is not an engine verdict
+			r.embedState.record(false, "embedding provider call failed")
 		}
+		return nil, err
 	}
-
-	return nil, fmt.Errorf("no embedding provider available (need OpenAI-compatible adapter)")
+	r.embedState.recordWidth(len(vec))
+	return vec, nil
 }

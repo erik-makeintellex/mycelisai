@@ -67,14 +67,11 @@ func recallStructuredMemories(ctx context.Context, db *sql.DB, query, category s
 }
 
 func recallVectorMemories(ctx context.Context, brain *cognitive.Router, mem *memory.Service, query string, limit int, scope memoryScope) []memoryResult {
-	if brain == nil || mem == nil {
+	if mem == nil {
 		return nil
 	}
-	vec, err := brain.Embed(ctx, query, "")
-	if err != nil {
-		return nil
-	}
-	vecResults, err := mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
+	// Semantic when an embedding engine works; PostgreSQL keyword ranking otherwise.
+	vecResults, _, err := mem.RecallGoverned(ctx, brain, query, memory.SemanticSearchOptions{
 		Limit:               limit,
 		TenantID:            scope.TenantID,
 		TeamID:              scope.TeamID,
@@ -88,7 +85,11 @@ func recallVectorMemories(ctx context.Context, brain *cognitive.Router, mem *mem
 	}
 	results := make([]memoryResult, 0, len(vecResults))
 	for _, vr := range vecResults {
-		results = append(results, memoryResult{Content: vr.Content, Score: vr.Score, Source: "vector"})
+		source := "vector"
+		if vr.RetrievalMode == memory.RecallModeKeyword {
+			source = "keyword"
+		}
+		results = append(results, memoryResult{Content: vr.Content, Score: vr.Score, Source: source})
 	}
 	return results
 }

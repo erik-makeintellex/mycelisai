@@ -294,6 +294,17 @@ export default function MissionControlMessageBubble({
                         {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
                     </div>
                 ) : null}
+                {!isUser && msg.context_sources?.length ? (
+                    <p aria-label="Context sources" className="px-1 text-[11px] text-cortex-text-muted">
+                        <span className="font-semibold">Sources:</span>{" "}
+                        {msg.context_sources.map((source, i) => (
+                            <span key={`${source.artifact_id}-${i}`}>
+                                {i > 0 ? " · " : ""}
+                                {source.title} <span className={source.used ? "text-cortex-success" : ""}>({source.used ? "Used" : "Consulted"})</span>
+                            </span>
+                        ))}
+                    </p>
+                ) : null}
                 {showTraceExtras && !msg.proposal && <MissionControlToolsUsed tools={msg.tools_used} />}
                 {showTraceExtras && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
                     <div className="flex items-center gap-1 px-1 mt-0.5">

@@ -50,6 +50,7 @@ type chatAgentResult struct {
 	ProviderID       string                           `json:"provider_id,omitempty"`
 	ModelUsed        string                           `json:"model_used,omitempty"`
 	Consultations    []protocol.ConsultationEntry     `json:"consultations,omitempty"`
+	ContextSources   []protocol.ContextSourceRef      `json:"context_sources,omitempty"`
 }
 
 // hasMutationTools checks if any tools in the list are mutation tools.

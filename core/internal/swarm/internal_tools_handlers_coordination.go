@@ -231,8 +231,8 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 	if query == "" {
 		return "", fmt.Errorf("search_memory requires 'query'")
 	}
-	if r.brain == nil || r.mem == nil {
-		return "Memory search unavailable — cognitive engine or memory service offline.", nil
+	if r.mem == nil {
+		return "", fmt.Errorf("search_memory unavailable: memory service offline")
 	}
 	limit := 5
 	if l, ok := args["limit"].(float64); ok && l > 0 {
@@ -243,11 +243,8 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 	if singleType := stringValue(args["type"]); singleType != "" {
 		searchTypes = append(searchTypes, singleType)
 	}
-	vec, err := r.brain.Embed(ctx, query, "")
-	if err != nil {
-		return "Embedding failed — no embed provider available.", nil
-	}
-	results, err := r.mem.SemanticSearchWithOptions(ctx, vec, memory.SemanticSearchOptions{
+	// Semantic when an embedding engine works; PostgreSQL keyword ranking otherwise.
+	results, mode, err := r.mem.RecallGoverned(ctx, r.brain, query, memory.SemanticSearchOptions{
 		Limit:               limit,
 		TenantID:            scope.TenantID,
 		TeamID:              scope.TeamID,
@@ -257,11 +254,12 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 		Types:               dedupeStringValues(searchTypes),
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
+		GoalSets:            goalSetArg(args["goal_set"]),
 	})
 	if err != nil {
-		return fmt.Sprintf("Search failed: %v", err), nil
+		return "", fmt.Errorf("search_memory failed: %w", err)
 	}
-	return mustJSON(results), nil
+	return mustJSON(map[string]any{"retrieval_mode": mode, "results": results}), nil
 }
 
 func (r *InternalToolRegistry) handleListTeams(_ context.Context, _ map[string]any) (string, error) {

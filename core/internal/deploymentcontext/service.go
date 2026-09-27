@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"unicode/utf8"
 
@@ -32,10 +33,10 @@ func (s *Service) Ready() error {
 		return fmt.Errorf("deployment context service unavailable")
 	case s.Artifacts == nil:
 		return fmt.Errorf("artifacts service offline")
+	case s.Artifacts.DB == nil:
+		return fmt.Errorf("deployment context store unavailable")
 	case s.Memory == nil:
 		return fmt.Errorf("memory service offline")
-	case s.Cognitive == nil:
-		return fmt.Errorf("cognitive engine offline")
 	default:
 		return nil
 	}
@@ -161,7 +162,9 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		"trust_class":        trustClass,
 		"tags":               tags,
 		"chunk_count":        len(chunks),
-		"vector_count":       len(chunks),
+		"vector_count":       0,
+		"embedding_status":   EmbeddingStatusPending,
+		"lexical_indexed":    true,
 		"content_length":     utf8.RuneCountInString(content),
 		"loaded_by":          userLabel,
 		"team_id":            teamID,
@@ -182,26 +185,9 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 	}
 	metadataJSON, _ := json.Marshal(metadataMap)
 
-	stored, err := s.Artifacts.Store(ctx, artifacts.Artifact{
-		AgentID:      agentID,
-		ArtifactType: artifacts.TypeDocument,
-		Title:        title,
-		ContentType:  contentType,
-		Content:      content,
-		Metadata:     metadataJSON,
-		Status:       "approved",
-	})
-	if err != nil {
-		return nil, fmt.Errorf("store deployment context artifact: %w", err)
-	}
-
+	chunkMeta := make([]map[string]any, len(chunks))
+	pending := make([]pendingChunk, len(chunks))
 	for idx, chunk := range chunks {
-		embeddingText := buildEmbeddingText(knowledgeClass, title, sourceLabel, sourceKind, chunk, idx+1, len(chunks))
-		vec, err := s.Cognitive.Embed(ctx, embeddingText, "")
-		if err != nil {
-			return nil, fmt.Errorf("embed deployment context chunk %d: %w", idx+1, err)
-		}
-
 		// The vector type is the knowledge class itself so recall can keep
 		// customer-provided context separate from approved company knowledge.
 		vectorMeta := map[string]any{
@@ -209,7 +195,6 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 			"source":             "governed_context_store",
 			"knowledge_store":    "governed_context_store",
 			"knowledge_class":    knowledgeClass,
-			"artifact_id":        stored.ID.String(),
 			"artifact_title":     title,
 			"tenant_id":          "default",
 			"team_id":            teamID,
@@ -227,24 +212,45 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 			"chunk_index":        idx,
 			"chunk_count":        len(chunks),
 			"loaded_by":          userLabel,
+			"embedding_status":   EmbeddingStatusPending,
 		}
 		if knowledgeClass == KnowledgeClassReflection {
 			vectorMeta["reflection_kind"] = sourceKind
 		}
 		for key, value := range req.ExtraMetadata {
-			if _, exists := vectorMeta[key]; exists {
-				continue
+			if _, exists := vectorMeta[key]; !exists {
+				vectorMeta[key] = value
 			}
-			vectorMeta[key] = value
 		}
-
-		if err := s.Memory.StoreVector(ctx, embeddingText, vec, vectorMeta); err != nil {
-			return nil, fmt.Errorf("store deployment context vector %d: %w", idx+1, err)
-		}
+		chunkMeta[idx] = vectorMeta
+		pending[idx].text = buildEmbeddingText(knowledgeClass, title, sourceLabel, sourceKind, chunk, idx+1, len(chunks))
 	}
 
+	// One transaction: the artifact and its chunk rows exist together or not
+	// at all. Chunks are keyword-searchable as soon as it commits.
+	artifactID, createdAt, chunkIDs, err := s.insertAtomic(ctx, agentID, title, contentType, content, metadataJSON, chunks, chunkMeta)
+	if err != nil {
+		return nil, &SaveError{Code: SaveFailedCode, Err: err}
+	}
+	for idx := range pending {
+		pending[idx].id = chunkIDs[idx]
+	}
+	embedded := s.embedChunks(ctx, pending)
+	status, vectorCount := EmbeddingStatusPending, 0
+	if statuses, counts, err := s.refreshArtifacts(ctx, []string{artifactID}); err != nil {
+		log.Printf("deployment context: refresh embedding status for %s: %v", artifactID, err)
+	} else if value, ok := statuses[artifactID]; ok {
+		status, vectorCount = value, counts[artifactID]
+	}
+	if embedded > 0 {
+		if _, err := s.BackfillEmbeddings(ctx, opportunisticBackfillLimit); err != nil {
+			log.Printf("deployment context: opportunistic backfill: %v", err)
+		}
+	}
+	modes, message := retrievalModes(status)
+
 	return &IngestResult{
-		ArtifactID:       stored.ID.String(),
+		ArtifactID:       artifactID,
 		KnowledgeClass:   knowledgeClass,
 		Title:            title,
 		SourceLabel:      sourceLabel,
@@ -253,11 +259,14 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		SensitivityClass: sensitivityClass,
 		TrustClass:       trustClass,
 		ChunkCount:       len(chunks),
-		VectorCount:      len(chunks),
+		VectorCount:      vectorCount,
 		ContentPreview:   previewContent(content, 220),
 		ContentLength:    utf8.RuneCountInString(content),
 		ContentDomain:    contentDomain,
 		TargetGoalSets:   targetGoalSets,
-		CreatedAt:        stored.CreatedAt,
+		CreatedAt:        createdAt,
+		EmbeddingStatus:  status,
+		RetrievalModes:   modes,
+		StatusMessage:    message,
 	}, nil
 }

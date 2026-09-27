@@ -226,7 +226,7 @@ SQL owns schema and migration contracts. Runtime tables cover identity, organiza
 
 ### Migration Index
 
-The `ORGANIZATIONS_EXTENSION` marker block in `001_current_schema.sql` (after C2A, before the single `COMMIT;`) adds the durable `organizations` table; the later `CONFIRM_TOKEN_BINDING_EXTENSION` marker (after `ROLE_SEED_RETIREMENT_EXTENSION`, before the same `COMMIT;`) adds `confirm_tokens.purpose`/`binding_digest`/`minted_by` and the purpose `CHECK` constraint (A2b).
+The `ORGANIZATIONS_EXTENSION` marker block in `001_current_schema.sql` (after C2A, before the single `COMMIT;`) adds the durable `organizations` table; the later `CONFIRM_TOKEN_BINDING_EXTENSION` marker (after `ROLE_SEED_RETIREMENT_EXTENSION`, before the same `COMMIT;`) adds `confirm_tokens.purpose`/`binding_digest`/`minted_by` and the purpose `CHECK` constraint (A2b); the last, `DEPLOYMENT_CONTEXT_TAXONOMY_EXTENSION` (M1), rewrites governed `diary_entry`/`diary` metadata values to `worklog_entry`/`worklog` once, gated by the `schema.deployment_context_taxonomy_v2` marker.
 
 Use migration files as the source of exact DDL truth. When API behavior or payload meaning changes, review [API Reference](../API_REFERENCE.md) and the affected migration docs/tests.
 
@@ -248,7 +248,7 @@ Provider profile, health, discovery, and routing routes.
 Status, trust, event, and stream routes.
 
 ### Memory & RAG
-Memory, semantic search, context, and continuity routes.
+Memory, search, context, and continuity routes. Governed-context injection, `search_memory`, `recall`, and memory search use `memory.RecallGoverned` (conversation-summary recall stays vector-only and is skipped without an engine): PostgreSQL full-text (`ts_rank_cd`) is the floor that works without an embedding model, and semantic pgvector recall joins it when `cognitive.Router.EmbeddingAvailable` passes (5-minute negative cache). Deployment-context saves write the artifact and its chunk rows in one transaction (`embedding_status` pending, then embedded by the post-save embed, opportunistic backfill, or `POST /api/v1/memory/deployment-context/backfill`).
 
 ### Governance & Proposals
 Policy, proposal, proof, and approval routes.

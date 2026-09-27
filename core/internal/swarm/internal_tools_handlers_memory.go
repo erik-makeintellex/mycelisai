@@ -74,6 +74,9 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 }
 
 func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, args map[string]any) (string, error) {
+	if err := requireConfirmedOrgWideWrite(ctx, stringValue(args["knowledge_class"])); err != nil {
+		return "", err
+	}
 	var artifactService *artifacts.Service
 	if r.db != nil {
 		artifactService = &artifacts.Service{DB: r.db}
@@ -126,11 +129,16 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		"content_domain":   result.ContentDomain,
 		"target_goal_sets": result.TargetGoalSets,
 		"context_kind":     "governed_knowledge",
-		"description":      "Stored in the governed context store for later Soma recall, separate from Soma memory.",
+		"embedding_status": result.EmbeddingStatus,
+		"retrieval_modes":  result.RetrievalModes,
+		"description":      result.StatusMessage,
 	}), nil
 }
 
 func (r *InternalToolRegistry) handlePromoteDeploymentContext(ctx context.Context, args map[string]any) (string, error) {
+	if err := requireConfirmedOrgWideWrite(ctx, "company_knowledge"); err != nil {
+		return "", err
+	}
 	var artifactService *artifacts.Service
 	if r.db != nil {
 		artifactService = &artifacts.Service{DB: r.db}

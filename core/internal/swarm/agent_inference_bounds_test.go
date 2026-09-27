@@ -54,7 +54,7 @@ func TestBuildInferRequestCarriesAuthoritativeAgentCorrelation(t *testing.T) {
 	agent := resultContractTestAgent(&boundedInferenceProvider{response: "done"}, &resultContractToolExecutor{})
 	agent.runID = "run-123"
 
-	req, _ := agent.buildInferRequest("complete the work", nil)
+	req, _, _ := agent.buildInferRequest("complete the work", nil)
 	if req.Correlation.RunID != "run-123" || req.Correlation.TeamID != "delivery-team" || req.Correlation.AgentID != "worker" {
 		t.Fatalf("correlation = %#v, want authoritative agent scope", req.Correlation)
 	}

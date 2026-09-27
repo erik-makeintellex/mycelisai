@@ -84,7 +84,11 @@ def test_current_schema_matches_immutable_dev_manifest():
     raw = BASELINE.read_bytes()
     from ops.db_upgrade import BEGIN_MARKER, END_MARKER, C2A_BEGIN_MARKER, C2A_END_MARKER
     from ops.db_upgrade import ORG_BEGIN_MARKER, ORG_END_MARKER, ROLE_BEGIN_MARKER, ROLE_END_MARKER
-    from ops.db_upgrade import TOKEN_BEGIN_MARKER, TOKEN_END_MARKER
+    from ops.db_upgrade import TOKEN_BEGIN_MARKER, TOKEN_END_MARKER, TAXONOMY_BEGIN_MARKER, TAXONOMY_END_MARKER
+    taxonomy_start = raw.index(TAXONOMY_BEGIN_MARKER.encode())
+    taxonomy_end = raw.index(TAXONOMY_END_MARKER.encode()) + len(TAXONOMY_END_MARKER)
+    # The TAXONOMY block is pinned in test_db_deployment_context_taxonomy.py; strip it first.
+    raw = raw[:taxonomy_start] + raw[taxonomy_end:].lstrip(b"\n")
     token_start = raw.index(TOKEN_BEGIN_MARKER.encode())
     token_end = raw.index(TOKEN_END_MARKER.encode()) + len(TOKEN_END_MARKER)
     # The TOKEN block is pinned in test_db_confirm_token_binding.py; strip it first.

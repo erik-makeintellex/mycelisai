@@ -240,10 +240,10 @@ func TestServiceLocalSourcesFallsBackToTextSearchWhenEmbeddingFails(t *testing.T
 	}
 	t.Cleanup(func() { db.Close() })
 
-	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "created_at"}).
-		AddRow("vec-1", "latest research retained context", `{"title":"Research note","visibility":"global"}`, time.Now())
-	mock.ExpectQuery("SELECT id, content, metadata, created_at").
-		WithArgs("default", "%latest%", "%research%", 2).
+	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
+		AddRow("vec-1", "latest research retained context", `{"title":"Research note","visibility":"global"}`, 0.3, time.Now())
+	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
+		WithArgs("default", "latest research", 2).
 		WillReturnRows(rows)
 
 	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 2}, failingEmbedder{}, memory.NewServiceWithDB(db))
@@ -270,10 +270,10 @@ func TestServiceLocalSourcesAllScopeReportsPartialCoverage(t *testing.T) {
 	}
 	t.Cleanup(func() { db.Close() })
 
-	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "created_at"}).
-		AddRow("vec-1", "internal and public comparison note", `{"title":"Comparison note","visibility":"global"}`, time.Now())
-	mock.ExpectQuery("SELECT id, content, metadata, created_at").
-		WithArgs("default", "%internal%", "%public%", 2).
+	rows := sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
+		AddRow("vec-1", "internal and public comparison note", `{"title":"Comparison note","visibility":"global"}`, 0.3, time.Now())
+	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
+		WithArgs("default", "internal public", 2).
 		WillReturnRows(rows)
 
 	svc := NewService(Config{Provider: ProviderLocalSources, MaxResults: 2}, failingEmbedder{}, memory.NewServiceWithDB(db))

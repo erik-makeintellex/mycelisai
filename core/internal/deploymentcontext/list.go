@@ -18,14 +18,20 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 	}
 
 	rows, err := s.Artifacts.DB.QueryContext(ctx, `
-		SELECT id::text,
-		       title,
-		       content,
-		       metadata,
-		       created_at
-		FROM artifacts
-		WHERE COALESCE(metadata->>'knowledge_store', '') = 'governed_context_store'
-		ORDER BY created_at DESC
+		SELECT a.id::text,
+		       a.title,
+		       a.content,
+		       a.metadata,
+		       a.created_at,
+		       c.chunks,
+		       c.embedded
+		FROM artifacts a
+		LEFT JOIN LATERAL (
+			SELECT count(*) AS chunks, count(*) FILTER (WHERE v.embedding IS NOT NULL) AS embedded
+			FROM context_vectors v WHERE v.metadata->>'artifact_id' = a.id::text
+		) c ON true
+		WHERE COALESCE(a.metadata->>'knowledge_store', '') = 'governed_context_store'
+		ORDER BY a.created_at DESC
 		LIMIT $1
 	`, limit)
 	if err != nil {
@@ -41,8 +47,10 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 			content   sql.NullString
 			metaJSON  []byte
 			createdAt time.Time
+			chunks    int
+			embedded  int
 		)
-		if err := rows.Scan(&id, &title, &content, &metaJSON, &createdAt); err != nil {
+		if err := rows.Scan(&id, &title, &content, &metaJSON, &createdAt, &chunks, &embedded); err != nil {
 			return nil, fmt.Errorf("scan deployment context entry: %w", err)
 		}
 
@@ -70,13 +78,16 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 				entry.SensitivityClass = stringMeta(meta, "sensitivity_class", entry.SensitivityClass)
 				entry.TrustClass = stringMeta(meta, "trust_class", entry.TrustClass)
 				entry.ChunkCount = intMeta(meta, "chunk_count", 0)
-				entry.VectorCount = intMeta(meta, "vector_count", entry.ChunkCount)
+				entry.EmbeddingStatus = stringMeta(meta, "embedding_status", "")
 				entry.ContentLength = intMeta(meta, "content_length", entry.ContentLength)
 				entry.ContentDomain = stringMeta(meta, "content_domain", entry.ContentDomain)
 				entry.TargetGoalSets = stringSliceMeta(meta, "target_goal_sets")
 			}
 		}
 
+		// Counts come from the stored chunk rows, never from saved claims.
+		entry.VectorCount = embedded
+		entry.EmbeddingStatus = entryEmbeddingStatus(entry.EmbeddingStatus, chunks, embedded)
 		entries = append(entries, entry)
 	}
 
@@ -84,4 +95,19 @@ func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
 		entries = []Entry{}
 	}
 	return entries, rows.Err()
+}
+
+// entryEmbeddingStatus derives an honest status for rows saved before M1
+// (no embedding_status) and for entries without any chunk rows.
+func entryEmbeddingStatus(saved string, chunks, embedded int) string {
+	switch {
+	case chunks == 0:
+		return "not_indexed"
+	case saved != "":
+		return saved
+	case embedded == chunks:
+		return EmbeddingStatusEmbedded
+	default:
+		return EmbeddingStatusPending
+	}
 }

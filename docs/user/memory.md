@@ -38,7 +38,7 @@ Mycelis now treats memory as several different classes with different purposes:
 - **`PROJECT_MEMORY`**: governed source context for work, including `user_private_context`, `customer_context`, and `company_knowledge`.
 - **`REFLECTION_MEMORY`**: distilled lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations. Reflection starts as a Managed Exchange `LearningCandidate` before promotion into `reflection_synthesis`.
 - **Durable semantic memory**: reusable facts, decisions, SitReps, recipes, and intentionally promoted summaries. This is the pgvector-backed recall substrate.
-- **User-private context store**: user-uploaded or pasted records, diary notes, finance/legal/health references, and other sensitive material intentionally made available for specific target goal sets. This is private/restricted by default and is not company knowledge.
+- **User-private context store**: user-uploaded or pasted records, work log notes, finance/legal/health & safety references, and other sensitive material intentionally made available for specific target goal sets. This is private/restricted by default and is not company knowledge.
 - **Customer context store**: operator- or customer-provided docs, notes, briefs, and research intentionally loaded into pgvector so Soma and governed teams can reason with deployment-specific requirements across future sessions.
 - **Company knowledge store**: approved company-authored guidance or playbooks that Soma or teams are explicitly allowed to treat as durable organizational reference.
 - **Reflection / synthesis memory**: distilled lessons, inferred patterns, contradictions, user-trajectory shifts, and meta-observations about what is changing over time. This is stored as `reflection_synthesis`, private/restricted by default, and should not be treated as raw transcript or customer content.
@@ -76,7 +76,7 @@ Type a natural-language query — not exact keywords, but the *meaning* of what 
 "errors encountered while producing the CSV processor outcome"
 ```
 
-Results are ranked by **cosine similarity** to your query, not by keyword match. Relevant memories from different time periods surface together.
+With an embedding engine, results are ranked by **cosine similarity** to your query (semantic recall), and entries still waiting for an embedding are added by keyword rank (hybrid). Without one, recall still works: PostgreSQL full-text search ranks entries by the meaningful words in your query (common words such as "our" or "for" are ignored), so a question like "write a promo for our weekend special" finds a saved note about the weekend special.
 
 Each result card shows:
 - **Content** — the stored text or artifact summary
@@ -86,17 +86,17 @@ Each result card shows:
 
 Semantic search can also be scoped for teams and planning lanes through the API when a narrower recall boundary is required.
 
-If the embedding-capable AI engine is unavailable, Memory should degrade cleanly instead of showing a raw backend failure. The API returns an empty result set with a `degraded.code` such as `embedding_unavailable`, and the UI should explain that vector recall needs an embedding-capable engine before the result can be trusted.
+If the embedding-capable AI engine is unavailable, the API returns keyword-ranked results with `retrieval_mode: keyword` and a `degraded.code` of `embedding_unavailable`, so the UI can say that semantic recall needs an embedding-capable engine. Mycelis checks the engine once and remembers a failure for five minutes, so a missing engine does not slow every chat turn.
 
 Governed deployment knowledge is stored under dedicated vector types:
 
 - `customer_context` for operator- or customer-provided source material
 - `company_knowledge` for approved company-authored guidance
 - `soma_operating_context` for admin-owned guidance that shapes shared Soma posture and output specificity
-- `user_private_context` for user-owned private records, diary entries, finance notes, and other sensitive references tied to explicit goal sets
+- `user_private_context` for user-owned private records, work log entries, finance notes, and other sensitive references tied to explicit goal sets (older `diary_entry`/`diary` values are stored as `worklog_entry`/`worklog`)
 - `reflection_synthesis` for lessons, inferred patterns, contradictions, trajectory shifts, and meta-observations that Soma should retain as synthesis rather than transcript
 
-That lets Soma and governed teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed.
+That lets Soma and governed teams recall deployment knowledge independently from ordinary remembered facts when a stricter context boundary is needed. When Soma's reply draws on this knowledge, the chat shows a **Sources** line naming each source as **Used** (the reply repeats its wording) or **Consulted**.
 
 ## Trusted Recall
 
