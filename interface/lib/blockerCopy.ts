@@ -183,6 +183,12 @@ const CODE_COPY: Record<string, CopyTemplate> = {
         whatHappened: 'The AI engine returned nothing usable. Nothing was written. Try again, or add the content yourself.',
         nextAction: { label: 'Try again', intent: 'retry' },
     },
+    connector_deployment_unavailable: {
+        title: "Connector installs aren't available yet",
+        whatHappened: 'Nothing was installed. Connector deployment has not shipped yet, so nothing was recorded.',
+        nextAction: { label: 'Use MCP servers or providers instead', href: '/settings?tab=tools', intent: 'open' },
+        whoCanHelp: 'An admin can check System Status for updates.',
+    },
     request_failed: REQUEST_FAILED,
 };
 
