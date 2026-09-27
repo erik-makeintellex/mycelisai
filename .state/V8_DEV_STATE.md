@@ -10,12 +10,54 @@
 | Integration branch | `dev` `f430d2c9`. Merged since 2026-09-26: S6e, P2, A2b, P3, S7, D2, D3, PH-B, PH-C, PH-D, UX1, UX2, H1, M1, T1, S7b, M2, B1 (Go), plus the architecture docs, the agent runbook and durable state. Every merge ran fatal gates before and after, and every merge commit body explains the mechanism. `dev` is ahead of `origin/dev`; the owner pushes manually, including `refs/notes/commits`. |
 | Source-size policy | Authored source files target 350 lines with 10% tolerance; `quality.max-lines`, CI, and release proof enforce a 385-line maximum. Legacy caps remain exact no-regression exceptions only while files exceed 385 lines. |
 | Test-instance policy | Repository-local Playwright proof is single-owner across managed, external, and live-backend modes. `interface.e2e` holds a PID/session lease before port selection through final cleanup, so parallel agents fail fast rather than sharing reports, launching duplicate Interface processes, or stopping another run. |
-| Active slice | No agents running. Resume in this order: (1) **B1 isolated first boot is blocked by the environment.** `go mod download` in the Docker build gets `connection reset by peer` from `proxy.golang.org`. It reproduces in a plain `golang:1.26-alpine` container, and go.mod/go.sum are unchanged. Fix the Docker network, then run `uv run inv lifecycle.first-boot-proof --isolated --build`, `compose.up --build` and `compose.migrate`, and rerun `ops/live_journey_probe.py`, which includes J3d. (2) Security review of the B1 override path. (3) B1 interface W2; two mounts are U1-owned. (4) Probe J8 (budget stop). (5) PH-E. (6) Agent scope for the operator MCP route. (7) The `council_consult` meter kind and B1 ledger retention. (8) The webAuth.test.ts flake. (9) Memory edit-in-place. (10) The owner's U1-spec items. |
+| Active slice | Two agents were in flight at the 2026-09-27 handoff: **P4** build resilience (`feature/build-resilience`, worktree `~/Projects/mycelisai-worktrees/build-resilience`), which adds a bounded, resumable `go mod download` in the Core Dockerfile and proves it with an isolated first boot; and a **B1 security review** of `git diff 5dd08536..f430d2c9` (read-only). If either is missing or unfinished, restart it from the Resume Guide below. The queue is also in the Resume Guide. |
 | Production branch | `main` = `origin/main`; no promotion this wave. |
 | Runtime posture | The retained Compose stack runs `dev` builds with the local vLLM root (Qwen2.5-Coder-14B-AWQ, `MYCELIS_ROOT_PROVIDER=vllm`). WSL shuts idle VMs down, so long work needs an active `wsl.exe` session. The live journey probe `ops/live_journey_probe.py` passes **12/12** on `9f6c8d98` or later. |
 | Delivery target | Trusted Outcome Journey and exact release-candidate certification remain the target shape, but every proof must now be clean-deploy compatible: the app starts from schema/config/secrets/storage roots only, shows no inherited user work, then lets Soma create the first Outcome, bounded team work, isolated deliverable, validation, completion summary, and direct open/reply/recover actions. |
 | Main release risk | Durable external framework execution remains unavailable until Core-minted run identity, exact correlation, durable binding/event replay, restart reconciliation, governed approval, idempotent stop, isolation, and candidate-result validation are implemented and proven without weakening central execution. LiteLLM separately remains uncertified for production model transport. Existing playable-output, manual novice, Compose, and Kubernetes gates remain open before promotion. |
 | Canonical PRD alignment | Workspace owns Outcomes; Soma owns execution; WorkIntent is transitional; deliverables, proof, recovery, and continuity remain Outcome-owned user concepts. |
+
+## Resume Guide (read this first when picking up)
+**Read in this order:**
+1. This file's Active Snapshot and Working Rules.
+2. `git log --show-notes -15 dev`: merge bodies explain each mechanism, and the notes correct two placeholder merges.
+3. `git worktree list`: any `feature/*` worktree besides U1 is unfinished work.
+4. The contracts in `docs/architecture-library/`, especially `TRUTHFUL_DELIVERY_AND_NEXT_ARCHITECTURE.md` and `B1_TOKEN_BUDGETS_CONTRACT.md`.
+5. `docs/AGENT_ACCEPTANCE_RUNBOOK.md`, for testing as a user.
+
+**Verify before trusting:**
+- Rebuild and check the stack: `uv run inv compose.up --build`, then `uv run inv compose.migrate`, then `uv run inv compose.health`.
+- Run `uv run python ops/live_journey_probe.py`. Last known result: 12/12 on `9f6c8d98`. J3d (memory archive/delete) has not run live yet.
+- In any unfinished worktree, run its targeted tests first.
+
+**Merging (lead only):** commit the slice with a detailed body (What changed / How it works / Proof / Follow-ups), merge `dev` into the slice, then run the gates:
+- `go vet`
+- `uv run inv core.test`
+- docs pytest: `tests/test_docs_links.py`, `tests/test_documentation_layout_contract.py`
+- `uv run inv quality.max-lines`
+- `git diff --check`
+
+Then `git merge --no-ff` into `dev` with the same body, and re-run the gates. Schema slices also need an isolated first boot and `compose.migrate`. Retire the worktree afterwards. The owner pushes.
+
+**Environment gotchas (each one cost hours):**
+- From Windows Git Bash, `wsl -- bash -c '...$VAR...'` expands `$` on the Windows side. That caused a fake `exit=0` and a 4-hour hung grep. Always run WSL work from script files.
+- WSL shuts the VM down when no `wsl.exe` session is active, and containers restart on the next boot. The owner runs `wsl -d mother-brain -- sleep infinity`, or sets `vmIdleTimeout=-1`.
+- Docker builds see `connection reset by peer` from proxy.golang.org during parallel `go mod download`. P4 fixes this.
+- Go PG tests need the current schema applied to their DSN.
+- Test helpers from parallel slices can collide within one Go package. `go vet` catches it at merge.
+- Markdown table cells in this file must stay on one line.
+
+**Queue after P4 and the B1 review:**
+1. Fix B1 review findings.
+2. Rebuild, migrate and re-run the probe, including J3d.
+3. B1 interface W2 (two mounts are U1-owned).
+4. Probe J8 (budget stop).
+5. PH-E (review-loop/research docs that claim unrun work).
+6. Agent scope on the operator MCP route.
+7. `council_consult` meter kind and ledger retention.
+8. The webAuth.test.ts flake.
+9. Memory edit-in-place.
+10. U1-spec items; U1 is the owner's lane.
 
 ## Working Rules For Development Agents
 - **Truthfulness (rule 12):** no placeholder or fake success. Use real model or tool output, or return an honest normalized blocker. Proof reads outputs back from disk, and tool failures are failures. Reviewers treat any fake-success path as a merge blocker. See `docs/architecture-library/TRUTHFUL_DELIVERY_AND_NEXT_ARCHITECTURE.md`.
@@ -24,7 +66,7 @@
 - **Worktrees:** one slice per `feature/*` worktree, merged only by the lead. Agents keep git read-only, start no containers except one disposable `--rm` PG for DB tests, and never spawn sub-agents. Linked worktrees share the main checkout's tool cache and `.env` (P1, P3).
 - **Schema:** append hash-pinned blocks to `core/migrations/001_current_schema.sql` with `ops/db_*` compatibility. Go PG tests need the current schema applied to their DSN. Prove each change with an isolated first boot and `compose.migrate`.
 - **Commits:** the merge commit body records what changed, how it works, the invariants and authority, the proof run, and the follow-ups. It is the durable explanation for future agents.
-- **Budget:** at most 2 live agents (account rate limits), each with one targeted deliverable. Use Sonnet for well-specified work, and Opus for security, schema and authority. At most 3 browser sessions.
+- **Budget:** at most 2 live agents (account rate limits), each with one targeted deliverable, and no sub-agents. Use Sonnet for well-specified work, and Opus for security, schema and authority. At most 3 browser sessions.
 - **U1:** `feature/u1-human-first-ui` is the owner's lane. Never edit U1's files; U1-owned UI changes go to the owner as a spec.
 
 ## History Corrections
