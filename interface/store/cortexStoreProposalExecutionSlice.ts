@@ -1,5 +1,6 @@
 import { extractRunIdFromResponse, trimToNonEmpty, updateProposalLifecycle } from '@/store/cortexStoreChatWorkflow';
 import { buildMissionChatFailure } from '@/lib/missionChatFailure';
+import { blockerCopy } from '@/lib/blockerCopy';
 import type { ChatMessage, ConfirmProposalResult } from '@/store/cortexStoreTypes';
 import {
     approvalSentEvent,
@@ -9,6 +10,9 @@ import {
     configurationCompletedState,
     configurationPendingEvent,
     configurationPendingState,
+    degradedRunEvent,
+    degradedRunMessage,
+    degradedRunState,
     executionStartedEvent,
     proposalStartedState,
     synchronousConfigAction,
@@ -160,15 +164,29 @@ export function createCortexProposalExecutionSlice(
                         && body?.data?.execution_state === 'running'
                         && body?.data?.run_status === 'running'
                         && summaryStatus === 'running';
+                    // The run completed but readback could not confirm it
+                    // (execution_state: "unverified"): never present this as a
+                    // plain "recorded" approval or a verified result.
+                    const degradation = executionSummary?.audit_recovery && typeof executionSummary.audit_recovery === 'object'
+                        ? executionSummary.audit_recovery.degradation
+                        : undefined;
+                    const unverifiedRun = Boolean(runId
+                        && body?.data?.verified === false
+                        && body?.data?.execution_state === 'unverified'
+                        && body?.data?.run_status === 'completed');
+                    const degradedCopy = unverifiedRun
+                        ? blockerCopy({ code: degradation?.code ?? 'output_readback_missing', httpStatus: res.status, viewerIsAdmin: false })
+                        : null;
                     const completedConfigAction = configAction && confirmationIsCompleted(body, res.status)
                         ? configAction
                         : null;
-                    const completed = Boolean(completedConfigAction || completedRun);
+                    const completed = Boolean(completedConfigAction || completedRun || unverifiedRun);
                     const lifecycle = completed ? 'executed' : 'confirmed_pending_execution';
                     const completedState = completedConfigAction ? configurationCompletedState(completedConfigAction)
                         : completedRun
                             ? { kind: 'execution_result' as const, label: 'Result verified', detail: 'Soma completed the approved action and saved its proof.', tone: 'success' as const }
-                            : runningRun ? proposalStartedState() : approvalRecordedState;
+                            : degradedCopy ? degradedRunState(degradedCopy)
+                                : runningRun ? proposalStartedState() : approvalRecordedState;
                     const completedEvent = completedConfigAction ? configurationCompletedEvent(completedConfigAction)
                         : completedRun
                             ? {
@@ -183,14 +201,16 @@ export function createCortexProposalExecutionSlice(
                                 payload_kind: 'soma_thread_event',
                                 timestamp: new Date().toISOString(),
                             }
-                            : runningRun ? executionStartedEvent(runId, teamWorkRefs)
-                                : confirmationPendingEvent(runId);
+                            : degradedCopy ? degradedRunEvent(degradedCopy, runId)
+                                : runningRun ? executionStartedEvent(runId, teamWorkRefs)
+                                    : confirmationPendingEvent(runId);
                     const systemMsg: ChatMessage = {
                         role: 'system',
                         content: completedConfigAction
                             ? configurationCompletedMessage(completedConfigAction, proofSummary)
                             : completedRun && runId ? verifiedRunMessage(runId, proofSummary)
-                                : confirmedRunMessage(runId, runningRun, runningRun ? proofSummary : null, teamWorkRefs),
+                                : degradedCopy ? degradedRunMessage(degradedCopy)
+                                    : confirmedRunMessage(runId, runningRun, runningRun ? proofSummary : null, teamWorkRefs),
                         mode: completed || runId ? 'execution_result' : 'proposal',
                         ui_response_state: completedState,
                         run_id: runId ?? undefined,

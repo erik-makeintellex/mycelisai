@@ -1,7 +1,38 @@
 import type { ChatMessage } from '@/store/cortexStoreTypes';
 import type { TeamWorkConfirmationRef } from '@/store/cortexStoreProposalTeamWorkRefs';
+import type { BlockerCopy } from '@/lib/blockerCopy';
 
 export type SynchronousConfigAction = 'store' | 'activate';
+
+// The run completed but output readback could not confirm it
+// (execution_state: "unverified"). Never present this as a plain
+// "recorded" approval or a verified result: surface the real
+// blockerCopy-derived degradation text instead.
+export function degradedRunState(copy: BlockerCopy): NonNullable<ChatMessage['ui_response_state']> {
+    return { kind: 'degraded_execution', label: copy.title, detail: copy.whatHappened, tone: 'warning' };
+}
+
+export function degradedRunEvent(
+    copy: BlockerCopy,
+    runId: string | null,
+): NonNullable<ChatMessage['thread_events']>[number] {
+    return {
+        kind: 'attention_required',
+        label: copy.title,
+        detail: copy.whatHappened,
+        tone: 'warning',
+        status: 'unverified',
+        run_id: runId ?? undefined,
+        source_kind: 'web_api',
+        source_channel: 'api.intent.confirm-action',
+        payload_kind: 'soma_thread_event',
+        timestamp: new Date().toISOString(),
+    };
+}
+
+export function degradedRunMessage(copy: BlockerCopy): string {
+    return [`${copy.title}.`, copy.whatHappened, copy.whoCanHelp].filter(Boolean).join(' ');
+}
 
 const proposalStartedDetail = 'Soma started the work. You can keep talking here while updates arrive.';
 
