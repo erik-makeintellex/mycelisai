@@ -104,32 +104,10 @@ func (s *AdminServer) HandleCognitiveStatus(w http.ResponseWriter, r *http.Reque
 	respondJSON(w, response)
 }
 
-// POST /api/v1/cognitive/infer
-func (s *AdminServer) handleInfer(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if s.Cognitive == nil {
-		http.Error(w, "Cognitive Matrix Offline", http.StatusServiceUnavailable)
-		return
-	}
-
-	var req cognitive.InferRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Bad JSON", http.StatusBadRequest)
-		return
-	}
-	resp, err := s.Cognitive.Infer(req)
-	if err != nil {
-		log.Printf("Inference Failed: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	respondJSON(w, resp)
-}
+// POST /api/v1/cognitive/infer was removed (B1R-B): it had no product caller,
+// took Correlation from the request body and ran uncapped system inference.
+// Inference runs only inside Core-owned units (Soma/team turns, D2 drafts,
+// agentry, system jobs) that set Correlation and a budget meter server-side.
 
 // GET /api/v1/cognitive/config
 // Returns the current Cognitive Configuration (Profiles + Providers)
