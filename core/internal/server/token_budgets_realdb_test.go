@@ -118,7 +118,7 @@ func TestPostgresBudgetLedger_TotalsAndReservationFlag(t *testing.T) {
 	}
 	// A fresh governor (a restart) reads the durable period totals.
 	restarted := cognitive.NewBudgetGovernor(spec, ledger)
-	usage := restarted.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "team-pg", protocol.TokenBudgetLimits{PerTeamDay: 100000, WarnPct: 80})
+	usage := restarted.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "team-pg", protocol.TokenBudgetLimits{PerTeamDay: 100000, WarnPct: 80})
 	if usage.Used != 3702 || usage.Period != protocol.TokenBudgetPeriodUTCDay || !usage.UsageReported {
 		t.Fatalf("durable usage = %+v", usage)
 	}

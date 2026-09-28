@@ -280,11 +280,8 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 		Profile:  profile,
 		Provider: a.Manifest.Provider,
 		Messages: messages,
-		Correlation: cognitive.InferenceCorrelation{
-			RunID:   a.runID,
-			TeamID:  a.TeamID,
-			AgentID: a.Manifest.ID,
-		},
+		// Runtime agents run in tenant "default" today (see logTurn).
+		Correlation: cognitive.InferenceCorrelation{RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, TenantID: cognitive.DefaultBudgetTenant},
 	}, profile, sources
 }
 

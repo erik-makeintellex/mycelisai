@@ -25,6 +25,19 @@ const (
 	BudgetLevelGlobal       = "global"
 )
 
+// DefaultBudgetTenant is the tenant of budget usage whose correlation names
+// none (runtime agents run in tenant "default" today).
+const DefaultBudgetTenant = "default"
+
+// BudgetTenant normalizes a correlation tenant: blank means "default".
+// Counters, ledger rows and usage reads are keyed by tenant + scope + ref.
+func BudgetTenant(tenant string) string {
+	if tenant = strings.TrimSpace(tenant); tenant != "" {
+		return tenant
+	}
+	return DefaultBudgetTenant
+}
+
 // BudgetSubject names what one inference is charged to.
 type BudgetSubject struct {
 	AgentID string

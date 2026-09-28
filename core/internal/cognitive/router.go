@@ -257,8 +257,8 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)
 	if err == nil && resp != nil {
 		r.finalizeInferenceResponse(providerID, resp)
-		r.budgetCharge(ctx, budget, resp)
 	}
+	r.budgetCharge(ctx, budget, resp, err)
 	if err != nil {
 		// Core fails closed on inference failure. It never re-routes a
 		// request to a different provider mid-flight: cross-provider

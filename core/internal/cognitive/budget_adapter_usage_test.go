@@ -109,7 +109,7 @@ func TestBudgetLedger_TotalsEqualAdapterReportedUsage(t *testing.T) {
 	if len(entries) != 4 || sum != 18+30+44+300 {
 		t.Fatalf("ledger entries=%d sum=%d", len(entries), sum)
 	}
-	usage := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeRun, "run-u", protocol.TokenBudgetLimits{PerRun: 100000, WarnPct: 80})
+	usage := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeRun, "run-u", protocol.TokenBudgetLimits{PerRun: 100000, WarnPct: 80})
 	if usage.Used != sum || usage.UsageReported {
 		t.Fatalf("run usage = %+v, want %d with usage_reported=false (one reservation)", usage, sum)
 	}

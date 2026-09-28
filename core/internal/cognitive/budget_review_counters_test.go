@@ -34,16 +34,16 @@ func TestB1RA_LedgerBlipRecoversDurableDayTotal(t *testing.T) {
 	if err := b1raInfer(r, corr); err != nil {
 		t.Fatalf("call during outage: %v", err)
 	}
-	if u := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "t", limits); u.Used != 200 || u.Period != protocol.TokenBudgetPeriodSinceRestart {
+	if u := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "t", limits); u.Used != 200 || u.Period != protocol.TokenBudgetPeriodSinceRestart {
 		t.Fatalf("outage usage = %+v, want since_restart 200", u)
 	}
 	ledger.set(false, false)
 	reads := ledger.readCount()
-	if u := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "t", limits); u.Period != protocol.TokenBudgetPeriodSinceRestart || ledger.readCount() != reads {
+	if u := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "t", limits); u.Period != protocol.TokenBudgetPeriodSinceRestart || ledger.readCount() != reads {
 		t.Fatalf("retry inside the rate limit: usage=%+v reads=%d->%d", u, reads, ledger.readCount())
 	}
 	clock.Advance(31 * time.Second)
-	u := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "t", limits)
+	u := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "t", limits)
 	// The outage call's append succeeded, so durable already holds it: 1_999_900+200, never +400.
 	if u.Used != 2_000_100 || u.Period != protocol.TokenBudgetPeriodUTCDay {
 		t.Fatalf("recovered usage = %+v, want utc_day 2000100 (durable, not double-counted)", u)
@@ -58,7 +58,7 @@ func TestB1RA_LedgerBlipRecoversDurableDayTotal(t *testing.T) {
 }
 
 // F4: loads retry at most once per interval per counter, and a recovered load
-// keeps in-memory charges whose appends failed (max, not sum).
+// keeps in-memory charges whose appends failed (durable + unappended).
 func TestB1RA_LedgerRetryIsRateLimitedAndKeepsUnappendedCharges(t *testing.T) {
 	clock := b1raNoon()
 	ledger := &b1raLedger{failReads: true, failAppends: true}
@@ -84,9 +84,11 @@ func TestB1RA_LedgerRetryIsRateLimitedAndKeepsUnappendedCharges(t *testing.T) {
 	}
 	ledger.set(false, false)
 	clock.Advance(31 * time.Second)
-	u := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "t", r.Budgets.Limits(b1raLocal))
-	if u.Used != 800 || u.Period != protocol.TokenBudgetPeriodUTCDay {
-		t.Fatalf("usage = %+v, want utc_day max(durable 150, in-memory 800) = 800", u)
+	u := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "t", r.Budgets.Limits(b1raLocal))
+	// B1R-C: the unappended charges count on top of the durable total
+	// (was max(durable 150, in-memory 800) = 800, which lost the 150).
+	if u.Used != 950 || u.Period != protocol.TokenBudgetPeriodUTCDay {
+		t.Fatalf("usage = %+v, want utc_day durable 150 + unappended 800 = 950", u)
 	}
 }
 
@@ -107,12 +109,12 @@ func TestB1RA_UsageReadsNeverAllocateCounters(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := NewBudgetGovernor(protocol.DefaultTokenBudgetPolicySpec(), tc.ledger)
 			for i := 0; i < 5000; i++ {
-				u := g.Usage(context.Background(), protocol.TokenBudgetScopeRun, fmt.Sprintf("r%d", i), protocol.TokenBudgetLimits{PerRun: 1024})
+				u := g.Usage(context.Background(), "", protocol.TokenBudgetScopeRun, fmt.Sprintf("r%d", i), protocol.TokenBudgetLimits{PerRun: 1024})
 				if u.Used != 0 || u.Period != tc.wantPeriod || u.Remaining != 1024 {
 					t.Fatalf("usage = %+v, want 0 with period %s", u, tc.wantPeriod)
 				}
 			}
-			day := g.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "nobody", protocol.TokenBudgetLimits{PerTeamDay: 1024})
+			day := g.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "nobody", protocol.TokenBudgetLimits{PerTeamDay: 1024})
 			if day.ResetsAt == nil {
 				t.Fatalf("day usage without a counter lost resets_at: %+v", day)
 			}
@@ -122,7 +124,7 @@ func TestB1RA_UsageReadsNeverAllocateCounters(t *testing.T) {
 		})
 	}
 	g := NewBudgetGovernor(protocol.DefaultTokenBudgetPolicySpec(), durable)
-	if u := g.Usage(context.Background(), protocol.TokenBudgetScopeRun, "known", protocol.TokenBudgetLimits{PerRun: 1024}); u.Used != 700 || u.Period != protocol.TokenBudgetPeriodRun || len(g.counters) != 0 {
+	if u := g.Usage(context.Background(), "", protocol.TokenBudgetScopeRun, "known", protocol.TokenBudgetLimits{PerRun: 1024}); u.Used != 700 || u.Period != protocol.TokenBudgetPeriodRun || len(g.counters) != 0 {
 		t.Fatalf("unknown-to-memory ref = %+v counters=%d, want the durable 700 without caching", u, len(g.counters))
 	}
 }
