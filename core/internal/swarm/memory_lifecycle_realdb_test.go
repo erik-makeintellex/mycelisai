@@ -20,7 +20,7 @@ func TestSomaRecallRealDB_RemovedEntryIsNeverCited(t *testing.T) {
 			router := retainedStackRouter(provider)
 			seedBakeryAndScopedOutSources(t, db, router)
 			svc := deploymentcontext.NewService(&artifacts.Service{DB: db}, memory.NewServiceWithDB(db), router)
-			entries, err := svc.ListEntries(context.Background(), 20, false)
+			entries, err := svc.ListEntries(context.Background(), 20, false, memory.GovernedReader{})
 			if err != nil {
 				t.Fatal(err)
 			}

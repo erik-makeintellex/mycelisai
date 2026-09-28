@@ -74,11 +74,16 @@ func isMemoryOwner(identity *RequestIdentity, record *deploymentcontext.EntryRec
 	if record.OwnerUserID != "" {
 		return strings.TrimSpace(identity.UserID) != "" && identity.UserID == record.OwnerUserID
 	}
-	label := strings.TrimSpace(identity.Username)
-	if label == "" {
-		label = strings.TrimSpace(identity.UserID)
-	}
+	label := memoryOwnerLabel(identity)
 	return label != "" && label == record.LoadedBy
+}
+
+// memoryOwnerLabel is the saved-by label a legacy row (no owner id) matches.
+func memoryOwnerLabel(identity *RequestIdentity) string {
+	if label := strings.TrimSpace(identity.Username); label != "" {
+		return label
+	}
+	return strings.TrimSpace(identity.UserID)
 }
 
 // memoryLifecycleDenial returns "" when identity may change the entry, or the
@@ -106,9 +111,17 @@ func canManageMemoryEntry(identity *RequestIdentity, entry *deploymentcontext.En
 // authorizeMemoryChange looks up the entry named in the path and applies the
 // lifecycle authority rule. It writes the refusal and returns ok=false when
 // the caller may not change the entry. Archive, restore, delete and edit share it.
+// An entry the caller may not read answers exactly like an unknown id (404,
+// same body): no existence oracle. Readable but not manageable stays 403.
 func (s *AdminServer) authorizeMemoryChange(w http.ResponseWriter, r *http.Request, identity *RequestIdentity) (*deploymentcontext.Service, *deploymentcontext.EntryRecord, bool) {
 	svc := s.deploymentContextService()
 	record, err := svc.Lookup(r.Context(), strings.TrimSpace(r.PathValue("id")))
+	readable := false
+	if err == nil {
+		if readable, err = s.canReadMemoryEntry(r, identity, record); err == nil && !readable {
+			err = deploymentcontext.ErrEntryNotFound
+		}
+	}
 	switch {
 	case errors.Is(err, deploymentcontext.ErrEntryNotFound):
 		respondBlockerText(w, r, http.StatusNotFound, codeMemoryEntryNotFound, memoryLifecycleCopy[codeMemoryEntryNotFound], "", nil)

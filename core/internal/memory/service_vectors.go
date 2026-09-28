@@ -40,6 +40,10 @@ type SemanticSearchOptions struct {
 	// GoalSets admits goal-scoped rows (non-empty target_goal_sets) only when
 	// they intersect; rows without target_goal_sets are unaffected.
 	GoalSets []string
+	// Reader, when set, admits governed-store rows only if that viewer may read
+	// their saved entry (MEM-LIST). User-facing recall sets it; agent recall
+	// leaves it nil.
+	Reader *GovernedReader
 }
 
 // StoreVector persists an embedding into context_vectors for future RAG retrieval.

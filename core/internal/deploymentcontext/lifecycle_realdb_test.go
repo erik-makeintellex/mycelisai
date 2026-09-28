@@ -26,7 +26,7 @@ func recallArtifactIDs(t *testing.T, db *sql.DB, embedder memory.Embedder, query
 
 func listedIDs(t *testing.T, svc *Service, includeArchived bool) map[string]string {
 	t.Helper()
-	entries, err := svc.ListEntries(context.Background(), 50, includeArchived)
+	entries, err := svc.ListEntries(context.Background(), 50, includeArchived, memory.GovernedReader{})
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}

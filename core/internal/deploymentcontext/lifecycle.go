@@ -24,6 +24,7 @@ var ErrEntryNotFound = errors.New("deployment context entry not found")
 type EntryRecord struct {
 	ArtifactID     string
 	Title          string
+	TenantID       string
 	KnowledgeClass string
 	Visibility     string
 	TeamID         string
@@ -76,6 +77,7 @@ func (s *Service) Lookup(ctx context.Context, artifactID string) (*EntryRecord, 
 func fillRecordMeta(record *EntryRecord, meta map[string]any) {
 	record.KnowledgeClass = stringMeta(meta, "knowledge_class", KnowledgeClassCustomerContext)
 	record.Visibility = stringMeta(meta, "visibility", "global")
+	record.TenantID = stringMeta(meta, "tenant_id", "default")
 	record.TeamID = stringMeta(meta, "team_id", "")
 	record.LoadedBy = stringMeta(meta, "loaded_by", "")
 	record.OwnerUserID = stringMeta(meta, "owner_user_id", "")
