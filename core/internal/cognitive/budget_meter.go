@@ -30,11 +30,15 @@ type TokenBudgetExhaustedError struct {
 	Scope    string
 	Ref      string
 	Used     int
+	Reserved int // held by in-flight calls when the stop was decided
 	Limit    int
 	ResetsAt time.Time // zero for execution and run scopes
 }
 
 func (e *TokenBudgetExhaustedError) Error() string {
+	if e.Reserved > 0 {
+		return fmt.Sprintf("%s: %s scope used %d of %d tokens (%d reserved by in-flight calls)", TokenBudgetExhaustedCode, e.Scope, e.Used, e.Limit, e.Reserved)
+	}
 	return fmt.Sprintf("%s: %s scope used %d of %d tokens", TokenBudgetExhaustedCode, e.Scope, e.Used, e.Limit)
 }
 
@@ -60,6 +64,7 @@ type ExecutionMeter struct {
 	kind        string
 	correlation InferenceCorrelation
 	used        int
+	reserved    int // output clamps of admitted, unsettled calls
 	warned      bool
 	stop        *TokenBudgetExhaustedError
 }

@@ -32,6 +32,15 @@ func (r *Router) budgetCharge(ctx context.Context, charge *budgetCharge, resp *I
 	r.Budgets.charge(ctx, charge, resp)
 }
 
+// budgetRelease returns the reservation of an admitted call that was never
+// charged (provider error, nil response, panic). No-op after budgetCharge.
+func (r *Router) budgetRelease(charge *budgetCharge) {
+	if r == nil || r.Budgets == nil {
+		return
+	}
+	r.Budgets.release(charge)
+}
+
 // BudgetHeadroom reports how many tokens one more call in this execution may
 // use, without charging. ok=false when budgets are not enforced.
 func (r *Router) BudgetHeadroom(ctx context.Context, req InferRequest) (int, *TokenBudgetExhaustedError, bool) {
