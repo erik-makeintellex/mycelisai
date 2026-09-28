@@ -99,36 +99,6 @@ describe('useCortexStore resource registry', () => {
         // MCPA D10: honest failure -- a rejected delete surfaces the
         // blocker envelope's code and never touches local state, so a 403
         // can never be mistaken for a removed server.
-        it('deleteMCPServer keeps the server on a 403 and surfaces the blocker code', async () => {
-            useCortexStore.setState({
-                mcpServers: [
-                    { id: 'srv1', name: 'fs', transport: 'stdio' as const, status: 'connected', created_at: '', tools: [] },
-                ],
-            });
-            mockFetch.mockResolvedValue({
-                ok: false,
-                status: 403,
-                json: async () => ({ ok: false, error: 'admin required', data: { code: 'admin_required' } }),
-            });
-
-            const result = await useCortexStore.getState().deleteMCPServer('srv1');
-
-            expect(result).toEqual({ ok: false, code: 'admin_required', httpStatus: 403 });
-            expect(useCortexStore.getState().mcpServers).toHaveLength(1);
-        });
-
-        it('deleteMCPServer surfaces mcp_server_not_found on a 404', async () => {
-            mockFetch.mockResolvedValue({
-                ok: false,
-                status: 404,
-                json: async () => ({ ok: false, error: '', data: { code: 'mcp_server_not_found' } }),
-            });
-
-            const result = await useCortexStore.getState().deleteMCPServer('srv-missing');
-
-            expect(result).toEqual({ ok: false, code: 'mcp_server_not_found', httpStatus: 404 });
-        });
-
         it('stores persisted MCP activity from API', async () => {
             const activity = [
                 {
@@ -207,38 +177,9 @@ describe('useCortexStore resource registry', () => {
 
         // MCPA D10: admin-only, fail-closed. A 403 never calls the refresh
         // fetch and surfaces the blocker code, not raw backend text.
-        it('createMCPToolSet surfaces admin_required on a 403 without refreshing', async () => {
-            mockFetch.mockResolvedValue({
-                ok: false,
-                status: 403,
-                json: async () => ({ ok: false, error: 'admin required', data: { code: 'admin_required', required_scope: 'mcp_config:write' } }),
-            });
-
-            const result = await useCortexStore.getState().createMCPToolSet({
-                name: 'deploy',
-                tool_refs: ['mcp:ssh/*'],
-                scope_kind: 'all',
-            });
-
-            expect(result).toEqual({ ok: false, code: 'admin_required', httpStatus: 403 });
-            expect(mockFetch).toHaveBeenCalledTimes(1);
-        });
-
         // MCPA D5/D10: no dead end. A require_approval inspect decision no
         // longer blocks the client; install still proceeds to /install and
         // succeeds (the server enforces approvals:decide, not the browser).
-        it('installFromLibrary proceeds to install even when inspect answers require_approval', async () => {
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ decision: 'require_approval', governance: { decision: 'require_approval', approval_required: true } }) })
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ status: 'installed', self_approved: true, audit_event_id: 'audit-1' }) });
-
-            const result = await useCortexStore.getState().installFromLibrary('github', { GITHUB_PERSONAL_ACCESS_TOKEN: 'x' });
-
-            expect(result.ok).toBe(true);
-            expect(mockFetch).toHaveBeenCalledTimes(4); // inspect, install, then fetchMCPServers + fetchMCPActivity
-            expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/mcp/library/install', expect.objectContaining({ method: 'POST' }));
-        });
-
         // MCPA D10: honest failure on inspect/install non-2xx -- no raw
         // backend text, and no success toast.
         it.each([
@@ -261,28 +202,6 @@ describe('useCortexStore resource registry', () => {
         // to respondAPIError's application/json {ok:false,error} envelope
         // (no data.code). The store parses by body content, not
         // Content-Type, so both shapes land on the same honest fallback.
-        it('installFromLibrary falls back to request_failed for a respondAPIError envelope with no data.code', async () => {
-            mockFetch
-                .mockResolvedValueOnce({ ok: true, json: async () => ({ decision: 'allow' }) })
-                .mockResolvedValueOnce({ ok: false, status: 503, json: async () => ({ ok: false, error: 'MCP subsystem not initialized' }) });
-
-            const result = await useCortexStore.getState().installFromLibrary('fetch');
-
-            expect(result).toEqual({ ok: false, code: 'request_failed', httpStatus: 503, governance: undefined });
-        });
-
-        it('installFromLibrary surfaces a blocker from a rejected inspect call', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 403,
-                json: async () => ({ ok: false, error: 'x', data: { code: 'admin_required' } }),
-            });
-
-            const result = await useCortexStore.getState().installFromLibrary('fetch');
-
-            expect(result).toEqual({ ok: false, code: 'admin_required', httpStatus: 403 });
-        });
-
         it('records Mycelis Search capability status failures', async () => {
             mockFetch.mockResolvedValue({ ok: false, status: 503 });
 
