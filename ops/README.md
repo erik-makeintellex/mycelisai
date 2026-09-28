@@ -140,7 +140,8 @@ Handles Go compilation and Docker image building.
 Keeps local API-key development access aligned.
 - **Dev Key**: `uv run inv auth.dev-key` — ensures `MYCELIS_API_KEY` and generates any missing/short/reused `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` values in `.env`; existing valid secrets are kept unchanged.
 - **Break-Glass Key**: `uv run inv auth.break-glass-key`
-- **Posture**: `uv run inv auth.posture` — also warns when a web secret is missing, short, or reused, and when local sign-in has no password/hash set.
+- **Posture**: `uv run inv auth.posture` — also warns when a web secret is missing, short, or reused, when local sign-in has no password/hash set, and when the local admin plaintext and its SHA-256 disagree.
+- **Local admin (e2e from `.env`)**: `uv run inv auth.dev-key --admin-password=sync|generate|<password>` — keeps `MYCELIS_LOCAL_ADMIN_PASSWORD` and `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` consistent so `interface.e2e` signs in from `.env`. `sync` only re-derives the hash from an existing plaintext (it changes nothing when `.env` holds just the hash); `generate` and an explicit password change your sign-in. Values print only with `--show`; apply with `uv run inv compose.up`. Without `--admin-password`, dev-key never touches the local admin.
 
 ### `mycelis_api.py` (Self-Use API Proof)
 Uses the live Core API as a delivery tool instead of only testing it from the outside.
