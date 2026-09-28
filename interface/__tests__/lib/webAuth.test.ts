@@ -121,7 +121,7 @@ describe("webAuth", () => {
     });
 
     it.each([
-        ["tampered last character", (token: string) => token.slice(0, -1) + (token.endsWith("A") ? "B" : "A")],
+        ["tampered last character", (token: string) => token.slice(0, -1) + flipSignificantBase64UrlBit(token[token.length - 1])],
         ["short signature", (token: string) => token.slice(0, token.indexOf(".") + 5)],
         ["long signature", (token: string) => `${token}AAAA`],
         ["payload only", (token: string) => `${token.split(".")[0]}.`],
@@ -134,6 +134,19 @@ describe("webAuth", () => {
         await expect(verifySessionToken(forge(token), SESSION_SECRET)).resolves.toBeNull();
     });
 });
+
+// The signature is 32 bytes, so its final base64url character carries only the
+// top 4 of its 6 bits (the bottom 2 are unused padding that decoding discards).
+// "A", "B", "C" and "D" share the same top 4 bits and differ only in that
+// padding, so a fixed A<->B swap is a no-op roughly 1 in 16 times -- exactly
+// when the timestamp-dependent HMAC signature happens to end in one of those
+// four characters. That made this case flake (~webAuth-test-flake, WAF).
+// Flipping one of the significant top-4 bits always changes the decoded byte.
+const BASE64URL_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+function flipSignificantBase64UrlBit(char: string): string {
+    const index = BASE64URL_ALPHABET.indexOf(char);
+    return BASE64URL_ALPHABET[index ^ 0b010000];
+}
 
 const API_KEY = "api-key-0123456789abcdef0123456789abcdef";
 const SESSION_SECRET = "session-secret-0123456789abcdef01234567";
