@@ -124,7 +124,7 @@ func (a *Agent) triggerPlanningOnly(data []byte) bool {
 	var ask protocol.TeamAsk
 	_ = json.Unmarshal(bytes.TrimSpace(data), &ask)
 	claim := trust.ExecutionClaim{IntentProofID: signalString(ask.Context["intent_proof_id"]), ContractID: signalString(ask.Context["contract_id"]),
-		RunID: signalString(ask.Context["run_id"]), WorkItemID: signalString(ask.Context["work_item_id"]), TeamID: a.TeamID}
+		RunID: signalString(ask.Context["run_id"]), WorkItemID: signalString(ask.Context["work_item_id"]), TeamID: a.TeamID, IdempotencyKey: signalString(ask.Context["idempotency_key"])}
 	var store trust.QueryRower
 	if a.internalTools != nil && a.internalTools.db != nil {
 		store = a.internalTools.db

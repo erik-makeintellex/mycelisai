@@ -30,7 +30,7 @@ func TestAgentTriggerRequestReplyReturnsDegradedTruthInsteadOfModelProse(t *test
 	raw, err := json.Marshal(protocol.TeamAsk{
 		Goal: "Create retained work.",
 		Context: map[string]any{
-			"run_id": f16bRun, "contract_id": f16bContract, "intent_proof_id": f16bProof, "work_item_id": f16bWorkItem,
+			"run_id": f16bRun, "contract_id": f16bContract, "intent_proof_id": f16bProof, "work_item_id": f16bWorkItem, "idempotency_key": f16cKey,
 			"result_contract": map[string]any{"kind": "project_package", "entrypoint_required": true},
 		},
 	})

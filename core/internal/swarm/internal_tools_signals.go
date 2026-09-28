@@ -121,6 +121,7 @@ func (r *InternalToolRegistry) handlePublishSignal(ctx context.Context, args map
 		}
 		payload = publicRaw
 	}
+	payload = planningOnlyTeamInputMessage(subject, payload) // F16c: no claim keys onto team input
 
 	if payloadKind, ok := inferPayloadKindFromSubject(subject); ok {
 		teamID := inferTeamIDFromSubject(subject)

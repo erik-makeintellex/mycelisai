@@ -29,6 +29,10 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 	}
 	guidance, steering := extractTeamSteering(payload)
 	if correlation := extractTeamCommandCorrelation(t.Manifest.ID, msg.Data, payload); correlation != nil {
+		// F16c: the durable receipt is the single-use gate for a dispatch key,
+		// so it is keyed on the team that received the command, never on a
+		// team_id written in the payload.
+		correlation.TeamID = t.Manifest.ID
 		accepted, err := t.acceptCommand(context.Background(), *correlation, msg.Subject, steering)
 		if err != nil {
 			log.Printf("Team [%s] could not durably accept command [%s]: %v", t.Manifest.Name, correlation.commandKey(), err)
@@ -48,38 +52,6 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 	}
 	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	t.nc.Publish(internalSubject, payload)
-}
-
-// triggerAuthorityKeys grant execution posture (run_id, contract_id,
-// intent_proof_id) or command/result correlation to a trigger.
-var triggerAuthorityKeys = []string{"run_id", "contract_id", "intent_proof_id", "work_item_id", "idempotency_key"}
-
-// planningOnlyTriggerPayload removes triggerAuthorityKeys from a JSON object
-// trigger, at the top level and inside every key matching "context" without
-// regard to case (encoding/json binds TeamAsk.Context case-insensitively).
-// Non-object payloads carry no such fields and are returned unchanged.
-func planningOnlyTriggerPayload(payload []byte) []byte {
-	var object map[string]any
-	if err := json.Unmarshal(bytes.TrimSpace(payload), &object); err != nil || object == nil {
-		return payload
-	}
-	stripTriggerAuthorityKeys(object)
-	for key, value := range object {
-		if nested, ok := value.(map[string]any); ok && strings.EqualFold(key, "context") {
-			stripTriggerAuthorityKeys(nested)
-		}
-	}
-	out, err := json.Marshal(object)
-	if err != nil {
-		return []byte("{}")
-	}
-	return out
-}
-
-func stripTriggerAuthorityKeys(values map[string]any) {
-	for _, key := range triggerAuthorityKeys {
-		delete(values, key)
-	}
 }
 
 func (t *Team) acceptCommandCorrelation(ctx context.Context, correlation teamCommandCorrelation, sourceChannel string) (bool, error) {

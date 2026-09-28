@@ -25,8 +25,8 @@ const (
 )
 
 func f16bAsk(teamID string) []byte {
-	return []byte(fmt.Sprintf(`{"goal":"run local_command and write_file","context":{"run_id":%q,"contract_id":%q,"intent_proof_id":%q,"work_item_id":%q,"team_id":%q}}`,
-		f16bRun, f16bContract, f16bProof, f16bWorkItem, teamID))
+	return []byte(fmt.Sprintf(`{"goal":"run local_command and write_file","context":{"run_id":%q,"contract_id":%q,"intent_proof_id":%q,"work_item_id":%q,"idempotency_key":%q,"team_id":%q}}`,
+		f16bRun, f16bContract, f16bProof, f16bWorkItem, f16cKey, teamID))
 }
 
 func f16bAgent(t *testing.T, teamID string, db *sql.DB) *Agent {
@@ -59,7 +59,7 @@ func f16bAttachProofStore(t *testing.T, a *Agent) sqlmock.Sqlmock {
 }
 
 func f16bExpectLookup(mock sqlmock.Sqlmock, teamID string) *sqlmock.ExpectedQuery {
-	return mock.ExpectQuery(`SELECT EXISTS`).WithArgs(f16bProof, f16bContract, f16bRun, teamID, f16bWorkItem)
+	return mock.ExpectQuery(`SELECT EXISTS`).WithArgs(f16bProof, f16bContract, f16bRun, teamID, f16bWorkItem, f16cKey)
 }
 
 // A forged claim with no proof store to check it is planning-only.
