@@ -154,6 +154,19 @@ else:
     s3, _, p3 = chat("Say hello in one short sentence.")
     record("J8c override removed, chat works again", s2 == 200 and s3 == 200 and len((p3.get("text") or "").strip()) > 0, f"delete http={s2} chat http={s3}")
 
+# J9: MCP install refuses undeclared env keys (MCPA-H). A NODE_OPTIONS env on the curated `fetch`
+# entry would reach the npx child inside Core; it must be refused with 400 mcp_env_rejected (even
+# for this admin key), the value never echoed, and the installed `fetch` server left untouched.
+def fetch_row():
+    s, _, raw = call("GET", "/api/v1/mcp/servers")
+    rows = js(raw) if isinstance(js(raw), list) else (js(raw).get("servers") or js(raw).get("data") or [])
+    return next((json.dumps(r, sort_keys=True) for r in rows if isinstance(r, dict) and r.get("name") == "fetch"), None)
+before = fetch_row()
+s9, _, raw9 = call("POST", "/api/v1/mcp/library/install", {"name": "fetch", "env": {"NODE_OPTIONS": "--require /tmp/probe-j9-never.js"}})
+b9 = raw9.decode("utf-8", "replace")
+record("J9 MCP install refuses undeclared env", s9 == 400 and "mcp_env_rejected" in b9 and "probe-j9-never" not in b9 and fetch_row() == before,
+       f"http={s9} body={b9[:140]!r} fetch_unchanged={fetch_row() == before}")
+
 w = max(len(r[0]) for r in results)
 for n, st, det in results: print(f"{st:4}  {n:<{w}}  {det}")
 print(f"\n{sum(r[1]=='PASS' for r in results)}/{len(results)} passed")

@@ -11,7 +11,7 @@ import (
 
 func TestHandleMCPLibraryInstall_NilSubsystem(t *testing.T) {
 	s := newTestServer()
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"test"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"test"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -19,7 +19,7 @@ func TestHandleMCPLibraryInstall_MissingName(t *testing.T) {
 	s := newTestServer(withMCPStubs(), func(s *AdminServer) {
 		s.MCPLibrary = &mcp.Library{Categories: []mcp.LibraryCategory{}}
 	})
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"env":{}}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"env":{}}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
@@ -27,7 +27,7 @@ func TestHandleMCPLibraryInstall_NotFoundInLibrary(t *testing.T) {
 	s := newTestServer(withMCPStubs(), func(s *AdminServer) {
 		s.MCPLibrary = &mcp.Library{Categories: []mcp.LibraryCategory{}}
 	})
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"nonexistent"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"nonexistent"}`)
 	assertStatus(t, rr, http.StatusNotFound)
 }
 
@@ -147,7 +147,7 @@ func TestHandleMCPLibraryInstall_HappyPath(t *testing.T) {
 		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
 		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
 
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
 }
 
@@ -178,7 +178,7 @@ func TestHandleMCPLibraryApply_HappyPath(t *testing.T) {
 		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
 		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
 
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryApply), "POST", "/api/v1/mcp/library/apply", `{"name":"fetch"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryApply), "POST", "/api/v1/mcp/library/apply", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp map[string]any

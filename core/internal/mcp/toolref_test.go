@@ -68,7 +68,7 @@ func TestParseToolRef(t *testing.T) {
 	}{
 		{"mcp:filesystem/read_file", false, "filesystem", "read_file"},
 		{"mcp:github/*", false, "github", "*"},
-		{"mcp:filesystem", false, "filesystem", "*"},           // no slash → wildcard
+		{"mcp:filesystem", false, "filesystem", "*"}, // no slash → wildcard
 		{"mcp:brave-search/web_search", false, "brave-search", "web_search"},
 		{"read_file", true, "", ""},
 		{"toolset:workspace", true, "", ""},
@@ -97,10 +97,10 @@ func TestParseToolRef(t *testing.T) {
 
 func TestToolRef_MatchesTool(t *testing.T) {
 	tests := []struct {
-		ref        ToolRef
-		server     string
-		tool       string
-		wantMatch  bool
+		ref       ToolRef
+		server    string
+		tool      string
+		wantMatch bool
 	}{
 		{ToolRef{"filesystem", "read_file"}, "filesystem", "read_file", true},
 		{ToolRef{"filesystem", "read_file"}, "filesystem", "write_file", false},

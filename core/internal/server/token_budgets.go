@@ -42,7 +42,7 @@ var tokenBudgetUsageForbiddenCopy = roleBlockerText{
 }
 
 // tokenBudgetTeamTenantSQL proves team membership from persisted state only
-// and returns the tenant it was proven in ('' proves nothing): the team's
+// and returns the tenant it was proven in (” proves nothing): the team's
 // active ownership binding (runtime_team_manifests owner account + owner
 // group, not revoked) and an active, unexpired org membership of the caller in
 // that group, with the user and account both active and the account in the

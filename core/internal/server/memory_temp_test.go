@@ -92,4 +92,3 @@ func TestHandleTempMemory_ValidationAndNilMem(t *testing.T) {
 	rr = doRequest(t, http.HandlerFunc(s.HandleTempMemory), "PATCH", "/api/v1/memory/temp", "")
 	assertStatus(t, rr, http.StatusMethodNotAllowed)
 }
-

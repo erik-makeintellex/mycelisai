@@ -45,7 +45,7 @@ func TestHandleMCPLibraryInstall_RedactsEnvAndHeaders(t *testing.T) {
 	s := newTestServer(opt, withSecretFetchLibrary())
 	expectSecretFetchInstall(mock)
 
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
 	assertNoMCPSecretLeak(t, rr.Body.String())
 }
@@ -55,7 +55,7 @@ func TestHandleMCPLibraryApply_RedactsEnvAndHeaders(t *testing.T) {
 	s := newTestServer(opt, withSecretFetchLibrary())
 	expectSecretFetchInstall(mock)
 
-	rr := doRequest(t, http.HandlerFunc(s.handleMCPLibraryApply), "POST", "/api/v1/mcp/library/apply", `{"name":"fetch"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryApply), "POST", "/api/v1/mcp/library/apply", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
 	assertNoMCPSecretLeak(t, rr.Body.String())
 }
