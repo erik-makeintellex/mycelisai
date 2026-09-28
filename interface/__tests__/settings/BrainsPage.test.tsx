@@ -9,27 +9,48 @@ const jsonResponse = (body: unknown, ok = true) => ({
     json: async () => body,
 });
 
+const BRAINS_LIST = [
+    {
+        id: 'production_gpt4',
+        type: 'openai',
+        endpoint: 'https://api.openai.com/v1',
+        model_id: 'gpt-4-turbo',
+        location: 'remote',
+        data_boundary: 'leaves_org',
+        usage_policy: 'require_approval',
+        token_budget_profile: 'extended',
+        max_output_tokens: 2048,
+        roles_allowed: ['all'],
+        enabled: true,
+        status: 'online',
+    },
+];
+
+// A minimal, well-formed effective policy so the mounted TokenBudgetsPanel
+// (B1-W2) doesn't fall into its own blocker state during these BrainsPage
+// tests: that would add a second role="alert" and break findByRole('alert')
+// assertions further down that expect exactly the toggle/policy blocker.
+const TOKEN_BUDGETS = {
+    ok: true,
+    data: {
+        class_order: ['local_large'],
+        global: { per_execution: 32000, per_run: 128000, per_team_day: 500000, per_agent_day: 250000, warn_pct: 80 },
+        classes: { local_large: { per_execution: 64000, per_run: 256000, per_team_day: 2000000, per_agent_day: 1000000, warn_pct: 80 } },
+        day_period: 'utc_day',
+        min_limit: 1024,
+        max_limit: 5000000,
+        can_edit: false,
+    },
+};
+
 describe('BrainsPage', () => {
     beforeEach(() => {
-        mockFetch.mockResolvedValue(jsonResponse({
-            ok: true,
-            data: [
-                {
-                    id: 'production_gpt4',
-                    type: 'openai',
-                    endpoint: 'https://api.openai.com/v1',
-                    model_id: 'gpt-4-turbo',
-                    location: 'remote',
-                    data_boundary: 'leaves_org',
-                    usage_policy: 'require_approval',
-                    token_budget_profile: 'extended',
-                    max_output_tokens: 2048,
-                    roles_allowed: ['all'],
-                    enabled: true,
-                    status: 'online',
-                },
-            ],
-        }));
+        mockFetch.mockImplementation((url: string) => {
+            if (typeof url === 'string' && url.startsWith('/api/v1/cognitive/budgets')) {
+                return Promise.resolve(jsonResponse(TOKEN_BUDGETS));
+            }
+            return Promise.resolve(jsonResponse({ ok: true, data: BRAINS_LIST }));
+        });
     });
 
     it('shows token budget details in the provider table', async () => {
@@ -40,6 +61,14 @@ describe('BrainsPage', () => {
         expect(await screen.findByText('Token Budget')).toBeDefined();
         expect(screen.getByText('Extended')).toBeDefined();
         expect(screen.getByText('2048 max')).toBeDefined();
+    });
+
+    it('mounts the token budgets panel under an Advanced section (B1-W2)', async () => {
+        await act(async () => {
+            render(<BrainsPage />);
+        });
+        expect(await screen.findByText('Advanced')).toBeDefined();
+        expect(await screen.findByText('local_large')).toBeDefined();
     });
 
     it('applies hosted-provider preset token defaults in the add modal', async () => {
