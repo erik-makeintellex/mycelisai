@@ -19,6 +19,8 @@ const DECK_CODES = [
     'provider_timeout',
     'empty_provider_output',
     'connector_deployment_unavailable',
+    'token_budget_exhausted',
+    'token_budget_usage_forbidden',
 ];
 
 describe('blockerCopy', () => {
@@ -112,6 +114,22 @@ describe('blockerCopy', () => {
         expect(copy.nextAction.label).toBeTruthy();
         expect(copy.nextAction.href).toBeTruthy();
         expect(copy.whatHappened).not.toMatch(/501|api\//i);
+    });
+
+    it('maps token_budget_exhausted with the exact D5 user copy and an admin override next step', () => {
+        const user = blockerCopy({ code: 'token_budget_exhausted', httpStatus: 429, viewerIsAdmin: false });
+        expect(user.whatHappened).toBe('This work stopped because it reached its token budget.');
+        expect(resolveBlockerCopy(user, false).nextAction.intent).not.toBe('retry');
+
+        const admin = resolveBlockerCopy(user, true);
+        expect(admin.nextAction.href).toBe('/settings?tab=engines');
+        expect(admin.nextAction.label.toLowerCase()).toMatch(/budget|override/);
+    });
+
+    it('maps token_budget_usage_forbidden to a member-only explanation with no dead end', () => {
+        const copy = blockerCopy({ code: 'token_budget_usage_forbidden', httpStatus: 403, viewerIsAdmin: false });
+        expect(copy.whatHappened.toLowerCase()).toContain('team');
+        expect(copy.nextAction.label.length).toBeGreaterThan(0);
     });
 
     it('maps transport_unavailable to the team-service copy, not a generic/auth message', () => {
