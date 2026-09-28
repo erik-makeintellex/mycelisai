@@ -276,3 +276,19 @@ var commsProviderRejectedCopy = roleBlockerText{
 	Admin: blockerText{"This inbound channel is not an allowed comms provider. Nothing was published.",
 		"Use a provider listed by GET /api/v1/comms/providers; reserved lanes (user, cli, sensor) and registered input sources are refused, and user needs MYCELIS_COMMS_ALLOW_USER_LANE=true."},
 }
+
+// F16b team asks and swarm broadcast. A team ask needs soma:work (403
+// team_ask_forbidden otherwise); swarm broadcast is root admin +
+// swarm:broadcast (the shared admin_required code). Nothing is sent on denial.
+const (
+	scopeSomaWork        = "soma:work"
+	scopeSwarmBroadcast  = "swarm:broadcast"
+	codeTeamAskForbidden = "team_ask_forbidden"
+)
+
+var teamAskForbiddenCopy = roleBlockerText{
+	User: blockerText{"Your account can't send work to teams. Nothing was sent.",
+		"Ask an admin for access to team work."},
+	Admin: blockerText{"This account lacks the permission to ask teams for work. Nothing was sent.",
+		"Grant the scope named in required_scope to the account, then try again."},
+}

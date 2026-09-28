@@ -69,7 +69,8 @@ func startSomaRuntime(
 		log.Printf("WARN: Failed to start Soma: %v", err)
 	}
 	mux.HandleFunc("/api/swarm/teams", soma.HandleCreateTeam)
-	mux.HandleFunc("/api/v1/swarm/broadcast", soma.HandleBroadcast)
+	// POST /api/v1/swarm/broadcast is registered by AdminServer.RegisterRoutes
+	// behind root-admin authority (F16b, HandleSwarmBroadcast).
 	return soma
 }
 

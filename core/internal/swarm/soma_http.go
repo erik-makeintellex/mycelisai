@@ -75,6 +75,8 @@ type BroadcastReply struct {
 }
 
 // HandleBroadcast fans a directive out to all active teams via request-reply.
+// Authority is checked by the Core route (server.HandleSwarmBroadcast, root
+// admin); the content always reaches agents as broadcast text (F16b).
 func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -95,6 +97,11 @@ func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	if payload.Source == "" {
 		payload.Source = "mission-control"
 	}
+	data, err := broadcastTriggerPayload(protocol.SourceKindWebAPI, "api.swarm.broadcast", payload.Content)
+	if err != nil {
+		http.Error(w, "Invalid content", http.StatusBadRequest)
+		return
+	}
 
 	s.mu.RLock()
 	teamIDs := make([]string, 0, len(s.teams))
@@ -111,7 +118,7 @@ func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 			defer wg.Done()
 			subject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID)
 			log.Printf("📡 Broadcast request to team [%s] on [%s]", teamID, subject)
-			msg, err := s.nc.Request(subject, []byte(payload.Content), 60*time.Second)
+			msg, err := s.nc.Request(subject, data, 60*time.Second)
 			if err != nil {
 				log.Printf("Broadcast: team [%s] did not respond: %v", teamID, err)
 				replies[idx] = BroadcastReply{TeamID: teamID, Error: err.Error()}
@@ -125,4 +132,15 @@ func (s *Soma) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]any{"status": "broadcast", "teams_hit": len(teamIDs), "source": payload.Source, "replies": replies})
+}
+
+// broadcastTriggerPayload wraps broadcast text for team internal.trigger
+// (F16b): a signal envelope whose content is only the text field, so the bytes
+// can never parse as a TeamAsk or carry posture or correlation fields.
+func broadcastTriggerPayload(sourceKind protocol.SignalSourceKind, sourceChannel, content string) ([]byte, error) {
+	return json.Marshal(protocol.SignalEnvelope{
+		Meta: protocol.SignalMeta{Timestamp: time.Now().UTC(), SourceKind: sourceKind,
+			SourceChannel: sourceChannel, PayloadKind: protocol.PayloadKindEvent},
+		Text: content,
+	})
 }

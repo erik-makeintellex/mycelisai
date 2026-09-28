@@ -173,6 +173,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/comms/providers", s.HandleCommsProviders)
 	mux.HandleFunc("POST /api/v1/comms/send", s.HandleCommsSend)
 	mux.HandleFunc("POST /api/v1/comms/inbound/{provider}", s.HandleCommsInbound)
+	mux.HandleFunc("POST /api/v1/swarm/broadcast", s.HandleSwarmBroadcast)
 
 	mux.HandleFunc("/api/v1/proposals", s.HandleProposals)
 	mux.HandleFunc("POST /api/v1/proposals/{id}/approve", s.HandleProposalApprove)

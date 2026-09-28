@@ -2,11 +2,14 @@ package swarm
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
+	"github.com/mycelis/core/internal/trust"
 	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
@@ -83,7 +86,7 @@ func (a *Agent) handleTrigger(msg *nats.Msg) {
 	default:
 	}
 	input := normalizeTeamTriggerInput(msg.Data)
-	planningOnly := teamTriggerPlanningOnly(msg.Data)
+	planningOnly := a.triggerPlanningOnly(msg.Data)
 	requirement := teamResultRequirementFromTrigger(msg.Data, planningOnly)
 	log.Printf("Agent [%s] thinking about: %s", a.Manifest.ID, input)
 	result := a.processMessageStructuredWithRequirement(input, nil, planningOnly, requirement)
@@ -110,6 +113,33 @@ func teamAgentResponsePayloadForTrigger(result ProcessResult, trigger []byte, te
 	return correlatedTeamResponsePayload(payload, correlation)
 }
 
+// triggerPlanningOnly is the agent's posture decision (F16b): execution posture
+// needs a claim that verifies against the proof store for this agent's team
+// (trust.VerifyExecutionClaim). No claim, no store, a lookup error or no
+// confirmed record keeps the trigger planning-only.
+func (a *Agent) triggerPlanningOnly(data []byte) bool {
+	if teamTriggerPlanningOnly(data) {
+		return true
+	}
+	var ask protocol.TeamAsk
+	_ = json.Unmarshal(bytes.TrimSpace(data), &ask)
+	claim := trust.ExecutionClaim{IntentProofID: signalString(ask.Context["intent_proof_id"]), ContractID: signalString(ask.Context["contract_id"]),
+		RunID: signalString(ask.Context["run_id"]), WorkItemID: signalString(ask.Context["work_item_id"]), TeamID: a.TeamID}
+	var store trust.QueryRower
+	if a.internalTools != nil && a.internalTools.db != nil {
+		store = a.internalTools.db
+	}
+	ctx, cancel := context.WithTimeout(a.ctx, 5*time.Second)
+	defer cancel()
+	if err := trust.VerifyExecutionClaim(ctx, store, claim); err != nil {
+		log.Printf("Agent [%s] trigger stays planning-only: %v", a.Manifest.ID, err)
+		return true
+	}
+	return false
+}
+
+// teamTriggerPlanningOnly is the syntactic pre-check only: a trigger that does
+// not claim run_id, contract_id and intent_proof_id is planning-only.
 func teamTriggerPlanningOnly(data []byte) bool {
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 {
@@ -183,6 +213,10 @@ func normalizeTeamTriggerInput(data []byte) string {
 	var ask protocol.TeamAsk
 	if err := json.Unmarshal(trimmed, &ask); err == nil && !ask.IsZero() {
 		return renderTeamAskPrompt(ask.Normalize())
+	}
+	var env protocol.SignalEnvelope // broadcast text (F16b): prompt text only
+	if json.Unmarshal(trimmed, &env) == nil && env.Meta.PayloadKind == protocol.PayloadKindEvent && env.Text != "" {
+		return env.Text
 	}
 	return string(data)
 }
