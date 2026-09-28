@@ -13,7 +13,7 @@ import (
 )
 
 func TestF16bVerifyExecutionClaimFailsClosedWithoutStore(t *testing.T) {
-	good := ExecutionClaim{IntentProofID: uuid.NewString(), ContractID: uuid.NewString(), RunID: uuid.NewString(), WorkItemID: "wi", TeamID: "team"}
+	good := ExecutionClaim{IntentProofID: uuid.NewString(), ContractID: uuid.NewString(), RunID: uuid.NewString(), WorkItemID: "wi", TeamID: "team", IdempotencyKey: "key"}
 	if err := VerifyExecutionClaim(context.Background(), nil, good); !errors.Is(err, ErrExecutionClaimRejected) {
 		t.Fatalf("nil store: err=%v", err)
 	}
@@ -52,11 +52,11 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 		q    string
 		args []any
 	}{
-		{`INSERT INTO intent_proofs (id, template_id, resolved_intent, status, scope_validation) VALUES ($1, 'chat-to-proposal', 'f16b', 'confirmed', $2::jsonb)`, []any{proofID, string(scope)}},
-		{`INSERT INTO mission_runs (id, mission_id) VALUES ($1, 'f16b')`, []any{runID}},
+		{`INSERT INTO intent_proofs (id, template_id, resolved_intent, status, scope_validation, expires_at) VALUES ($1, 'chat-to-proposal', 'f16b', 'confirmed', $2::jsonb, NOW() + interval '10 minutes')`, []any{proofID, string(scope)}},
+		{`INSERT INTO mission_runs (id, mission_id, status) VALUES ($1, 'f16b', 'running')`, []any{runID}},
 		{`INSERT INTO execution_contracts (id, intent_proof_id, run_id, template_id) VALUES ($1, $2, $3, 'chat-to-proposal')`, []any{contractID, proofID, runID}},
-		{`INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
-		  VALUES ($1, $2, 'confirmed_action_team_plan', $3, $4, $5, 'prime-development', $6, 'web_api', 'api.intent.confirm-action', 'command')`,
+		{`INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, status, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
+		  VALUES ($1, $2, 'confirmed_action_team_plan', 'executing', $3, $4, $5, 'prime-development', $6, 'web_api', 'api.intent.confirm-action', 'command')`,
 			[]any{uuid.NewString(), "confirm-action:" + proofID, runID, proofID, contractID, workItem}},
 	} {
 		if _, err := db.ExecContext(ctx, stmt.q, stmt.args...); err != nil {
@@ -69,7 +69,7 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM mission_runs WHERE id = $1`, runID)
 		_, _ = db.Exec(`DELETE FROM intent_proofs WHERE id = $1`, proofID)
 	})
-	good := ExecutionClaim{IntentProofID: proofID, ContractID: contractID, RunID: runID, WorkItemID: workItem, TeamID: "prime-development"}
+	good := ExecutionClaim{IntentProofID: proofID, ContractID: contractID, RunID: runID, WorkItemID: workItem, TeamID: "prime-development", IdempotencyKey: "confirm-action:" + proofID}
 	if err := VerifyExecutionClaim(ctx, db, good); err != nil {
 		t.Fatalf("confirmed dispatched proof rejected: %v", err)
 	}

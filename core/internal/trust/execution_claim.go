@@ -19,6 +19,9 @@ type ExecutionClaim struct {
 	RunID         string
 	WorkItemID    string
 	TeamID        string
+	// IdempotencyKey must equal the dispatch outbox row's key (F16c), which
+	// the team's durable command receipt accepts once.
+	IdempotencyKey string
 }
 
 // ErrExecutionClaimRejected means the claim does not name a confirmed,
@@ -36,17 +39,34 @@ type QueryRower interface {
 // outbox row for the same proof, contract and run; and, in the proof's
 // correlated scope, a planned call whose context names this team, this proof
 // and this work item.
+//
+// Freshness (F16c): the run is still live (pending or running; completed,
+// degraded, failed and cancelled are terminal); the outbox row was released
+// for dispatch and not dead-lettered (pending, executing or completed;
+// staged, awaiting_handler and failed are not); and the claim's
+// idempotency_key is the outbox row's key, which the team's durable command
+// receipt accepts once.
+//
+// intent_proofs.expires_at is deliberately NOT checked: it is the confirm-token
+// TTL (15 minutes from proposal creation) and governs only whether a proposal
+// may be confirmed. Checking it here would downgrade live confirmed runs
+// (late confirm, retry, dispatch after restart) to planning-only. Replay is
+// closed by single use (outbox key + receipt) and run state instead.
 const verifyExecutionClaimSQL = `
 SELECT EXISTS (
 	SELECT 1
 	FROM intent_proofs ip
 	JOIN execution_contracts ec ON ec.intent_proof_id = ip.id
+	JOIN mission_runs r ON r.id = ec.run_id
 	JOIN execution_dispatch_outbox o ON o.intent_proof_id = ip.id
 	WHERE ip.id = $1::uuid
 	  AND ip.status = 'confirmed'
 	  AND ec.id = $2::uuid
 	  AND ec.run_id = $3::uuid
+	  AND r.status IN ('pending', 'running') -- runs.StatusPending, runs.StatusRunning
 	  AND o.dispatch_kind = 'confirmed_action_team_plan' -- server.confirmedActionDispatchKind
+	  AND o.status IN ('pending', 'executing', 'completed') -- dispatchoutbox.Status*
+	  AND o.idempotency_key = $6
 	  AND o.contract_id = ec.id
 	  AND o.run_id = ec.run_id::text
 	  AND EXISTS (
@@ -59,16 +79,16 @@ SELECT EXISTS (
 )`
 
 // VerifyExecutionClaim checks claim against the proof store. It returns nil
-// only for a fully bound claim; a malformed claim, a missing store, a query
-// error or no matching record all return an error (fail closed).
+// only for a fully bound, fresh claim; a malformed claim, a missing store, a
+// query error or no matching record all return an error (fail closed).
 func VerifyExecutionClaim(ctx context.Context, db QueryRower, claim ExecutionClaim) error {
 	for label, value := range map[string]string{"intent_proof_id": claim.IntentProofID, "contract_id": claim.ContractID, "run_id": claim.RunID} {
 		if _, err := uuid.Parse(strings.TrimSpace(value)); err != nil {
 			return fmt.Errorf("%w: %s is not a UUID", ErrExecutionClaimRejected, label)
 		}
 	}
-	if strings.TrimSpace(claim.TeamID) == "" || strings.TrimSpace(claim.WorkItemID) == "" {
-		return fmt.Errorf("%w: team_id and work_item_id are required", ErrExecutionClaimRejected)
+	if strings.TrimSpace(claim.TeamID) == "" || strings.TrimSpace(claim.WorkItemID) == "" || strings.TrimSpace(claim.IdempotencyKey) == "" {
+		return fmt.Errorf("%w: team_id, work_item_id and idempotency_key are required", ErrExecutionClaimRejected)
 	}
 	if db == nil {
 		return fmt.Errorf("%w: proof store unavailable", ErrExecutionClaimRejected)
@@ -76,7 +96,7 @@ func VerifyExecutionClaim(ctx context.Context, db QueryRower, claim ExecutionCla
 	var ok bool
 	err := db.QueryRowContext(ctx, verifyExecutionClaimSQL,
 		strings.TrimSpace(claim.IntentProofID), strings.TrimSpace(claim.ContractID), strings.TrimSpace(claim.RunID),
-		strings.TrimSpace(claim.TeamID), strings.TrimSpace(claim.WorkItemID)).Scan(&ok)
+		strings.TrimSpace(claim.TeamID), strings.TrimSpace(claim.WorkItemID), strings.TrimSpace(claim.IdempotencyKey)).Scan(&ok)
 	if err != nil {
 		return fmt.Errorf("%w: proof lookup failed: %v", ErrExecutionClaimRejected, err)
 	}

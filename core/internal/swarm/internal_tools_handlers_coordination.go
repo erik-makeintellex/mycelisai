@@ -52,6 +52,7 @@ func (r *InternalToolRegistry) handleDelegateTask(ctx context.Context, args map[
 	if ask.IsZero() {
 		return "", fmt.Errorf("delegate_task requires 'team_id' and 'task'")
 	}
+	ask = delegateAskAuthority(ctx, ask) // F16c: only Core's confirmed dispatch keeps claim keys
 	if teamID == "" {
 		teamID, err = r.resolveDelegationTeam(ask)
 		if err != nil {
