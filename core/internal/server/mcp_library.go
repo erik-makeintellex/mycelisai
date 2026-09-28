@@ -2,9 +2,9 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/mycelis/core/internal/mcp"
 )
@@ -120,17 +120,18 @@ func (s *AdminServer) installFromMCPLibrary(w http.ResponseWriter, r *http.Reque
 func (s *AdminServer) prepareMCPLibraryRequest(w http.ResponseWriter, r *http.Request) (mcpPreparedLibraryRequest, bool) {
 	var req mcpLibraryRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
+		respondAPIError(w, "invalid JSON body: "+err.Error(), http.StatusBadRequest)
 		return mcpPreparedLibraryRequest{}, false
 	}
 	if req.Name == "" {
-		http.Error(w, `{"error":"name is required"}`, http.StatusBadRequest)
+		respondAPIError(w, "name is required", http.StatusBadRequest)
 		return mcpPreparedLibraryRequest{}, false
 	}
 
 	entry := s.MCPLibrary.FindByName(req.Name)
 	if entry == nil {
-		http.Error(w, fmt.Sprintf(`{"error":"server %q not found in library"}`, req.Name), http.StatusNotFound)
+		// JSON-encoded, so a hostile name cannot break the body.
+		respondAPIError(w, "server "+strconv.Quote(req.Name)+" not found in library", http.StatusNotFound)
 		return mcpPreparedLibraryRequest{}, false
 	}
 

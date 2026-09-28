@@ -130,6 +130,33 @@ def test_stop_does_not_kill_foreign_listener_on_requested_port(monkeypatch, caps
     assert "non-repo process" in capsys.readouterr().out
 
 
+def test_e2e_default_stop_never_kills_a_foreign_listener_on_port_3000(monkeypatch, capsys):
+    """`interface.e2e` calls the no-arg `stop(c)` (defaults to `INTERFACE_PORT`,
+    3000) before and after every run. That is also the owner's Docker-published
+    Compose Interface port, so this proves the same non-repo-process guard from
+    `test_stop_does_not_kill_foreign_listener_on_requested_port` holds for the
+    exact call e2e makes: a PID on :3000 that does not match a repo-local
+    node/cmd Interface process (e.g. a Docker Desktop proxy process) is left
+    running, never killed."""
+    cleaned: list[str] = []
+    killed: list[int] = []
+
+    monkeypatch.setattr(interface, "is_windows", lambda: True)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("repo") or [])
+    monkeypatch.setattr(interface, "_cleanup_managed_interface_listeners", lambda: cleaned.append("managed") or [])
+    monkeypatch.setattr(interface, "_windows_listening_pids_for_port", lambda _port: [9999])
+    monkeypatch.setattr(interface, "_repo_local_interface_processes_for_pids", lambda _pids: [])
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: killed.append(pid))
+
+    # No `port=` kwarg: this is the exact call `e2e()` makes at the top and in
+    # its `finally` block.
+    interface.stop.body(FakeContext())
+
+    assert killed == []
+    assert cleaned == ["managed", "repo"]
+    assert "non-repo process" in capsys.readouterr().out
+
+
 def test_lifecycle_up_fails_closed_when_api_port_is_foreign_core(monkeypatch):
     killed_ports: list[tuple[int, str]] = []
     started: list[str] = []
