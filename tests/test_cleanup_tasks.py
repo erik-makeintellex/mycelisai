@@ -116,18 +116,11 @@ def test_remove_repo_targets_retries_readonly_cache_files(tmp_path):
     assert not cache_dir.exists()
 
 
-def test_clean_windows_dev_residue_requires_windows(monkeypatch):
-    monkeypatch.setattr(misc, "is_windows", lambda: False)
-
-    try:
-        misc.clean_windows_dev_residue.body(Context())
-    except SystemExit as exc:
-        assert "Windows-only" in str(exc)
-    else:
-        raise AssertionError("expected SystemExit for non-Windows host")
-
-
-def test_clean_windows_dev_residue_reports_source_only_guidance(monkeypatch, tmp_path, capsys):
+def test_clean_generated_adds_windows_source_only_reminder_on_windows(monkeypatch, tmp_path, capsys):
+    """`clean.windows-dev-residue` was merged into `clean.generated` (MYC-TASKS
+    tightening): same target set, same removal logic, only the Windows-only
+    reminder differed. `clean.generated` now prints that reminder itself
+    when run on Windows instead of requiring a separate task."""
     monkeypatch.setattr(misc, "ROOT_DIR", tmp_path)
     monkeypatch.setattr(misc, "is_windows", lambda: True)
     targets = (
@@ -140,13 +133,24 @@ def test_clean_windows_dev_residue_reports_source_only_guidance(monkeypatch, tmp
         target.mkdir(parents=True, exist_ok=True)
         (target / "marker.txt").write_text("x", encoding="utf-8")
 
-    misc.clean_windows_dev_residue.body(Context())
+    misc.clean_generated.body(Context())
 
     output = capsys.readouterr().out
     assert "Windows source-only reminder:" in output
     assert "run install/build/test/compose from the WSL checkout" in output
     for target in targets:
         assert not target.exists()
+
+
+def test_clean_generated_omits_windows_reminder_off_windows(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(misc, "ROOT_DIR", tmp_path)
+    monkeypatch.setattr(misc, "is_windows", lambda: False)
+    monkeypatch.setattr(misc, "_generated_artifact_targets", lambda _root: ())
+
+    misc.clean_generated.body(Context())
+
+    output = capsys.readouterr().out
+    assert "Windows source-only reminder:" not in output
 
 
 def test_clean_wsl_handoff_skips_active_python_environment(monkeypatch, tmp_path, capsys):

@@ -8,7 +8,7 @@ from invoke import Context
 from ops import db as db_tasks
 from ops import interface_runtime as interface, service_ownership
 from ops import interface_processes, lifecycle
-from tests.interface_task_support import FakeContext
+from tests.interface_task_support import FakeContext, FakeResult
 
 
 def test_cleanup_managed_interface_listeners_skips_foreign_port_range_pids():
@@ -88,6 +88,66 @@ def test_frontend_ownership_falls_back_to_ss_when_lsof_is_unavailable(monkeypatc
 
     assert pid == 42
     assert [call[0] for call in calls] == ["lsof", "ss"]
+
+
+def test_posix_listening_pids_for_port_falls_back_to_ss_when_lsof_finds_nothing():
+    """Regression for the `interface.e2e` leak: a managed `next-server` that
+    was reparented under `/init` in WSL is invisible to a bare `lsof -ti`
+    call (it returns exit 0 with empty stdout, not an error), so `stop()`
+    must fall back to `ss` instead of concluding the port is free."""
+    calls: list[str] = []
+
+    def run(command, **_kwargs):
+        calls.append(command[0])
+        if command[0] == "lsof":
+            return FakeResult(stdout="")
+        assert command[0] == "ss"
+        return FakeResult(stdout='LISTEN users:(("next-server",pid=8123,fd=22))')
+
+    pids = interface_processes.posix_listening_pids_for_port(3103, run=run)
+
+    assert pids == [8123]
+    assert calls == ["lsof", "ss"]
+
+
+def test_posix_listening_pids_for_port_falls_back_when_lsof_is_missing():
+    def run(command, **_kwargs):
+        if command[0] == "lsof":
+            raise FileNotFoundError("lsof")
+        return FakeResult(stdout='LISTEN users:(("next-server",pid=8124,fd=22))')
+
+    pids = interface_processes.posix_listening_pids_for_port(3103, run=run)
+
+    assert pids == [8124]
+
+
+def test_stop_finds_and_kills_a_posix_listener_the_lsof_lookup_missed(monkeypatch, capsys):
+    """`stop()` must use the fallback-aware lookup, not a bare `lsof` call,
+    so a managed `next-server` orphan that `lsof` cannot see is still found
+    and killed instead of leaving `stop()` reporting "No process on port"."""
+    killed: list[int] = []
+    cleaned: list[str] = []
+
+    monkeypatch.setattr(interface, "is_windows", lambda: False)
+    monkeypatch.setattr(interface, "_cleanup_repo_local_interface_processes", lambda: cleaned.append("repo") or [])
+    monkeypatch.setattr(interface, "_cleanup_managed_interface_listeners", lambda: cleaned.append("managed") or [])
+    monkeypatch.setattr(
+        interface.interface_processes,
+        "posix_listening_pids_for_port",
+        lambda _port, **_kwargs: [8123],
+    )
+    monkeypatch.setattr(
+        interface,
+        "_repo_local_interface_processes_for_pids",
+        lambda pids: [{"pid": pids[0], "name": "next-server", "command": "next-server (v16.1.6)"}],
+    )
+    monkeypatch.setattr(interface, "_kill_pid_tree", lambda pid: killed.append(pid))
+
+    interface.stop.body(FakeContext(), port=3103)
+
+    output = capsys.readouterr().out
+    assert killed == [8123]
+    assert "No process on port" not in output
 
 
 def test_stop_runs_tree_kill_for_repo_owned_listener_on_windows(monkeypatch):
