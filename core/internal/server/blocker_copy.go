@@ -33,6 +33,18 @@ const (
 // MYCELIS_WORKSPACE root (lexically or through a symlink). Nothing ran.
 const codeMCPPathOutsideWorkspace = "mcp_path_outside_workspace"
 
+// MCPL2: 400 when a filesystem MCP call carries an argument that is neither
+// a known key of the tool nor path-bearing by name but whose value looks like
+// a path. Nothing ran.
+const codeMCPPathArgumentUnknown = "mcp_path_argument_unknown"
+
+var mcpPathArgumentUnknownCopy = roleBlockerText{
+	User: blockerText{"This tool got a setting it doesn't recognize that looks like a file location. Nothing ran.",
+		"Remove the extra setting and try again with the tool's usual options."},
+	Admin: blockerText{"An argument is not declared by this filesystem tool and its value looks like a path, so Core refused it. Nothing ran.",
+		"Send only the tool's declared arguments; detail names the refused argument key."},
+}
+
 // MCPA MCP configuration writes: 400 when a request carries env keys the
 // library entry does not declare (nothing installed or launched), 404 when a
 // delete names no registered server (nothing disconnected or deleted), 502
