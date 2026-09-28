@@ -2,6 +2,7 @@ package cognitive
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -74,12 +75,34 @@ func (g *BudgetGovernor) release(c *budgetCharge) {
 // reservation (a configured bound, not a text estimate) and marks the row
 // usage_reported=false (D6).
 func (g *BudgetGovernor) charge(ctx context.Context, c *budgetCharge, resp *InferResponse) {
-	entry := TokenLedgerEntry{Outcome: TokenLedgerOutcomeCharged, PromptTokens: resp.PromptTokens, CompletionTokens: resp.CompletionTokens}
-	entry.TotalTokens = resp.TokensUsed
-	if entry.TotalTokens <= 0 {
-		entry.TotalTokens = resp.PromptTokens + resp.CompletionTokens
+	g.settle(ctx, c, resp, true)
+}
+
+// chargeReported settles a call whose adapter returned a response together
+// with an error: provider-reported usage is charged; without any, the call is
+// only released (nothing is charged).
+func (g *BudgetGovernor) chargeReported(ctx context.Context, c *budgetCharge, resp *InferResponse) {
+	g.settle(ctx, c, resp, false)
+}
+
+func reportedTotal(resp *InferResponse) int {
+	if resp.TokensUsed > 0 {
+		return resp.TokensUsed
 	}
+	return resp.PromptTokens + resp.CompletionTokens
+}
+
+func (g *BudgetGovernor) settle(ctx context.Context, c *budgetCharge, resp *InferResponse, chargeUnreported bool) {
+	if c == nil || resp == nil {
+		return
+	}
+	entry := TokenLedgerEntry{Outcome: TokenLedgerOutcomeCharged, PromptTokens: resp.PromptTokens, CompletionTokens: resp.CompletionTokens}
+	entry.TotalTokens = reportedTotal(resp)
 	entry.UsageReported = entry.TotalTokens > 0
+	if !entry.UsageReported && !chargeUnreported {
+		g.release(c)
+		return
+	}
 	if !entry.UsageReported {
 		entry.TotalTokens, entry.PromptTokens, entry.CompletionTokens = c.reservation, 0, 0
 	}
@@ -114,13 +137,18 @@ func (g *BudgetGovernor) charge(ctx context.Context, c *budgetCharge, resp *Infe
 	}
 	sink := g.warn
 	g.mu.Unlock()
-	g.append(ctx, c, entry, scopes)
 	// Counters stay pinned until the ledger row lands, so an eviction can
-	// never reload a durable total that is missing this charge.
-	g.mu.Lock()
-	g.unpinLocked(c.scopes)
-	g.unpinLocked(scopes)
-	g.mu.Unlock()
+	// never reload a durable total that is missing this charge. The unpin is
+	// deferred so the pins drain whatever the append does.
+	func() {
+		defer func() {
+			g.mu.Lock()
+			g.unpinLocked(c.scopes)
+			g.unpinLocked(scopes)
+			g.mu.Unlock()
+		}()
+		g.append(ctx, c, entry, scopes)
+	}()
 	if sink != nil {
 		for _, w := range warnings {
 			sink(w)
@@ -142,20 +170,33 @@ func (g *BudgetGovernor) append(ctx context.Context, c *budgetCharge, entry Toke
 	if g.ledger == nil {
 		return
 	}
+	entry.TenantID = BudgetTenant(c.correlation.TenantID)
 	entry.OccurredAt = g.now().UTC()
 	entry.ExecutionID, entry.ExecutionKind = c.meter.id, c.meter.kind
 	entry.RunID, entry.TeamID, entry.AgentID = c.correlation.RunID, c.correlation.TeamID, c.correlation.AgentID
 	entry.ProviderID, entry.ModelID, entry.BudgetClass = c.providerID, c.modelID, c.subject.Class
-	if err := g.ledger.Append(context.WithoutCancel(ctx), entry); err != nil {
+	if err := g.appendSafely(ctx, entry); err != nil {
 		// The in-memory counters stay exact but the durable record is now
-		// incomplete: label these periods since restart and let the next
-		// reload (max of durable and in-memory) restore the day label.
+		// incomplete: remember the unpersisted charge, label these periods
+		// since restart, and let the next reload (durable + unpersisted vs
+		// in-memory) restore the day label.
 		log.Printf("WARN: token usage ledger append failed (execution %s): %v", entry.ExecutionID, err)
 		g.mu.Lock()
 		now := g.now()
 		for _, s := range charged {
+			s.counter.unpersisted += entry.TotalTokens
 			s.counter.source, s.counter.loaded, s.counter.lastLoad = protocol.TokenBudgetPeriodSinceRestart, false, now
 		}
 		g.mu.Unlock()
 	}
+}
+
+// appendSafely treats a panicking ledger as a failed append.
+func (g *BudgetGovernor) appendSafely(ctx context.Context, entry TokenLedgerEntry) (err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("token usage ledger: append panicked: %v", p)
+		}
+	}()
+	return g.ledger.Append(context.WithoutCancel(ctx), entry)
 }

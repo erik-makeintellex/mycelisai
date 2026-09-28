@@ -216,10 +216,17 @@ FORMAT (JSON):
 		Strategies string   `json:"strategies"`
 	}
 
+	// ARC (following F22 in archivist.go): a parse failure is a real failure,
+	// not a summary. Never store the raw model text as though it were the
+	// structured sitrep. compressAndStore runs off the NATS subscription
+	// (often via `go`), so there is no caller to return an error to; skip
+	// the write and log honestly instead, consistent with how
+	// GenerateSitRep fails closed on the same condition.
 	cleanText := extractJSON(resp.Text)
 	if err := json.Unmarshal([]byte(cleanText), &sitrep); err != nil {
-		log.Printf("Archivist Daemon: JSON parse failed: %v. Storing raw.", err)
-		sitrep.Summary = resp.Text
+		// Log the size only: the model output is derived from team conversation.
+		log.Printf("Archivist Daemon: failed to parse sitrep JSON for %s: %v (%d bytes of model output discarded, nothing stored)", teamID, err, len(resp.Text))
+		return
 	}
 
 	eventsJSON, _ := json.Marshal(sitrep.KeyEvents)

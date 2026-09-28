@@ -19,7 +19,7 @@ import (
 
 const b1rbMemberID = "7a4f2c9e-3b1d-4e8a-9c6f-2d5b8e1a0f34"
 
-var b1rbMemberQuery = `SELECT EXISTS \(SELECT 1 FROM runtime_team_manifests`
+var b1rbMemberQuery = `SELECT COALESCE\(\(SELECT t.tenant_id FROM runtime_team_manifests`
 
 // b1rbUsageServer charges 1124 tokens to team secret-team, agent x, run r-1.
 func b1rbUsageServer(t *testing.T, opts ...func(*AdminServer)) (*AdminServer, *http.ServeMux) {
@@ -76,7 +76,7 @@ func TestTokenBudgetUsageScope_TeamMembershipIsProvenFromPersistedState(t *testi
 	t.Run("member reads own team", func(t *testing.T) {
 		dbOpt, mock := withDirectDB(t)
 		mock.ExpectQuery(b1rbMemberQuery).WithArgs("secret-team", b1rbMemberID).
-			WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+			WillReturnRows(sqlmock.NewRows([]string{"tenant"}).AddRow("default"))
 		_, mux := b1rbUsageServer(t, dbOpt)
 		rr := doAuthenticatedRequestAs(t, mux, http.MethodGet, "/api/v1/cognitive/budgets/usage?team_id=secret-team", "", user)
 		assertStatus(t, rr, http.StatusOK)
@@ -91,7 +91,7 @@ func TestTokenBudgetUsageScope_TeamMembershipIsProvenFromPersistedState(t *testi
 		for _, team := range []string{"secret-team", "no-such-team"} {
 			dbOpt, mock := withDirectDB(t)
 			mock.ExpectQuery(b1rbMemberQuery).WithArgs(team, b1rbMemberID).
-				WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+				WillReturnRows(sqlmock.NewRows([]string{"tenant"}).AddRow(""))
 			_, mux := b1rbUsageServer(t, dbOpt)
 			rr := doAuthenticatedRequestAs(t, mux, http.MethodGet, "/api/v1/cognitive/budgets/usage?team_id="+team, "", user)
 			b1rbAssertUsageDenied(t, rr.Code, rr.Body.String())
@@ -167,9 +167,9 @@ func TestGetTokenBudgetsScope_ProviderIdentityIsAdminOnly(t *testing.T) {
 // unbound team proves nothing (needs MYCELIS_TOKEN_BUDGET_TEST_DSN).
 func TestTokenBudgetUsageScope_RealDBMembershipQueryFailsClosed(t *testing.T) {
 	db := openTokenBudgetRealDB(t)
-	var member bool
-	if err := db.QueryRow(tokenBudgetTeamMemberSQL, "b1rb-unbound-team", b1rbMemberID).Scan(&member); err != nil || member {
-		t.Fatalf("membership query = %v, %v", member, err)
+	var tenant string
+	if err := db.QueryRow(tokenBudgetTeamTenantSQL, "b1rb-unbound-team", b1rbMemberID).Scan(&tenant); err != nil || tenant != "" {
+		t.Fatalf("membership query = %q, %v", tenant, err)
 	}
 }
 

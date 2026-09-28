@@ -11,10 +11,7 @@ func (r *Router) budgetPreflight(ctx context.Context, req InferRequest, provider
 		return nil, nil
 	}
 	meter := meterFor(ctx, req)
-	correlation := req.Correlation
-	if correlation == (InferenceCorrelation{}) {
-		correlation = meter.correlation
-	}
+	correlation := budgetCorrelation(req, meter)
 	subject := BudgetSubject{AgentID: correlation.AgentID, TeamID: correlation.TeamID, Profile: req.Profile, Class: ResolveBudgetClass(cfg)}
 	charge, clamp, err := r.Budgets.preflight(ctx, meter, correlation, subject, providerID, cfg.ModelID, opts.MaxTokens)
 	if err != nil {
@@ -24,9 +21,23 @@ func (r *Router) budgetPreflight(ctx context.Context, req InferRequest, provider
 	return charge, nil
 }
 
-// budgetCharge records the provider-reported usage of one admitted call.
-func (r *Router) budgetCharge(ctx context.Context, charge *budgetCharge, resp *InferResponse) {
+// budgetCorrelation is the request correlation, or the meter's when the
+// request names no run, team or agent (a tenant alone is not a scope).
+func budgetCorrelation(req InferRequest, meter *ExecutionMeter) InferenceCorrelation {
+	if c := req.Correlation; c.RunID != "" || c.TeamID != "" || c.AgentID != "" {
+		return c
+	}
+	return meter.correlation
+}
+
+// budgetCharge records the usage of one admitted call. With a provider error
+// only provider-reported usage is charged; otherwise the call is released.
+func (r *Router) budgetCharge(ctx context.Context, charge *budgetCharge, resp *InferResponse, err error) {
 	if r == nil || r.Budgets == nil || charge == nil || resp == nil {
+		return
+	}
+	if err != nil {
+		r.Budgets.chargeReported(ctx, charge, resp)
 		return
 	}
 	r.Budgets.charge(ctx, charge, resp)
@@ -52,10 +63,7 @@ func (r *Router) BudgetHeadroom(ctx context.Context, req InferRequest) (int, *To
 	cfg := NormalizeProviderTokenDefaults(r.Config.Providers[resolution.ProviderID])
 	r.mu.RUnlock()
 	meter := meterFor(ctx, req)
-	correlation := req.Correlation
-	if correlation == (InferenceCorrelation{}) {
-		correlation = meter.correlation
-	}
+	correlation := budgetCorrelation(req, meter)
 	subject := BudgetSubject{AgentID: correlation.AgentID, TeamID: correlation.TeamID, Profile: req.Profile, Class: ResolveBudgetClass(cfg)}
 	remaining, stop := r.Budgets.Headroom(ctx, meter, correlation, subject)
 	return remaining, stop, true

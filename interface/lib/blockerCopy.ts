@@ -210,6 +210,27 @@ const CODE_COPY: Record<string, CopyTemplate> = {
         whatHappened: 'Nothing was changed. Try again in a moment.',
         nextAction: { label: 'Try again', intent: 'retry' },
     },
+    // B1: a run, team-day or agent-day token budget was reached (429). The
+    // user copy is the exact D5 wording; the admin variant names the
+    // override path instead of a dead-end "OK".
+    token_budget_exhausted: {
+        title: 'Usage limit reached',
+        whatHappened: 'This work stopped because it reached its token budget.',
+        nextAction: { label: 'OK', intent: 'dismiss' },
+        whoCanHelp: 'An admin can raise the budget.',
+        adminVariant: {
+            title: 'Usage limit reached',
+            whatHappened: 'This work stopped because it reached its token budget.',
+            nextAction: { label: 'Open token budget overrides', href: '/settings?tab=engines', intent: 'open' },
+        },
+    },
+    // B1R-B: a usage read the caller could not prove membership for (403).
+    token_budget_usage_forbidden: {
+        title: "You can't see this team's usage",
+        whatHappened: "You don't have access to this team's token usage.",
+        nextAction: { label: 'OK', intent: 'dismiss' },
+        whoCanHelp: 'Ask an admin, or someone on that team, for its usage.',
+    },
     request_failed: REQUEST_FAILED,
 };
 

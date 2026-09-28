@@ -130,6 +130,9 @@ record("J5 web search is real or honestly blocked", s in (200, 422, 503) and (bo
 # J8: token budget stop is honest (B1 contract "J6"). Soma's turns run as agent `admin`. A 1,024-token
 # override on that agent is spent by one turn; the next turn must stop with token_budget_exhausted
 # and claim no completion. The override is always deleted, and chat must work again afterwards.
+# This proves the day/run caps: the first turn's prompt alone exceeds 1,024 tokens, so the second
+# turn is refused at preflight by per_agent_day (and per_run/per_team_day). The per-execution stop needs a multi-call turn (D4 lets one call's prompt
+# overshoot), so it is proven by the cognitive unit tests, not here.
 OVR = "/api/v1/cognitive/budgets/overrides/agent/admin"
 lim = {"per_execution": 1024, "per_run": 1024, "per_team_day": 1024, "per_agent_day": 1024}
 s0, _, raw0 = call("PUT", OVR, lim)
@@ -144,7 +147,7 @@ else:
         claims_done = "result verified" in blob or (p1.get("execution_state") or "") in ("completed", "verified")
         su, _, rawu = call("GET", "/api/v1/cognitive/budgets/usage?agent_id=admin")
         u = (js(rawu).get("data") or {})
-        record("J8a over-budget turn stops honestly", stopped and not claims_done, f"http={s1} stopped={stopped} claims_done={claims_done} body={blob[:120]!r}")
+        record("J8a over-budget turn stops honestly (day cap)", stopped and not claims_done, f"http={s1} stopped={stopped} claims_done={claims_done} body={blob[:120]!r}")
         record("J8b usage shows the cap reached", su == 200 and u.get("limit") == 1024 and (u.get("used") or 0) >= 1024, f"http={su} used={u.get('used')} limit={u.get('limit')} period={u.get('period')}")
     finally:
         s2, _, _ = call("DELETE", OVR)

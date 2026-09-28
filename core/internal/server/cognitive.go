@@ -277,14 +277,14 @@ func normalizeChatRequestMessages(messages []chatRequestMessage, extraMutationTo
 		}
 		normalized[idx].Content = directAnswerRoutePrefix + "\n" +
 			"Answer the latest request directly in readable text. " + toolInstruction + "\n\n" +
-			"Match the user's requested answer depth (" + string(depth) + "). Use the lightest useful response, and offer expansion instead of turning the answer into a proposal.\n\n" +
-			"Original request:\n" + trimmed
+			"Match the user's requested answer depth (" + string(depth) + "). Use the lightest useful response, and offer expansion instead of turning the answer into a proposal.\n" +
+			protocol.ChatOriginalRequestMarker + "\n" + trimmed
 		return normalized, nil
 	}
 
 	normalized[idx].Content = governedMutationRoutePrefix + "\n" +
-		"Treat this latest request as governed proposal-only work and emit tool_call JSON if a mutation is needed.\n\n" +
-		"Original request:\n" + trimmed
+		"Treat this latest request as governed proposal-only work and emit tool_call JSON if a mutation is needed.\n" +
+		protocol.ChatOriginalRequestMarker + "\n" + trimmed
 
 	return normalized, mutTools
 }
@@ -298,7 +298,7 @@ func applyDirectAnswerRetryInstruction(messages []chatRequestMessage, latestRequ
 	normalized := make([]chatRequestMessage, len(messages))
 	copy(normalized, messages)
 	normalized[idx].Content = directAnswerRetryRoutePrefix + "\n" +
-		"Answer the latest request directly in readable text. Do not call tools. Do not emit tool_call JSON. If more context is needed, ask one concise clarifying question.\n\n" +
-		"Original request:\n" + strings.TrimSpace(latestRequest)
+		"Answer the latest request directly in readable text. Do not call tools. Do not emit tool_call JSON. If more context is needed, ask one concise clarifying question.\n" +
+		protocol.ChatOriginalRequestMarker + "\n" + strings.TrimSpace(latestRequest)
 	return normalized
 }

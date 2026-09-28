@@ -9,9 +9,8 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-const budgetLedgerTenant = "default"
-
-// PostgresBudgetLedger is the append-only token_usage_ledger store.
+// PostgresBudgetLedger is the append-only token_usage_ledger store. Reads and
+// appends are keyed by tenant_id (blank means "default").
 type PostgresBudgetLedger struct {
 	db *sql.DB
 }
@@ -20,7 +19,7 @@ func NewPostgresBudgetLedger(db *sql.DB) *PostgresBudgetLedger {
 	return &PostgresBudgetLedger{db: db}
 }
 
-func (l *PostgresBudgetLedger) PeriodTotal(ctx context.Context, scope, ref string, since time.Time) (int, bool, error) {
+func (l *PostgresBudgetLedger) PeriodTotal(ctx context.Context, tenant, scope, ref string, since time.Time) (int, bool, error) {
 	if l == nil || l.db == nil {
 		return 0, false, fmt.Errorf("token usage ledger: database unavailable")
 	}
@@ -42,7 +41,7 @@ func (l *PostgresBudgetLedger) PeriodTotal(ctx context.Context, scope, ref strin
 		FROM token_usage_ledger
 		WHERE tenant_id = $1 AND `+column+` = $2 AND occurred_at >= $3
 		  AND outcome = 'charged' AND execution_kind <> 'system'`,
-		budgetLedgerTenant, ref, since.UTC()).Scan(&total, &unreported)
+		BudgetTenant(tenant), ref, since.UTC()).Scan(&total, &unreported)
 	if err != nil {
 		return 0, false, fmt.Errorf("token usage ledger: period total: %w", err)
 	}
@@ -59,7 +58,7 @@ func (l *PostgresBudgetLedger) Append(ctx context.Context, e TokenLedgerEntry) e
 			 provider_id, model_id, budget_class, prompt_tokens, completion_tokens, total_tokens,
 			 usage_reported, outcome)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-		budgetLedgerTenant, e.OccurredAt, e.ExecutionID, e.ExecutionKind, e.RunID, e.TeamID, e.AgentID,
+		BudgetTenant(e.TenantID), e.OccurredAt, e.ExecutionID, e.ExecutionKind, e.RunID, e.TeamID, e.AgentID,
 		e.ProviderID, e.ModelID, e.BudgetClass, e.PromptTokens, e.CompletionTokens, e.TotalTokens,
 		e.UsageReported, e.Outcome)
 	if err != nil {
