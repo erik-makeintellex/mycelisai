@@ -11,6 +11,28 @@ Priority: correctness → safety / authority → accepted architecture → tests
 - Change only the requested scope. No opportunistic refactoring, unrelated formatting, broad renames, unnecessary dependencies, or new services when an existing seam works.
 - Inspect implementation first. Prefer small functions, stable contracts, explicit state, deterministic behavior, and fail-closed authority/security. Avoid duplicate registries, queues, approval systems, memory authority, hidden fallback, and magic provider behavior.
 
+## Area AGENTS.md Index
+
+Feature folders carry their own `AGENTS.md` with owned paths, the roster role that writes there, contracts/invariants, exact targeted gates, and gotchas for that area. Root rules always win on conflict; an area file only adds area-specific detail. Any writer or reviewer must read the area `AGENTS.md` of every folder it touches, in addition to this file, before editing.
+
+| Area | File | Covers |
+| --- | --- | --- |
+| Core (Go) | [`core/AGENTS.md`](core/AGENTS.md) | Backend runtime, orchestration, identity, execution; splits by roster role |
+| Core HTTP/auth | [`core/internal/server/AGENTS.md`](core/internal/server/AGENTS.md) | Routes, blocker envelope, auth gate patterns |
+| Core cognitive | [`core/internal/cognitive/AGENTS.md`](core/internal/cognitive/AGENTS.md) | Provider routing, the token-budget choke point |
+| Core swarm | [`core/internal/swarm/AGENTS.md`](core/internal/swarm/AGENTS.md) | Agent dispatch, tool scope, NATS subjects |
+| Core migrations | [`core/migrations/AGENTS.md`](core/migrations/AGENTS.md) | Single-writer schema baseline, isolated first boot |
+| Framework Runs service | [`services/framework-runs/AGENTS.md`](services/framework-runs/AGENTS.md) | Separate Go module, own gate, B2 Compose-only posture |
+| Interface (TS) | [`interface/AGENTS.md`](interface/AGENTS.md) | UI, BFF routes, Vitest; the U1 lane boundary |
+| Interface E2E | [`interface/e2e/AGENTS.md`](interface/e2e/AGENTS.md) | Playwright lease, `.env` sign-in, fixture purge |
+| Ops/platform | [`ops/AGENTS.md`](ops/AGENTS.md) | Task runner, Compose, CI (task names are a moving target while "Task runner tightening" is active) |
+| Docs | [`docs/AGENTS.md`](docs/AGENTS.md) | Docs ownership, link/layout gates |
+| Charts (Helm) | [`charts/AGENTS.md`](charts/AGENTS.md) | Helm packaging, cross-linked with deploy |
+| Deploy (Compose) | [`deploy/AGENTS.md`](deploy/AGENTS.md) | Compose overlays, cross-linked with charts |
+| Tests | [`tests/AGENTS.md`](tests/AGENTS.md) | Python test/docs-contract ownership by area |
+| Proto | [`proto/AGENTS.md`](proto/AGENTS.md) | Protobuf sources and generated consumers |
+| SDK | [`sdk/AGENTS.md`](sdk/AGENTS.md) | Python relay client |
+
 ## Authority And Effects
 
 - Preserve Human/Soma → BFF → Core → authority → execution. The browser does not orchestrate internal services. Core owns authorization; the BFF is a transport/session boundary, not a second authority.
