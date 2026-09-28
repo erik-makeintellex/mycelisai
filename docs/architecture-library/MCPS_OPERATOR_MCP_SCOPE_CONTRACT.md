@@ -124,3 +124,9 @@ Gates: targeted `go test -race -count=1 ./internal/server/ ./internal/mcp/`, `go
 - Q1. Should standard users keep workspace create/write through Resources → Workspace? **No. They read directly and write through a Soma proposal. Only approvers write directly.**
 - Q2. Should the direct read allowlist cover more than filesystem reads (for example fetch, or github read tools)? **No, filesystem reads only in MCPS. Widen later by adding code entries with tests.**
 - Q3. Should MCPA (role gates on MCP install/apply/delete/toolsets) be queued right after MCPS? **Yes, as the next Opus slice. It is the same class of gap.**
+
+## Follow-ups closed (MCPL)
+- **Core-side path confinement:** filesystem path arguments resolve against the `MYCELIS_WORKSPACE` root (lexically, then with symlinks evaluated on the existing prefix) after authorization and before the `mcp_tool_called` audit; anything outside is `403` `mcp_path_outside_workspace`, nothing runs, and high calls get a keys-only refusal audit. The upstream server's own confinement is now a second layer, not the only one.
+- **Stale tool cache:** a pool failure after authorization records `mcp_tool_call_failed` (linked by `audit_event_id`) and a `status=failed` Exchange item instead of a bare `502`. The tool list is not refreshed automatically.
+- **One scope normalizer:** `mcp.NormalizeToolSetScope` is exported and the toolset audit uses it.
+- **`/api/v1/user/me`** now reports `scopes` and `is_approver` as interface hints; Core stays the authority.
