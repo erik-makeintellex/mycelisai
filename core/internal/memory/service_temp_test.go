@@ -89,4 +89,3 @@ func TestPutTempMemory_Validation(t *testing.T) {
 		t.Fatal("expected error when db is nil")
 	}
 }
-

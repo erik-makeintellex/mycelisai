@@ -137,4 +137,3 @@ func TestExecutorAdapter_CallTool_Error(t *testing.T) {
 		t.Fatal("expected error for unknown server")
 	}
 }
-
