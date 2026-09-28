@@ -43,7 +43,7 @@ func TestArchivist_GenerateSitRep(t *testing.T) {
 	}
 
 	// Inject Mock Adapter
-	mockLLM := &cognitive.MockAdapter{
+	mockLLM := &pheMockLLMAdapter{
 		FixedResponse: `{"summary": "Test Summary", "key_events": ["Event A"], "strategies": "None"}`,
 	}
 	cog.Adapters["mock-llm"] = mockLLM

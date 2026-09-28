@@ -92,14 +92,15 @@ FORMAT (JSON):
 		Strategies string   `json:"strategies"`
 	}
 
-	// Try to unmarshal JSON from text (it might be wrapped in Markdown ```json ... ```)
-	// Simple cleanup: find { and }
-	cleanText := resp.Text // TODO: robust JSON extractor
+	// Extract JSON that may be wrapped in a Markdown ```json ... ``` fence before
+	// unmarshaling.
+	cleanText := extractJSON(resp.Text)
 
+	// F22: a parse failure is a real failure, not a summary. Never store the raw
+	// model text as though it were the structured sitrep summary.
 	if err := json.Unmarshal([]byte(cleanText), &sitrep); err != nil {
 		log.Printf("Archivist: Failed to parse SitRep JSON: %v. Raw: %s", err, resp.Text)
-		// Fallback: Store raw text as summary
-		sitrep.Summary = resp.Text
+		return fmt.Errorf("failed to parse sitrep JSON: %w", err)
 	}
 
 	// 5. Save to DB

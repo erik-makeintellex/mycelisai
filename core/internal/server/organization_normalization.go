@@ -24,10 +24,9 @@ func normalizeOrganizationHome(home OrganizationHomePayload) OrganizationHomePay
 	home.DefaultOutputModelSummary = outputModelLabel(home.DefaultOutputModelID)
 	home.OutputModelBindings = normalizedOrganizationOutputModelBindings(home.OutputModelBindings, home.DefaultOutputModelID)
 
-	if len(home.Departments) == 0 && home.DepartmentCount > 0 {
-		home.Departments = generateFallbackDepartments(home.DepartmentCount, home.SpecialistCount)
-	}
-
+	// F18: when only a count is known and no real department records exist, do
+	// not invent department names/IDs from the count. Leave the list empty and
+	// let callers read DepartmentCount for the honest total.
 	if len(home.Departments) > 0 {
 		home.DepartmentCount = len(home.Departments)
 		totalSpecialists := 0
@@ -173,27 +172,6 @@ func normalizeAgentTypeProfiles(
 	}
 
 	return normalized
-}
-
-func generateFallbackDepartments(departmentCount, specialistCount int) []OrganizationDepartmentSummary {
-	if departmentCount <= 0 {
-		return nil
-	}
-
-	departments := make([]OrganizationDepartmentSummary, 0, departmentCount)
-	names := []string{"Core Delivery Department", "Planning Department", "Operations Department", "Support Department"}
-	for index := 0; index < departmentCount; index++ {
-		name := names[min(index, len(names)-1)]
-		if index >= len(names) {
-			name = fmt.Sprintf("Department %d", index+1)
-		}
-		departments = append(departments, OrganizationDepartmentSummary{
-			ID:              slugifyDepartmentID(name, index),
-			Name:            name,
-			SpecialistCount: spreadSpecialists(specialistCount, departmentCount, index),
-		})
-	}
-	return departments
 }
 
 func slugifyDepartmentID(name string, fallbackIndex int) string {

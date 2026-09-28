@@ -61,20 +61,34 @@ func (a *Axon) handleTeamEvent(msg *nats.Msg) {
 }
 
 // ProcessSignal analyzes a raw signal from Soma and dispatches it to the appropriate Team(s).
-func (a *Axon) ProcessSignal(msg *nats.Msg) {
+// There is no ask-routing/intent classifier yet to pick the "best team" for a signal. This
+// legacy lane (POST /api/swarm/command -> TopicGlobalInputUser) targets a runtime team with
+// the literal ID "genesis"; the shipped Genesis team is "genesis-core"
+// (core/config/teams/genesis.yaml), so in a default deployment this lane reaches no team.
+// ProcessSignal never silently publishes to a team topic with no team behind it: when
+// "genesis" is not running it returns an honest error. Deleting this lane or routing it to
+// a real team is a tracked follow-up (PH-E).
+func (a *Axon) ProcessSignal(msg *nats.Msg) error {
 	// 1. Optimize Signal (e.g., compress, format, enrich)
 	// For now, pass through.
 
-	// 2. Determine Route based on Intent
-	// This would use the Cognitive Registry to find the "Best Team" for the job.
-	// Hardcoded for V6.2 MVP:
-	targetTopic := fmt.Sprintf(protocol.TopicTeamInternalCommand, "genesis") // Default to Genesis Team
-
 	if string(msg.Data) == "system_status" {
-		targetTopic = fmt.Sprintf(protocol.TopicTeamSignalStatus, "telemetry") // Expression Team
+		targetTopic := fmt.Sprintf(protocol.TopicTeamSignalStatus, "telemetry") // Expression Team
+		log.Printf("⚡ Axon Routing Signal to [%s]", targetTopic)
+		return a.nc.Publish(targetTopic, msg.Data)
 	}
+
+	// 2. Determine Route based on Intent.
+	// This would use the Cognitive Registry to find the "Best Team" for the job.
+	// No such mechanism exists yet; this legacy lane only ever targeted the literal
+	// "genesis" team ID, and now only when such a team is actually running.
+	const defaultTeamID = "genesis"
+	if !a.soma.HasTeam(defaultTeamID) {
+		return fmt.Errorf("axon: no team resolved for signal (team %q is not running)", defaultTeamID)
+	}
+	targetTopic := fmt.Sprintf(protocol.TopicTeamInternalCommand, defaultTeamID)
 
 	// 3. Dispatch
 	log.Printf("⚡ Axon Routing Signal to [%s]", targetTopic)
-	a.nc.Publish(targetTopic, msg.Data)
+	return a.nc.Publish(targetTopic, msg.Data)
 }
