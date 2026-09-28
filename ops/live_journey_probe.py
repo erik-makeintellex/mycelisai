@@ -167,6 +167,32 @@ b9 = raw9.decode("utf-8", "replace")
 record("J9 MCP install refuses undeclared env", s9 == 400 and "mcp_env_rejected" in b9 and "probe-j9-never" not in b9 and fetch_row() == before,
        f"http={s9} body={b9[:140]!r} fetch_unchanged={fetch_row() == before}")
 
+# J10: Core confines filesystem MCP paths (MCPL/MCPL2). The curated `filesystem` server is recognized by its
+# package (not its name): an in-workspace listing works, while an escape and an upper-case `Path` key are
+# refused before any tool call. Compose disables default MCP auto-install, so J10 installs the curated
+# server through the admin library route when it is absent and deletes it again afterwards (audited).
+def fs_server_id():
+    s, _, raw = call("GET", "/api/v1/mcp/servers")
+    d = js(raw); rows = d if isinstance(d, list) else (d.get("servers") or d.get("data") or [])
+    return next((r.get("id") for r in rows if isinstance(r, dict) and r.get("name") == "filesystem" and r.get("status") == "connected"), None)
+fsid, installed_by_probe, si = fs_server_id(), False, None
+if not fsid:
+    si, _, rawi = call("POST", "/api/v1/mcp/library/install", {"name": "filesystem"}, timeout=300)
+    fsid, installed_by_probe = fs_server_id(), si == 200
+if not fsid:
+    record("J10 filesystem MCP paths confined in Core", False, f"no connected `filesystem` server; probe install http={si}")
+else:
+    base = f"/api/v1/mcp/servers/{fsid}/tools"
+    sa, _, _ = call("POST", f"{base}/list_directory/call", {"arguments": {"path": "."}})
+    sb, _, rb = call("POST", f"{base}/read_text_file/call", {"arguments": {"path": "../../etc/passwd"}})
+    sc, _, rc = call("POST", f"{base}/read_text_file/call", {"arguments": {"Path": "/etc/passwd"}})
+    ok_b = sb == 403 and b"mcp_path_outside_workspace" in rb and b"root:" not in rb
+    ok_c = sc in (400, 403) and b"root:" not in rc
+    record("J10 filesystem MCP paths confined in Core", sa == 200 and ok_b and ok_c,
+           f"list .={sa} escape={sb} ({rb[:60]!r}) upper-case Path={sc} installed_by_probe={installed_by_probe}")
+    if installed_by_probe:
+        call("DELETE", f"/api/v1/mcp/servers/{fsid}")
+
 w = max(len(r[0]) for r in results)
 for n, st, det in results: print(f"{st:4}  {n:<{w}}  {det}")
 print(f"\n{sum(r[1]=='PASS' for r in results)}/{len(results)} passed")
