@@ -80,6 +80,11 @@ CREATE INDEX IF NOT EXISTS idx_token_ledger_run ON token_usage_ledger(tenant_id,
 - Validation: integers in [1,024, 5,000,000]. There is no "unlimited" value, and `per_execution ≤ per_run ≤ per_team_day` is enforced after merging.
 - Storage: each change writes a new operator-scope `TokenBudgetPolicy` revision (source `api`) and activates it in one transaction, like the S6 override pattern. Audit is the activation history plus a governed mission event `token_budget_changed` {actor, level, ref, before, after}.
 - Budgets never change A2b tiers: cost > 5.0 still needs an approver, and a budget stop is not an approval request.
+- Review fixes (B1R-B):
+  - The raw `POST /api/v1/cognitive/infer` route is removed. It had no product caller, it took Correlation from the body, and it ran as uncapped `system` inference.
+  - Usage reads: a root admin with `cognitive:read` or `cognitive:write` can read any ref. Anyone else can read a team only if the team ownership binding plus an active group membership proves they belong to it; otherwise they get `403 token_budget_usage_forbidden`.
+  - Agent and run usage have no ownership record, so only admins can read them. This is a W2 dependency.
+  - `GET /budgets` shows provider and model IDs only to admins with those scopes.
 
 **D9. D2 mapping.** Remove `writeFileDraftMaxPerTurn`. The drafting pass runs under a `draft` meter charged to agent `admin`, and Correlation is now set.
 - Preflight: if n × provider `MaxOutputTokens` exceeds remaining, return the `token_budget_exhausted` blocker with copy "can draft K of N" and propose nothing.
