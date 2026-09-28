@@ -1,1 +1,3 @@
 Correction (lead, 2026-09-28): this commit body says the lead 'ran the changed e2e spec during the merge'. That did not happen. Playwright could not run because `uv run inv interface.e2e` does not forward MYCELIS_LOCAL_ADMIN_PASSWORD to Playwright global-setup (a harness defect, fixed by slice E2EENV). The merge commit 98d10f0e records the true gates: typecheck, 1107 Vitest, docs, max-lines and diff-check; no e2e.
+
+Update (lead, 2026-09-28): E2EENV fixed the env propagation, but live e2e also needs a plaintext admin password, and the owner's .env stores only the SHA256. See the E2EENV merge follow-ups.
