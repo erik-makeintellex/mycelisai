@@ -31,6 +31,9 @@ def _load_env():
     """
     compose_path = resolve_env_file(".env.compose", checkout_root=ROOT_DIR)
     env_path = resolve_env_file(".env", checkout_root=ROOT_DIR)
+    # A non-empty .env value wins, but an empty one (e.g. MYCELIS_LOCAL_ADMIN_PASSWORD=
+    # when only the SHA256 is configured) must never blank a value set in the shell.
+    preset = {key: value for key, value in os.environ.items() if value}
     try:
         from dotenv import load_dotenv
         if compose_path:
@@ -42,6 +45,9 @@ def _load_env():
             load_env_file(compose_path)
         if env_path:
             load_env_file(env_path)
+    for key, value in preset.items():
+        if not os.environ.get(key):
+            os.environ[key] = value
     # Root .env owns the Go Core HTTP port; Next.js must use INTERFACE_PORT.
     os.environ.pop("PORT", None)
 def _task_env(extra=None):
