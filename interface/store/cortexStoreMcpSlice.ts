@@ -11,6 +11,7 @@ import type {
     MCPTool,
     MCPToolSet,
     MCPToolSetCreate,
+    MCPWriteResult,
     SearchCapabilityStatus,
 } from '@/store/cortexStoreTypes';
 
@@ -25,17 +26,23 @@ const ownedMCPGovernanceContext = {
     config_scope: 'user_group',
 } as const;
 
-function inspectionMessage(decision?: string, reasons?: string[], fallback?: string): string {
-    if (Array.isArray(reasons) && reasons.length > 0) {
-        return reasons.join(' ');
+// MCPA D10: every write route answers a non-2xx as the blocker envelope
+// `{ok:false, error, data:{code, ...}}` (respondBlocker/blocker_copy.go).
+// This is the one place that reads `data.code` so callers never hand-parse
+// or display raw backend text; an envelope with no code (a plain
+// respondError 400/404/500) falls back to the generic `request_failed`
+// copy, which is still honest -- never a success toast on failure.
+async function readMCPBlocker(res: Response): Promise<{ code: string; httpStatus: number }> {
+    let code = 'request_failed';
+    try {
+        const payload = await res.json();
+        if (typeof payload?.data?.code === 'string') {
+            code = payload.data.code;
+        }
+    } catch {
+        // no JSON body: keep the generic fallback code
     }
-    if (typeof fallback === 'string' && fallback.trim().length > 0) {
-        return fallback;
-    }
-    if (decision === 'require_approval') {
-        return 'This MCP entry still needs an explicit approval boundary before it can be installed.';
-    }
-    return 'MCP configuration could not be completed.';
+    return { code, httpStatus: res.status };
 }
 
 export function createCortexMcpSlice(
@@ -87,16 +94,25 @@ export function createCortexMcpSlice(
             }
         },
 
-        deleteMCPServer: async (id: string) => {
+        // MCPA D9/D10: admin-only, fail-closed. A non-2xx (403 admin_required,
+        // 404 mcp_server_not_found, 503 service_unavailable, ...) never
+        // touches local state, so a rejected delete cannot be mistaken for a
+        // removed server.
+        deleteMCPServer: async (id: string): Promise<MCPWriteResult> => {
             try {
                 const res = await fetch(`/api/v1/mcp/servers/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    set((s) => ({
-                        mcpServers: s.mcpServers.filter((server) => server.id !== id),
-                    }));
+                if (!res.ok) {
+                    const blocker = await readMCPBlocker(res);
+                    console.error('[MCP] Delete failed:', blocker.code, res.status);
+                    return { ok: false, code: blocker.code, httpStatus: blocker.httpStatus };
                 }
+                set((s) => ({
+                    mcpServers: s.mcpServers.filter((server) => server.id !== id),
+                }));
+                return { ok: true };
             } catch (err) {
                 console.error('[MCP] Delete failed:', err);
+                return { ok: false, code: 'request_failed', httpStatus: 0 };
             }
         },
 
@@ -142,24 +158,28 @@ export function createCortexMcpSlice(
             }
         },
 
-        createMCPToolSet: async (input: MCPToolSetCreate) => {
+        // MCPA D10: admin-only, fail-closed. A non-2xx surfaces the blocker
+        // envelope's code instead of raw backend text; `mcpToolSetsError`
+        // stays a short, non-raw summary for the list-level banner.
+        createMCPToolSet: async (input: MCPToolSetCreate): Promise<MCPWriteResult> => {
             try {
                 const res = await fetch('/api/v1/mcp/toolsets', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(input),
                 });
-                if (res.ok) {
-                    await get().fetchMCPToolSets();
-                    return true;
+                if (!res.ok) {
+                    const blocker = await readMCPBlocker(res);
+                    set({ mcpToolSetsError: `MCP access layer was rejected (HTTP ${res.status})` });
+                    return { ok: false, code: blocker.code, httpStatus: blocker.httpStatus };
                 }
-                const message = await res.text();
-                set({ mcpToolSetsError: message || `MCP access layer was rejected (HTTP ${res.status})` });
+                await get().fetchMCPToolSets();
+                return { ok: true };
             } catch (err) {
                 const message = err instanceof Error ? err.message : 'network error';
                 set({ mcpToolSetsError: `MCP access layer could not be saved (${message})` });
+                return { ok: false, code: 'request_failed', httpStatus: 0 };
             }
-            return false;
         },
 
         fetchMCPLibrary: async () => {
@@ -238,6 +258,12 @@ export function createCortexMcpSlice(
             }
         },
 
+        // MCPA D5/D10: `require_approval` is a real tier-2 path now, not a
+        // dead end -- install always goes through for an approver
+        // (self-approved tier 2), so the client never blocks on the
+        // inspect decision itself. The server is the only place that
+        // enforces `approvals:decide` (403 admin_required otherwise). No
+        // path here expects a 202: install/apply answer 200 or a blocker.
         installFromLibrary: async (name: string, env?: Record<string, string>): Promise<MCPInstallResult> => {
             try {
                 const inspectRes = await fetch('/api/v1/mcp/library/inspect', {
@@ -246,41 +272,34 @@ export function createCortexMcpSlice(
                     body: JSON.stringify({ name, env, governance_context: ownedMCPGovernanceContext }),
                 });
                 if (!inspectRes.ok) {
-                    const message = await inspectRes.text();
-                    console.error('[MCP Library] Inspect failed:', message);
-                    return { ok: false, message: inspectionMessage(undefined, undefined, message) };
+                    const blocker = await readMCPBlocker(inspectRes);
+                    console.error('[MCP Library] Inspect failed:', blocker.code, inspectRes.status);
+                    return { ok: false, code: blocker.code, httpStatus: blocker.httpStatus };
                 }
-
                 const inspection = await inspectRes.json() as MCPLibraryInspectionResponse;
-                if (inspection.decision !== 'allow') {
-                    return {
-                        ok: false,
-                        message: inspectionMessage(inspection.decision, inspection.reasons),
-                        governance: inspection.governance,
-                    };
-                }
 
                 const res = await fetch('/api/v1/mcp/library/install', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, env, governance_context: ownedMCPGovernanceContext }),
                 });
-                if (res.ok) {
-                    await get().fetchMCPServers();
-                    await get().fetchMCPActivity();
-                    return {
-                        ok: true,
-                        message: 'Installed into your current MCP group without an extra approval step.',
-                        governance: inspection.governance,
-                    };
-                } else {
-                    const message = await res.text();
-                    console.error('[MCP Library] Install failed:', message);
-                    return { ok: false, message: inspectionMessage(undefined, undefined, message), governance: inspection.governance };
+                if (!res.ok) {
+                    const blocker = await readMCPBlocker(res);
+                    console.error('[MCP Library] Install failed:', blocker.code, res.status);
+                    return { ok: false, code: blocker.code, httpStatus: blocker.httpStatus, governance: inspection.governance };
                 }
+                await get().fetchMCPServers();
+                await get().fetchMCPActivity();
+                // Servers are global (no owner/group column), never scoped
+                // to "your current MCP group".
+                return {
+                    ok: true,
+                    message: 'Installed. It is available across the workspace.',
+                    governance: inspection.governance,
+                };
             } catch (err) {
                 console.error('[MCP Library] Install failed:', err);
-                return { ok: false, message: 'MCP configuration failed before install could complete.' };
+                return { ok: false, code: 'request_failed', httpStatus: 0 };
             }
         },
     };

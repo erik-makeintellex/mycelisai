@@ -30,7 +30,7 @@ const toolSets: MCPToolSet[] = [
 
 function renderPanel(overrides: Partial<ComponentProps<typeof MCPToolSetLayersPanel>> = {}) {
     const onRefresh = vi.fn();
-    const onCreate = vi.fn().mockResolvedValue(true);
+    const onCreate = vi.fn().mockResolvedValue({ ok: true });
     render(
         <MCPToolSetLayersPanel
             toolSets={toolSets}
@@ -38,6 +38,7 @@ function renderPanel(overrides: Partial<ComponentProps<typeof MCPToolSetLayersPa
             error={null}
             onRefresh={onRefresh}
             onCreate={onCreate}
+            isAdmin
             {...overrides}
         />,
     );
@@ -109,5 +110,30 @@ describe("MCPToolSetLayersPanel", () => {
             scope_kind: "group",
             scope_ref: "market-research",
         });
+    });
+
+    // MCPA D10: new-layer is an admin-only control. isAdmin is a UI hint
+    // only (Core still enforces mcp_config:write).
+    it("hides the add-permission-group form for a non-admin viewer", () => {
+        renderPanel({ isAdmin: false });
+
+        expect(screen.queryByRole("button", { name: "Save permissions" })).toBeNull();
+        expect(screen.getByText(/Only an admin can add or change permission groups/i)).toBeDefined();
+        // Reads stay visible for everyone (D3).
+        expect(screen.getByText("workspace")).toBeDefined();
+    });
+
+    // MCPA D10: honest failure -- a rejected save renders blocker copy
+    // instead of the generic "could not be saved" text.
+    it("renders blocker copy on a rejected save", async () => {
+        const onCreate = vi.fn().mockResolvedValue({ ok: false, code: "admin_required", httpStatus: 403 });
+        renderPanel({ onCreate });
+
+        fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: "lane-tools" } });
+        fireEvent.change(screen.getByLabelText(/Capability refs/i), { target: { value: "mcp:filesystem/*" } });
+        fireEvent.click(screen.getByRole("button", { name: "Save permissions" }));
+
+        expect(await screen.findByRole("alert")).toBeDefined();
+        expect(screen.queryByText(/"code":"admin_required"/)).toBeNull();
     });
 });

@@ -121,6 +121,21 @@ export interface MCPInstallResult {
     ok: boolean;
     message?: string;
     governance?: MCPGovernanceDecision;
+    // MCPA D10: the blocker envelope's `code`/HTTP status for a non-2xx
+    // install/apply, so callers render `blockerCopy` instead of raw text.
+    code?: string;
+    httpStatus?: number;
+}
+
+// MCPA D10: the shared honest-failure shape for delete and toolset writes.
+// `code` mirrors the backend blocker envelope's `data.code`
+// (admin_required, mcp_server_not_found, service_unavailable, ...); it is
+// absent only when the backend answered without a code (rare, falls back to
+// `request_failed` in the caller).
+export interface MCPWriteResult {
+    ok: boolean;
+    code?: string;
+    httpStatus?: number;
 }
 
 export interface CapabilityManifest {

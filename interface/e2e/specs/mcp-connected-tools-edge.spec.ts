@@ -35,6 +35,10 @@ async function mockDisabledConnectedTools(page: Page) {
     await page.route("**/api/v1/user/me", async (route) => {
         await fulfillJSON(route, 200, { ok: true, data: { id: "operator-1", name: "Operator" } });
     });
+    // MCPA D10: install/delete/new-layer controls are admin-only.
+    await page.route("**/auth/session", async (route) => {
+        await fulfillJSON(route, 200, { ok: true, data: { user: { role: "admin" } } });
+    });
     await page.route("**/api/v1/services/status", async (route) => {
         await fulfillJSON(route, 200, { ok: true, data: [{ name: "core", status: "ready" }] });
     });

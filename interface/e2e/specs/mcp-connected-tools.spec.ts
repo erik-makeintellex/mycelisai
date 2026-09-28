@@ -147,14 +147,10 @@ async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOpt
             },
         });
     });
+    // MCPA D10: install is admin-only; this spec asserts success as admin.
+    await page.route("**/auth/session", async (route) => fulfillJSON(route, 200, { ok: true, data: { user: { role: "admin" } } }));
     await page.route("**/api/v1/services/status", async (route) => {
-        await fulfillJSON(route, 200, {
-            ok: true,
-            data: [
-                { name: "core", status: "ready" },
-                { name: "frontend", status: "ready" },
-            ],
-        });
+        await fulfillJSON(route, 200, { ok: true, data: [{ name: "core", status: "ready" }, { name: "frontend", status: "ready" }] });
     });
 
     await page.route("**/api/v1/mcp/servers", async (route) => {
@@ -204,10 +200,9 @@ async function mockConnectedToolsApis(page: Page, options: MockConnectedToolsOpt
         }
         await fulfillJSON(route, 200, {
             ok: true,
-            data: {
-                ok: true,
-                message: "Installed into your current MCP group without an extra approval step.",
-            },
+            status: "installed",
+            self_approved: true,
+            audit_event_id: "audit-fetch-install",
         });
     });
 }

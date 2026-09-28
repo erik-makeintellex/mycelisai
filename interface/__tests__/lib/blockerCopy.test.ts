@@ -24,6 +24,8 @@ const DECK_CODES = [
     'mcp_tool_not_found',
     'mcp_call_forbidden',
     'mcp_env_rejected',
+    'mcp_server_not_found',
+    'mcp_connect_failed',
 ];
 
 describe('blockerCopy', () => {
@@ -141,6 +143,26 @@ describe('blockerCopy', () => {
         expect(copy.whatHappened).toMatch(/can't be set up with those settings/i);
         const admin = resolveBlockerCopy(copy, true);
         expect(admin.whatHappened).toMatch(/environment variables/i);
+    });
+
+    // MCPA D10: delete resolves the server before auditing (D9); an
+    // unknown id is 404 mcp_server_not_found with no admin-only detail.
+    it('maps mcp_server_not_found to a plain-language copy with a retry', () => {
+        const copy = blockerCopy({ code: 'mcp_server_not_found', httpStatus: 404, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/removed/i);
+        expect(copy.nextAction.intent).toBe('retry');
+    });
+
+    // MCPA: install/apply's Connect failed after the server row was
+    // created; the code mirrors codeMCPConnectFailed and is never reported
+    // as a success.
+    it('maps mcp_connect_failed to a plain-language copy with an admin detail path', () => {
+        const copy = blockerCopy({ code: 'mcp_connect_failed', httpStatus: 502, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/could not connect/i);
+        expect(copy.whoCanHelp).toMatch(/admin/i);
+        const admin = resolveBlockerCopy(copy, true);
+        expect(admin.whatHappened).toMatch(/Connect failed after install/i);
+        expect(admin.nextAction.href).toBe('/resources?tab=tools');
     });
 
     it.each(['provider_timeout', 'empty_provider_output'])(

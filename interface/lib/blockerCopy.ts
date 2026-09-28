@@ -3,6 +3,7 @@
 // truth for blocker vocabulary: no caller should hand-build this copy.
 // See scratchpad/ux/complex-actions-copy-deck.md (vocabulary table, section 2)
 // and scratchpad/ux/U1-spec.md (section 0, the contract U1 consumes).
+import { MCP_CODE_COPY } from './blockerCopyMcp';
 
 export interface BlockerInput {
     code: string;
@@ -26,7 +27,9 @@ export interface BlockerCopy {
     code: string;
 }
 
-type CopyTemplate = Omit<BlockerCopy, 'code' | 'adminVariant'> & { adminVariant?: Omit<BlockerCopy, 'adminVariant' | 'code'> };
+// Exported so blockerCopyMcp.ts (MCPA D10) can add codes without pushing
+// this file, which sits at its 385-line cap, any higher.
+export type CopyTemplate = Omit<BlockerCopy, 'code' | 'adminVariant'> & { adminVariant?: Omit<BlockerCopy, 'adminVariant' | 'code'> };
 
 const REQUEST_FAILED: CopyTemplate = {
     title: 'Something went wrong',
@@ -300,6 +303,7 @@ const CODE_COPY: Record<string, CopyTemplate> = {
         nextAction: { label: 'OK', intent: 'dismiss' },
         whoCanHelp: 'Ask an admin, or someone on that team, for its usage.',
     },
+    ...MCP_CODE_COPY,
     request_failed: REQUEST_FAILED,
 };
 

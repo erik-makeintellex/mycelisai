@@ -35,6 +35,10 @@ async function mockSettingsApis(page: Page) {
     await page.route("**/api/v1/user/me", async (route) => {
         await fulfillJSON(route, { ok: true, data: { id: "operator", email: "operator@example.test" } });
     });
+    // MCPA D10: new-layer is admin-only; this spec asserts a successful save.
+    await page.route("**/auth/session", async (route) => {
+        await fulfillJSON(route, { ok: true, data: { user: { role: "admin" } } });
+    });
     await page.route("**/api/v1/services/status", async (route) => {
         await fulfillJSON(route, { ok: true, data: [{ name: "core", status: "ready" }] });
     });
