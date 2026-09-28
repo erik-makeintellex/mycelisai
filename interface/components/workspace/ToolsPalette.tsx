@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { X, Wrench, Server, Zap, ChevronDown, ChevronRight, Play, Loader2 } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import { toolLabel, WORKSPACE_LABELS } from "@/lib/labels";
+import { blockerCopy, resolveBlockerCopy } from "@/lib/blockerCopy";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 
 export default function ToolsPalette() {
     const isOpen = useCortexStore((s) => s.isToolsPaletteOpen);
@@ -16,6 +18,7 @@ export default function ToolsPalette() {
     const [expandedServer, setExpandedServer] = useState<string | null>(null);
     const [executingTool, setExecutingTool] = useState<string | null>(null);
     const [toolResult, setToolResult] = useState<string | null>(null);
+    const { isAdmin } = useIsAdmin();
 
     useEffect(() => {
         if (isOpen) {
@@ -45,6 +48,16 @@ export default function ToolsPalette() {
                 body: JSON.stringify({ arguments: {} }),
             });
             const text = await res.text();
+            if (!res.ok) {
+                // Never surface raw backend text (UX1): map the normalized
+                // blocker code to plain-language copy instead.
+                const payload = JSON.parse(text || "{}") as { data?: { code?: unknown } };
+                const code = typeof payload?.data?.code === "string" ? payload.data.code : "request_failed";
+                const reason = code === "admin_required" || code === "service_unavailable" ? "mcp_call" : undefined;
+                const copy = resolveBlockerCopy(blockerCopy({ code, httpStatus: res.status, viewerIsAdmin: isAdmin, reason }), isAdmin);
+                setToolResult(`${copy.title}: ${copy.whatHappened}`);
+                return;
+            }
             setToolResult(text);
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : "Tool call failed";

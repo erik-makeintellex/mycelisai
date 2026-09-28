@@ -33,6 +33,18 @@ async function mockWorkspaceMCP(page: Page) {
         ["workspace/groups/game-delivery/final/game-brief.md", "# Final Game Brief\nRetained user output."],
         ["workspace/groups/game-delivery/source/gameplay.js", "export const loop = 'playable';"],
     ]);
+    // MCPS D9: direct create/write is admin (approver) only; this spec
+    // asserts write success through the WorkspaceExplorer UI, so it needs
+    // an admin session (the live filesystem MCP call route enforces this
+    // in Core regardless of what the UI hint shows).
+    await page.route("**/auth/session", async (route) => {
+        await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ ok: true, data: { user: { email: "operator@example.test", name: "QA Operator", role: "admin", provider: "local" } } }),
+        });
+    });
+
     const directories = new Set<string>([
         "workspace/logs",
         "workspace/groups",
