@@ -127,7 +127,10 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - The lead agent is the messaging avatar for team execution. It coordinates intent, decisions, dependencies, and proof across sub-agents and Mycelis teams instead of letting background work drift into disconnected threads.
 - When the local NATS-backed Mycelis stack is intentionally running and relevant to the slice, prefer using the product's bus-facing workflows for team coordination proof, status, and handoff checks. If the bus is unavailable or unnecessary, record that explicitly and keep coordination in the lead thread.
 - Team communication should mirror the product architecture: concise intent, assigned ownership, expected output, proof gate, status updates, blockers, and handoff notes. Avoid spawning parallel teams without a clear owner, bounded deliverable, and cleanup path.
-- Close-out must include what teams or agents were reused, spawned, messaged, closed, or intentionally skipped.
+- **Delivery target teams (owner rule, 2026-09-28): at most 3 agents per delivery target.** A delivery target is one named outcome, for example "MCP authority" or "e2e suite green". At most 3 agents may be live for one target at a time; the lead is not counted. Separate targets may run in parallel only when their owned files are disjoint, and the total must stay within the account's rate limits.
+- Before spawning for a target, declare its team: at most 3 roles from the harness roster (for example writer, second writer or interface writer, then independent QA), each with its model tier. Record the team in the scoreboard's "Delivery Targets And Teams" table (`.state/V8_DEV_STATE.md`). Changing a role means updating that row first.
+- Continuing a target reuses its declared team. Resume a live agent that holds the context; otherwise respawn the same role with a fresh packet. When a target closes, mark its row closed and list the agents actually used, so the next continuation starts from the record, not from memory.
+- Close-out must include what teams or agents were reused, spawned, messaged, closed, or intentionally skipped. List them per delivery target.
 
 ## Canonical Docs Location
 
