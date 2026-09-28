@@ -80,6 +80,8 @@ func TestHandleCommsSend_ValidationAndOffline(t *testing.T) {
 func TestHandleCommsInbound_NATSOffline(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "POST /api/v1/comms/inbound/{provider}", s.HandleCommsInbound)
-	rr := doRequest(t, mux, "POST", "/api/v1/comms/inbound/whatsapp", `{"sender":"+1","message":"hello"}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/comms/inbound/whatsapp", `{"sender":"+1","message":"hello"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
+	// F16: authority is checked before dependencies; anonymous callers get 401.
+	assertStatus(t, doRequest(t, mux, "POST", "/api/v1/comms/inbound/whatsapp", `{"message":"hello"}`), http.StatusUnauthorized)
 }

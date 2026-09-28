@@ -561,7 +561,7 @@ def build(c):
 
 @task
 def lint(c):
-    """Lint the Interface code."""
+    """Lint the Interface code (eslint). Use before interface.build/ci.lint to catch style/type issues fast."""
     print("Linting Interface...")
     run_interface_command(c, "npm run lint")
 
@@ -650,8 +650,7 @@ def stop(c, port=INTERFACE_PORT):
     if is_windows():
         port_pids = _windows_listening_pids_for_port(int(port))
     else:
-        result = subprocess.run(["lsof", "-ti", f":{port}"], capture_output=True, text=True, timeout=5)
-        port_pids = [int(line) for line in result.stdout.splitlines() if line.strip().isdigit()]
+        port_pids = interface_processes.posix_listening_pids_for_port(int(port), run=subprocess.run)
     owned_processes = _repo_local_interface_processes_for_pids(port_pids)
     for process in owned_processes:
         pid = int(process["pid"])

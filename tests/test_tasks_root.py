@@ -47,7 +47,6 @@ def test_root_collection_registers_expected_namespaces():
         "compose",
         "core",
         "db",
-        "device",
         "interface",
         "k8s",
         "lifecycle",
@@ -83,7 +82,6 @@ def test_root_collection_exports_expected_task_surface():
         "clean.disk-status",
         "clean.generated",
         "clean.reports",
-        "clean.windows-dev-residue",
         "clean.wsl-handoff",
         "cognitive.install",
         "cognitive.llm",
@@ -116,7 +114,6 @@ def test_root_collection_exports_expected_task_surface():
         "db.migrate",
         "db.reset",
         "db.status",
-        "device.boot",
         "install",
         "interface.build",
         "interface.check",
@@ -154,6 +151,7 @@ def test_root_collection_exports_expected_task_surface():
         "team.architecture-sync",
         "team.worktree-triage",
         "test.coverage",
+        "test.probe",
         "wsl.cycle",
         "wsl.refresh",
         "wsl.status",
@@ -162,7 +160,7 @@ def test_root_collection_exports_expected_task_surface():
 
 
 def test_root_task_surface_stays_within_operator_budget():
-    assert len(tasks.ns.task_names) <= 95
+    assert len(tasks.ns.task_names) <= 94
 
 
 def test_documented_invoke_commands_are_registered():

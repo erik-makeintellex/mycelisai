@@ -201,7 +201,7 @@ def package(c, target_os="", target_arch="amd64", version_tag=""):
 
 @task
 def clean(c):
-    """Clean Go Build Artifacts."""
+    """Remove Go build artifacts (core/bin, go clean caches). Use before core.build/core.compile when a stale binary or cache is suspected."""
     print("Cleaning Core...")
     with c.cd(str(CORE_DIR)):
         c.run("go clean", env=_task_env())
@@ -264,7 +264,7 @@ def run(c):
 @task
 def stop(c):
     """
-    Stop the Core Service (Kill).
+    Stop the local native Core process (kill). Use before core.run when a prior instance may still hold the port.
     """
     print("Stopping Core...")
     if is_windows():
@@ -277,7 +277,7 @@ def stop(c):
 @task
 def restart(c):
     """
-    Restart the Core Service (Kill + Run).
+    Restart the local native Core process (kill + run). Use after a Go source change to pick it up without a full core.build.
     """
     print("Restarting Core...")
     stop(c)
@@ -286,7 +286,7 @@ def restart(c):
 @task
 def smoke(c):
     """
-    Run Governance Smoke Tests (Go).
+    Run the Go governance smoke suite. Use as a fast authority/permission sanity check before the full core.test run.
     """
     print("Running Smoke Tests...")
     with c.cd(str(CORE_DIR)):

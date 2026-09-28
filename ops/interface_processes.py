@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from collections.abc import Callable
 from contextlib import suppress
@@ -224,6 +225,35 @@ def cleanup_repo_local_interface_processes(
         except RuntimeError:
             return []
     return remaining
+
+
+def posix_listening_pids_for_port(
+    port: int,
+    *,
+    run: Callable[..., Any] = subprocess.run,
+) -> list[int]:
+    """Resolve listening PIDs for a TCP port on a POSIX host.
+
+    Tries `lsof` first, then falls back to `ss`. A managed `next-server`
+    that was reparented (for example under WSL `/init` after its npm/node
+    parent exited) can be invisible to a bare `lsof -ti` lookup, which
+    returns exit 0 with empty stdout rather than an error. Treating empty
+    `lsof` output as "no listener" without the `ss` fallback is what let
+    `interface.stop()` report "No process on port N" while its own managed
+    server kept listening. `ss` is also used when `lsof` itself is missing.
+    """
+    try:
+        result = run(["lsof", "-ti", f":{port}"], capture_output=True, text=True, timeout=5)
+        pids = [int(line) for line in result.stdout.splitlines() if line.strip().isdigit()]
+    except (subprocess.SubprocessError, OSError, ValueError):
+        pids = []
+    if pids:
+        return pids
+    try:
+        result = run(["ss", "-ltnp", f"sport = :{port}"], capture_output=True, text=True, timeout=5)
+        return sorted({int(value) for value in re.findall(r"pid=(\d+)", result.stdout)})
+    except (subprocess.SubprocessError, OSError, ValueError):
+        return []
 
 
 def windows_listening_pids_for_port(

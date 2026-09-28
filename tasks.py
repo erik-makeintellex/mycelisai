@@ -7,7 +7,6 @@ from ops import cognitive
 from ops import compose
 from ops import core
 from ops import db
-from ops import device
 from ops import interface
 from ops import k8s
 from ops import lifecycle
@@ -81,7 +80,6 @@ ns.add_collection(interface.ns)
 ns.add_collection(auth.ns)
 ns.add_collection(logging_tasks.ns)
 ns.add_collection(quality.ns)
-ns.add_collection(device.ns)
 ns.add_collection(test.ns)
 ns.add_collection(db.ns)
 ns.add_collection(ci.ns)
