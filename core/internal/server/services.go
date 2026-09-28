@@ -109,23 +109,41 @@ func (s *AdminServer) buildServiceStatuses(r *http.Request) []ServiceStatus {
 	} else if !cfg.Enabled {
 		ollamaStatus.Status = "degraded"
 		ollamaStatus.Detail = "Ollama provider disabled"
-	} else if _, ok := s.Cognitive.AdapterSnapshot("ollama"); !ok {
+	} else if adapter, ok := s.Cognitive.AdapterSnapshot("ollama"); !ok {
 		ollamaStatus.Status = "degraded"
 		ollamaStatus.Detail = "Ollama enabled but adapter not initialized"
 	} else {
-		ollamaStatus.Status = "online"
-		if fullView {
-			detail := "Model " + cfg.ModelID
-			if cfg.Endpoint != "" {
-				detail += " @ " + cfg.Endpoint
+		// F19: "online" must reflect an actual probe of the adapter, never just
+		// that a config/adapter object exists.
+		probeCtx, probeCancel := context.WithTimeout(ctx, 2*time.Second)
+		healthy, probeErr := adapter.Probe(probeCtx)
+		probeCancel()
+		if probeErr != nil || !healthy {
+			ollamaStatus.Status = "offline"
+			if fullView {
+				detail := "Ollama probe failed"
+				if probeErr != nil {
+					detail += ": " + probeErr.Error()
+				}
+				ollamaStatus.Detail = detail
+			} else {
+				ollamaStatus.Detail = "Ollama provider unreachable"
 			}
-			// Keep details compact to avoid noisy UI status cards.
-			ollamaStatus.Detail = strings.TrimSpace(detail)
 		} else {
-			// Non-admins (and admins without cognitive:read/write) never see
-			// the model id or endpoint here, matching the F2 narrowing on
-			// /cognitive/status and /brains.
-			ollamaStatus.Detail = "Ollama provider ready"
+			ollamaStatus.Status = "online"
+			if fullView {
+				detail := "Model " + cfg.ModelID
+				if cfg.Endpoint != "" {
+					detail += " @ " + cfg.Endpoint
+				}
+				// Keep details compact to avoid noisy UI status cards.
+				ollamaStatus.Detail = strings.TrimSpace(detail)
+			} else {
+				// Non-admins (and admins without cognitive:read/write) never see
+				// the model id or endpoint here, matching the F2 narrowing on
+				// /cognitive/status and /brains.
+				ollamaStatus.Detail = "Ollama provider ready"
+			}
 		}
 	}
 	services = append(services, ollamaStatus)

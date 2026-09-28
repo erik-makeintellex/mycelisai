@@ -139,7 +139,9 @@ func (s *Soma) handleGlobalInput(msg *nats.Msg) {
 		return
 	}
 	log.Printf("🧠 Soma Received Input on [%s]: %s", msg.Subject, string(msg.Data))
-	s.axon.ProcessSignal(msg)
+	if err := s.axon.ProcessSignal(msg); err != nil {
+		log.Printf("⚡ Axon routing failed: %v", err)
+	}
 }
 
 // SpawnTeam dynamically creates and starts a new team.

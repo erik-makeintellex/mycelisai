@@ -89,10 +89,16 @@ func resolveLoopOwner(home OrganizationHomePayload, profile LoopProfile) (LoopOw
 	}
 }
 
+// buildReviewLoopOutput is a structure check: it reads current department/
+// specialist/response-style counts and configuration and flags gaps against
+// fixed thresholds. F15: no agent or model examines anything here, and the
+// owner named below is only the loop's configured scope, not a reviewer who
+// looked at the work — the output must never claim a review happened.
 func buildReviewLoopOutput(home OrganizationHomePayload, owner LoopOwnerResolution) ReviewLoopStructuredOutput {
 	findings := []string{
+		"This is an automated structure check of current setup and counts; no reviewer or model examined this organization's work.",
 		fmt.Sprintf("%s is currently operating with %d Department%s, %d Specialist%s, and %d Advisor%s.", safeOrganizationName(home.Name), home.DepartmentCount, pluralSuffix(home.DepartmentCount), home.SpecialistCount, pluralSuffix(home.SpecialistCount), home.AdvisorCount, pluralSuffix(home.AdvisorCount)),
-		fmt.Sprintf("%s is the active review owner for this loop.", owner.Name),
+		fmt.Sprintf("%s is the scope this structure check covers.", owner.Name),
 	}
 	suggestions := []string{
 		"Keep this loop read-only until Automations visibility and policy surfaces are in place.",
@@ -171,6 +177,10 @@ func (s *AdminServer) executeReviewLoop(home OrganizationHomePayload, profile Lo
 	return result, nil
 }
 
+// summarizeActivityFromReview turns a structure check's output into an
+// activity status/summary. F15: the summary must describe what the
+// structure check found against its fixed thresholds, never imply a
+// reviewer or model examined and cleared the work.
 func summarizeActivityFromReview(review ReviewLoopStructuredOutput) (LoopActivityStatus, string) {
 	if review.Status == "attention_needed" {
 		flagged := review.FlaggedItems
@@ -179,7 +189,7 @@ func summarizeActivityFromReview(review ReviewLoopStructuredOutput) (LoopActivit
 		}
 		return LoopActivityStatusWarning, fmt.Sprintf("%d item%s flagged", flagged, pluralSuffix(flagged))
 	}
-	return LoopActivityStatusSuccess, "No issues detected"
+	return LoopActivityStatusSuccess, "No structural gaps found"
 }
 
 func summarizeActivityFromError(err error) (LoopActivityStatus, string) {
