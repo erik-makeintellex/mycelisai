@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/mcp"
@@ -31,81 +30,48 @@ func TestHandleMCPLibraryInstall_NotFoundInLibrary(t *testing.T) {
 	assertStatus(t, rr, http.StatusNotFound)
 }
 
-func TestHandleMCPLibraryInstall_RemoteConfigReturnsApprovalBoundary(t *testing.T) {
-	s := newTestServer(withMCPStubs(), func(s *AdminServer) {
-		s.MCPLibrary = &mcp.Library{
-			Categories: []mcp.LibraryCategory{
-				{
-					Name: "Default",
-					Servers: []mcp.LibraryEntry{
-						{Name: "remote-knowledge", Transport: "sse", URL: "https://mcp.example.com/sse", Tags: []string{"remote"}},
-					},
-				},
+func withRemoteKnowledgeLibrary() func(*AdminServer) {
+	return func(s *AdminServer) {
+		s.MCPLibrary = &mcp.Library{Categories: []mcp.LibraryCategory{{
+			Name: "Default",
+			Servers: []mcp.LibraryEntry{
+				{Name: "remote-knowledge", Transport: "sse", URL: "https://mcp.example.com/sse", Tags: []string{"remote"}},
 			},
-		}
-	})
-
-	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"remote-knowledge"}`)
-	assertStatus(t, rr, http.StatusAccepted)
-
-	var resp map[string]any
-	assertJSON(t, rr, &resp)
-	if resp["requires_approval"] != true {
-		t.Fatalf("requires_approval = %v, want true", resp["requires_approval"])
+		}}}
 	}
 }
 
-func TestHandleMCPLibraryInstall_StandardLibraryGitHubReturnsApprovalBoundary(t *testing.T) {
+// MCPA D5: a require_approval entry is never answered 202; a caller without
+// approvals:decide gets 403 admin_required naming the missing scope.
+func TestHandleMCPLibraryInstall_RemoteConfigNeedsApprover(t *testing.T) {
+	s := newTestServer(withMCPStubs(), withRemoteKnowledgeLibrary())
+	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"remote-knowledge"}`, adminWithScopes(scopeMCPConfigWrite))
+	env := mcpsAssertBlocker(t, rr, http.StatusForbidden, codeAdminRequired)
+	if env.Data["required_scope"] != scopeApprovalsDecide {
+		t.Fatalf("required_scope = %v, want %s", env.Data["required_scope"], scopeApprovalsDecide)
+	}
+}
+
+func TestHandleMCPLibraryInstall_StandardLibraryGitHubNeedsApprover(t *testing.T) {
 	s := newTestServer(withMCPStubs(), func(s *AdminServer) {
 		s.MCPLibrary = loadStandardMCPLibrary(t)
 	})
-
-	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"github"}`)
-	assertStatus(t, rr, http.StatusAccepted)
-
-	var resp map[string]any
-	assertJSON(t, rr, &resp)
-	if resp["requires_approval"] != true {
-		t.Fatalf("requires_approval = %v, want true", resp["requires_approval"])
-	}
-	inspection, ok := resp["inspection"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected inspection object, got %T", resp["inspection"])
-	}
-	if inspection["deployment_boundary"] != "external_saas" {
-		t.Fatalf("deployment_boundary = %v, want external_saas", inspection["deployment_boundary"])
+	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"github"}`, adminWithScopes(scopeMCPConfigWrite))
+	env := mcpsAssertBlocker(t, rr, http.StatusForbidden, codeAdminRequired)
+	if env.Data["required_scope"] != scopeApprovalsDecide {
+		t.Fatalf("required_scope = %v, want %s", env.Data["required_scope"], scopeApprovalsDecide)
 	}
 }
 
-func TestHandleMCPLibraryApply_RemoteConfigReturnsStructuredApprovalBoundary(t *testing.T) {
-	s := newTestServer(withMCPStubs(), func(s *AdminServer) {
-		s.MCPLibrary = &mcp.Library{
-			Categories: []mcp.LibraryCategory{
-				{
-					Name: "Default",
-					Servers: []mcp.LibraryEntry{
-						{Name: "remote-knowledge", Transport: "sse", URL: "https://mcp.example.com/sse", Tags: []string{"remote"}},
-					},
-				},
-			},
-		}
-	})
+func TestHandleMCPLibraryApply_RemoteConfigNeedsApproverThroughRoutes(t *testing.T) {
+	s := newTestServer(withMCPStubs(), withRemoteKnowledgeLibrary())
 	mux := http.NewServeMux()
 	s.RegisterRoutes(mux)
 
-	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mcp/library/apply", `{"name":"remote-knowledge"}`)
-	assertStatus(t, rr, http.StatusAccepted)
-
-	var resp map[string]any
-	assertJSON(t, rr, &resp)
-	if resp["status"] != "requires_approval" {
-		t.Fatalf("status = %v, want requires_approval", resp["status"])
-	}
-	if resp["requires_approval"] != true {
-		t.Fatalf("requires_approval = %v, want true", resp["requires_approval"])
-	}
-	if _, ok := resp["inspection"].(map[string]any); !ok {
-		t.Fatalf("expected inspection object, got %T", resp["inspection"])
+	rr := doAuthenticatedRequestAs(t, mux, "POST", "/api/v1/mcp/library/apply", `{"name":"remote-knowledge"}`, adminWithScopes(scopeMCPConfigWrite))
+	env := mcpsAssertBlocker(t, rr, http.StatusForbidden, codeAdminRequired)
+	if env.Data["required_scope"] != scopeApprovalsDecide {
+		t.Fatalf("required_scope = %v, want %s", env.Data["required_scope"], scopeApprovalsDecide)
 	}
 }
 
@@ -121,73 +87,33 @@ func TestHandleMCPInstall_ForbiddenForStandardLibraryEntryToo(t *testing.T) {
 }
 
 func TestHandleMCPLibraryInstall_HappyPath(t *testing.T) {
-	opt, mock := withMCPDB(t)
-	s := newTestServer(opt, func(s *AdminServer) {
-		s.MCPLibrary = &mcp.Library{
-			Categories: []mcp.LibraryCategory{
-				{
-					Name: "Default",
-					Servers: []mcp.LibraryEntry{
-						{Name: "fetch", Transport: "unsupported"},
-					},
-				},
-			},
-		}
-	})
-	now := time.Now()
-
-	mock.ExpectQuery("INSERT INTO mcp_servers").
-		WithArgs("fetch", "unsupported", "", sqlmock.AnyArg(), sqlmock.AnyArg(), "", sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
-			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "fetch", "unsupported", "", `[]`, `{}`, "", `{}`, "installed", nil, now, now))
-	mock.ExpectExec("UPDATE mcp_servers").
-		WithArgs("error", sqlmock.AnyArg(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
-		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
-		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
+	url := mcpaFixtureURL(t)
+	opt, mock := mcpaSharedDB(t)
+	s := newTestServer(opt, mcpaLiveLibrary(url))
+	mcpaExpectLiveInstall(t, s, mock, "fetch", sqlmock.AnyArg(), url, `{}`, `{}`, false)
 
 	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
+	mcpaAssertMet(t, mock)
 }
 
 func TestHandleMCPLibraryApply_HappyPath(t *testing.T) {
-	opt, mock := withMCPDB(t)
-	s := newTestServer(opt, func(s *AdminServer) {
-		s.MCPLibrary = &mcp.Library{
-			Categories: []mcp.LibraryCategory{
-				{
-					Name: "Default",
-					Servers: []mcp.LibraryEntry{
-						{Name: "fetch", Transport: "unsupported"},
-					},
-				},
-			},
-		}
-	})
-	now := time.Now()
-
-	mock.ExpectQuery("INSERT INTO mcp_servers").
-		WithArgs("fetch", "unsupported", "", sqlmock.AnyArg(), sqlmock.AnyArg(), "", sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
-			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "fetch", "unsupported", "", `[]`, `{}`, "", `{}`, "installed", nil, now, now))
-	mock.ExpectExec("UPDATE mcp_servers").
-		WithArgs("error", sqlmock.AnyArg(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
-		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
-		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
+	url := mcpaFixtureURL(t)
+	opt, mock := mcpaSharedDB(t)
+	s := newTestServer(opt, mcpaLiveLibrary(url))
+	mcpaExpectLiveInstall(t, s, mock, "fetch", sqlmock.AnyArg(), url, `{}`, `{}`, false)
 
 	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryApply), "POST", "/api/v1/mcp/library/apply", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
+	mcpaAssertMet(t, mock)
 
 	var resp map[string]any
 	assertJSON(t, rr, &resp)
 	if resp["status"] != "installed" {
 		t.Fatalf("status = %v, want installed", resp["status"])
 	}
-	if resp["requires_approval"] != false {
-		t.Fatalf("requires_approval = %v, want false", resp["requires_approval"])
+	if resp["requires_approval"] != false || resp["self_approved"] != false {
+		t.Fatalf("requires_approval/self_approved = %v/%v, want false/false", resp["requires_approval"], resp["self_approved"])
 	}
 	if _, ok := resp["inspection"].(map[string]any); !ok {
 		t.Fatalf("expected inspection object, got %T", resp["inspection"])

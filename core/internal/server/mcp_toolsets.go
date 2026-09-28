@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
 
@@ -42,81 +43,65 @@ func (s *AdminServer) handleListToolSets(w http.ResponseWriter, r *http.Request)
 
 // handleCreateToolSet creates a new MCP tool set.
 // POST /api/v1/mcp/toolsets
+// MCPA D1/D7: mcp_config:write, then a fail-closed audit before the insert.
 func (s *AdminServer) handleCreateToolSet(w http.ResponseWriter, r *http.Request) {
-	if s.MCPToolSets == nil {
-		respondError(w, "MCP Tool Set service not available", http.StatusServiceUnavailable)
+	req, ok := s.decodeToolSetWrite(w, r)
+	if !ok {
 		return
 	}
-
-	var req mcpToolSetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+	record := mcpToolSetAuditRecord("", req.Name, req.ScopeKind, req.ScopeRef, nil, req.ToolRefs)
+	auditID, ok := s.auditMCPConfigChange(w, r, "mcp_toolset_created", req.Name, record)
+	if !ok {
 		return
 	}
-	if req.Name == "" {
-		respondError(w, "name is required", http.StatusBadRequest)
-		return
-	}
-
-	created, err := s.MCPToolSets.Create(r.Context(), mcp.ToolSet{
-		Name:        req.Name,
-		Description: req.Description,
-		ToolRefs:    req.ToolRefs,
-		ScopeKind:   req.ScopeKind,
-		ScopeRef:    req.ScopeRef,
-	})
+	created, err := s.MCPToolSets.Create(r.Context(), req.toolSet())
 	if err != nil {
-		respondError(w, "Failed to create tool set: "+err.Error(), mcpToolSetErrorStatus(err))
+		s.respondToolSetWriteError(w, r, "mcp_toolset_create_failed", req.Name, auditID, err, record)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
 	respondJSON(w, map[string]interface{}{
-		"ok":         true,
-		"data":       created,
-		"governance": buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
+		"ok":             true,
+		"data":           created,
+		"audit_event_id": auditID,
+		"governance":     buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
 	})
 }
 
 // handleUpdateToolSet updates an existing MCP tool set.
 // PUT /api/v1/mcp/toolsets/{id}
 func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request) {
-	if s.MCPToolSets == nil {
-		respondError(w, "MCP Tool Set service not available", http.StatusServiceUnavailable)
+	if _, ok := requireMCPConfigWrite(w, r); !ok {
 		return
 	}
-
-	idStr := r.PathValue("id")
-	id, err := uuid.Parse(idStr)
+	id, ok := s.toolSetPathID(w, r)
+	if !ok {
+		return
+	}
+	req, ok := s.decodeToolSetWrite(w, r)
+	if !ok {
+		return
+	}
+	existing, ok := s.resolveToolSet(w, r, id)
+	if !ok {
+		return
+	}
+	record := mcpToolSetAuditRecord(id.String(), req.Name, req.ScopeKind, req.ScopeRef, existing.ToolRefs, req.ToolRefs)
+	record["previous_name"] = existing.Name
+	auditID, ok := s.auditMCPConfigChange(w, r, "mcp_toolset_updated", req.Name, record)
+	if !ok {
+		return
+	}
+	updated, err := s.MCPToolSets.Update(r.Context(), id, req.toolSet())
 	if err != nil {
-		respondError(w, "Invalid UUID: "+idStr, http.StatusBadRequest)
-		return
-	}
-
-	var req mcpToolSetRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	if req.Name == "" {
-		respondError(w, "name is required", http.StatusBadRequest)
-		return
-	}
-
-	updated, err := s.MCPToolSets.Update(r.Context(), id, mcp.ToolSet{
-		Name:        req.Name,
-		Description: req.Description,
-		ToolRefs:    req.ToolRefs,
-		ScopeKind:   req.ScopeKind,
-		ScopeRef:    req.ScopeRef,
-	})
-	if err != nil {
-		respondError(w, "Failed to update tool set: "+err.Error(), mcpToolSetErrorStatus(err))
+		s.respondToolSetWriteError(w, r, "mcp_toolset_update_failed", req.Name, auditID, err, record)
 		return
 	}
 	respondJSON(w, map[string]interface{}{
-		"ok":         true,
-		"data":       updated,
-		"governance": buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
+		"ok":             true,
+		"data":           updated,
+		"audit_event_id": auditID,
+		"governance":     buildMCPConfigGovernanceDecision(normalizeMCPGovernanceContext(r, req.GovernanceContext), "local", "low"),
 	})
 }
 
@@ -135,25 +120,111 @@ func mcpToolSetErrorStatus(err error) int {
 // handleDeleteToolSet deletes an MCP tool set.
 // DELETE /api/v1/mcp/toolsets/{id}
 func (s *AdminServer) handleDeleteToolSet(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireMCPConfigWrite(w, r); !ok {
+		return
+	}
+	id, ok := s.toolSetPathID(w, r)
+	if !ok {
+		return
+	}
 	if s.MCPToolSets == nil {
 		respondError(w, "MCP Tool Set service not available", http.StatusServiceUnavailable)
 		return
 	}
-
-	idStr := r.PathValue("id")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		respondError(w, "Invalid UUID: "+idStr, http.StatusBadRequest)
+	existing, ok := s.resolveToolSet(w, r, id)
+	if !ok {
 		return
 	}
-
+	record := mcpToolSetAuditRecord(id.String(), existing.Name, existing.ScopeKind, existing.ScopeRef, existing.ToolRefs, []string{})
+	auditID, ok := s.auditMCPConfigChange(w, r, "mcp_toolset_deleted", existing.Name, record)
+	if !ok {
+		return
+	}
 	if err := s.MCPToolSets.Delete(r.Context(), id); err != nil {
-		respondError(w, "Failed to delete tool set: "+err.Error(), http.StatusInternalServerError)
+		s.respondToolSetWriteError(w, r, "mcp_toolset_delete_failed", existing.Name, auditID, err, record)
 		return
 	}
 	respondJSON(w, map[string]interface{}{
-		"ok":         true,
-		"deleted":    id.String(),
-		"governance": buildOwnedMCPConfigDecision(r),
+		"ok":             true,
+		"deleted":        id.String(),
+		"audit_event_id": auditID,
+		"governance":     buildOwnedMCPConfigDecision(r),
 	})
+}
+
+// decodeToolSetWrite runs authority (idempotent for update), the service
+// check, and body validation for create/update.
+func (s *AdminServer) decodeToolSetWrite(w http.ResponseWriter, r *http.Request) (mcpToolSetRequest, bool) {
+	var req mcpToolSetRequest
+	if _, ok := requireMCPConfigWrite(w, r); !ok {
+		return req, false
+	}
+	if s.MCPToolSets == nil {
+		respondError(w, "MCP Tool Set service not available", http.StatusServiceUnavailable)
+		return req, false
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respondError(w, "Invalid JSON: "+err.Error(), http.StatusBadRequest)
+		return req, false
+	}
+	if req.Name == "" {
+		respondError(w, "name is required", http.StatusBadRequest)
+		return req, false
+	}
+	if req.ToolRefs == nil {
+		req.ToolRefs = []string{}
+	}
+	return req, true
+}
+
+func (req mcpToolSetRequest) toolSet() mcp.ToolSet {
+	return mcp.ToolSet{Name: req.Name, Description: req.Description, ToolRefs: req.ToolRefs, ScopeKind: req.ScopeKind, ScopeRef: req.ScopeRef}
+}
+
+func (s *AdminServer) toolSetPathID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	id, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		respondError(w, "Invalid tool set id", http.StatusBadRequest)
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
+// resolveToolSet reads the current set so the audit carries refs before the
+// write; an unknown id is 404 with no audit and no write.
+func (s *AdminServer) resolveToolSet(w http.ResponseWriter, r *http.Request, id uuid.UUID) (*mcp.ToolSet, bool) {
+	existing, err := s.MCPToolSets.Get(r.Context(), id)
+	if err != nil {
+		log.Printf("MCPA: resolve tool set %s: %s", id, redactedMCPErrorText(err))
+		respondError(w, "Failed to read tool set", http.StatusInternalServerError)
+		return nil, false
+	}
+	if existing == nil {
+		respondError(w, "tool set not found", http.StatusNotFound)
+		return nil, false
+	}
+	return existing, true
+}
+
+func mcpToolSetAuditRecord(id, name, scopeKind, scopeRef string, before, after []string) map[string]any {
+	if before == nil {
+		before = []string{}
+	}
+	if after == nil {
+		after = []string{}
+	}
+	return map[string]any{"toolset_id": id, "toolset_name": name, "scope_kind": scopeKind, "scope_ref": scopeRef,
+		"tool_refs_before": before, "tool_refs_after": after}
+}
+
+// respondToolSetWriteError records the post-audit failure and answers with
+// validation text for 400/404 and a fixed message for anything else (D8).
+func (s *AdminServer) respondToolSetWriteError(w http.ResponseWriter, r *http.Request, action, name, auditID string, err error, record map[string]any) {
+	s.recordMCPConfigFailure(r, action, name, auditID, "write", err, record)
+	status := mcpToolSetErrorStatus(err)
+	if status == http.StatusInternalServerError {
+		respondError(w, "Tool set change failed. Check the Core log for the redacted reason.", status)
+		return
+	}
+	respondError(w, redactedMCPErrorText(err), status)
 }

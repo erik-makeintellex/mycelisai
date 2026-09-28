@@ -22,8 +22,10 @@ type mcpPreparedLibraryRequest struct {
 }
 
 type mcpLibraryInstallResult struct {
-	Server mcp.ServerConfig
-	Tools  []mcp.ToolDef
+	Server       mcp.ServerConfig
+	Tools        []mcp.ToolDef
+	SelfApproved bool
+	AuditEventID string
 }
 
 // handleMCPLibrary returns the curated MCP server library organized by category.
@@ -54,87 +56,65 @@ func (s *AdminServer) handleMCPLibraryInspect(w http.ResponseWriter, r *http.Req
 // handleMCPLibraryInstall installs an MCP server from the curated library by name.
 // POST /api/v1/mcp/library/install
 func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Request) {
-	if _, ok := requireMCPConfigWrite(w, r); !ok {
-		return
-	}
-	if s.MCP == nil || s.MCPPool == nil {
-		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
-		return
-	}
-	if s.MCPLibrary == nil {
-		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
-		return
-	}
-
-	prepared, ok := s.prepareMCPLibraryRequest(w, r)
-	if !ok || !requireDeclaredMCPEnv(w, r, prepared.Entry, prepared.Request.Env) {
-		return
-	}
-
-	if decision, _ := prepared.Inspection["decision"].(string); decision == "require_approval" {
-		w.WriteHeader(http.StatusAccepted)
-		respondJSON(w, map[string]any{
-			"requires_approval": true,
-			"inspection":        prepared.Inspection,
-		})
-		return
-	}
-
-	result, ok := s.installMCPLibraryEntry(w, r, prepared, "install")
+	prepared, result, ok := s.installFromMCPLibrary(w, r, "install")
 	if !ok {
 		return
 	}
-
-	respondJSON(w, map[string]interface{}{
-		"server":     redactMCPServerConfig(result.Server),
-		"tools":      result.Tools,
-		"governance": prepared.Inspection["governance"],
+	respondJSON(w, map[string]any{
+		"status":         "installed",
+		"server":         redactMCPServerConfig(result.Server),
+		"tools":          result.Tools,
+		"governance":     prepared.Inspection["governance"],
+		"self_approved":  result.SelfApproved,
+		"audit_event_id": result.AuditEventID,
 	})
 }
 
 // handleMCPLibraryApply runs the curated MCP inspect+install flow as a single API call.
 // POST /api/v1/mcp/library/apply
 func (s *AdminServer) handleMCPLibraryApply(w http.ResponseWriter, r *http.Request) {
-	if _, ok := requireMCPConfigWrite(w, r); !ok {
-		return
-	}
-	if s.MCP == nil || s.MCPPool == nil {
-		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
-		return
-	}
-	if s.MCPLibrary == nil {
-		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
-		return
-	}
-
-	prepared, ok := s.prepareMCPLibraryRequest(w, r)
-	if !ok || !requireDeclaredMCPEnv(w, r, prepared.Entry, prepared.Request.Env) {
-		return
-	}
-
-	if decision, _ := prepared.Inspection["decision"].(string); decision == "require_approval" {
-		w.WriteHeader(http.StatusAccepted)
-		respondJSON(w, map[string]any{
-			"status":            "requires_approval",
-			"requires_approval": true,
-			"inspection":        prepared.Inspection,
-		})
-		return
-	}
-
-	result, ok := s.installMCPLibraryEntry(w, r, prepared, "apply")
+	prepared, result, ok := s.installFromMCPLibrary(w, r, "apply")
 	if !ok {
 		return
 	}
-
 	respondJSON(w, map[string]any{
 		"status":            "installed",
-		"requires_approval": false,
+		"requires_approval": false, // nothing is ever left pending (MCPA D5)
+		"self_approved":     result.SelfApproved,
+		"audit_event_id":    result.AuditEventID,
 		"server":            redactMCPServerConfig(result.Server),
 		"tools":             result.Tools,
 		"inspection":        prepared.Inspection,
 		"governance":        prepared.Inspection["governance"],
 	})
+}
+
+// installFromMCPLibrary is the one install/apply path (MCPA D1, D4, D5, D7):
+// authority, subsystem checks, entry, approver for require_approval, declared
+// env, fail-closed audit, then install and connect. It writes every refusal.
+func (s *AdminServer) installFromMCPLibrary(w http.ResponseWriter, r *http.Request, logAction string) (mcpPreparedLibraryRequest, mcpLibraryInstallResult, bool) {
+	identity, ok := requireMCPConfigWrite(w, r)
+	if !ok {
+		return mcpPreparedLibraryRequest{}, mcpLibraryInstallResult{}, false
+	}
+	if s.MCP == nil || s.MCPPool == nil {
+		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
+		return mcpPreparedLibraryRequest{}, mcpLibraryInstallResult{}, false
+	}
+	if s.MCPLibrary == nil {
+		http.Error(w, `{"error":"MCP library not loaded"}`, http.StatusServiceUnavailable)
+		return mcpPreparedLibraryRequest{}, mcpLibraryInstallResult{}, false
+	}
+	prepared, ok := s.prepareMCPLibraryRequest(w, r)
+	if !ok {
+		return prepared, mcpLibraryInstallResult{}, false
+	}
+	selfApproved, ok := requireMCPApproverFor(w, r, identity, prepared.Inspection)
+	if !ok || !requireDeclaredMCPEnv(w, r, prepared.Entry, prepared.Request.Env) {
+		return prepared, mcpLibraryInstallResult{}, false
+	}
+	result, ok := s.installMCPLibraryEntry(w, r, prepared, selfApproved, logAction)
+	return prepared, result, ok
 }
 
 func (s *AdminServer) prepareMCPLibraryRequest(w http.ResponseWriter, r *http.Request) (mcpPreparedLibraryRequest, bool) {
@@ -162,35 +142,73 @@ func (s *AdminServer) prepareMCPLibraryRequest(w http.ResponseWriter, r *http.Re
 	}, true
 }
 
-func (s *AdminServer) installMCPLibraryEntry(w http.ResponseWriter, r *http.Request, prepared mcpPreparedLibraryRequest, logAction string) (mcpLibraryInstallResult, bool) {
-	cfg := prepared.Entry.ToServerConfig(prepared.Request.Env)
-	runtimeCfg, err := mcp.ApplyRuntimeDefaults(cfg)
+// mcpInstallAuditRecord is the D7 mcp_server_installed record: labels and env
+// keys only, never env values.
+func mcpInstallAuditRecord(prepared mcpPreparedLibraryRequest, selfApproved, replacedExisting bool, logAction string) map[string]any {
+	record := map[string]any{
+		"server_name": prepared.Entry.Name, "transport": prepared.Entry.Transport, "route": logAction,
+		"deployment_boundary": mcpLibraryDeploymentBoundary(prepared.Entry),
+		"credential_boundary": mcpLibraryCredentialBoundary(prepared.Entry),
+		"env_keys":            sortedMCPEnvKeys(prepared.Request.Env),
+		"replaced_existing":   replacedExisting,
+		"decision":            prepared.Inspection["decision"],
+		"self_approved":       selfApproved,
+		"tier":                approverTierAuto,
+	}
+	if selfApproved {
+		record["tier"], record["authority"] = approverTierApprover, scopeApprovalsDecide
+	}
+	if ctx, ok := prepared.Inspection["governance_context"].(mcpGovernanceContext); ok {
+		record["owner_user_id"], record["actor_role"] = ctx.OwnerUserID, ctx.ActorRole
+	}
+	return record
+}
+
+func (s *AdminServer) installMCPLibraryEntry(w http.ResponseWriter, r *http.Request, prepared mcpPreparedLibraryRequest, selfApproved bool, logAction string) (mcpLibraryInstallResult, bool) {
+	ctx := r.Context()
+	name := prepared.Entry.Name
+	existing, err := s.MCP.FindServerByName(ctx, name)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"install failed: prepare runtime defaults: %s"}`, err.Error()), http.StatusInternalServerError)
+		log.Printf("MCPA: %s %s: replace lookup: %s", logAction, name, redactedMCPErrorText(err))
+		respondAPIError(w, mcpInstallFailedMessage, http.StatusInternalServerError)
+		return mcpLibraryInstallResult{}, false
+	}
+	record := mcpInstallAuditRecord(prepared, selfApproved, existing != nil, logAction)
+	auditID, ok := s.auditMCPConfigChange(w, r, "mcp_server_installed", name, record)
+	if !ok {
+		return mcpLibraryInstallResult{}, false
+	}
+	failed := func(stage string, err error) (mcpLibraryInstallResult, bool) {
+		s.recordMCPConfigFailure(r, "mcp_server_install_failed", name, auditID, stage, err, record)
+		respondAPIError(w, mcpInstallFailedMessage, http.StatusInternalServerError)
 		return mcpLibraryInstallResult{}, false
 	}
 
-	installed, err := s.MCP.Install(r.Context(), runtimeCfg)
+	runtimeCfg, err := mcp.ApplyRuntimeDefaults(prepared.Entry.ToServerConfig(prepared.Request.Env))
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"install failed: %s"}`, err.Error()), http.StatusInternalServerError)
+		return failed("runtime_defaults", err)
+	}
+	installed, err := s.MCP.Install(ctx, runtimeCfg)
+	if err != nil {
+		return failed("install", err)
+	}
+	if err := s.MCPPool.Connect(ctx, *installed); err != nil {
+		// The row is registered with status "error" but nothing launched, so
+		// the answer is an honest blocker, never "installed".
+		s.recordMCPConfigFailure(r, "mcp_server_install_failed", name, auditID, "connect", err, record)
+		respondBlocker(w, r, http.StatusBadGateway, codeMCPConnectFailed, redactedMCPErrorText(err), map[string]string{
+			"server_id": installed.ID.String(), "server_name": installed.Name, "audit_event_id": auditID,
+		})
 		return mcpLibraryInstallResult{}, false
 	}
 
-	if err := s.MCPPool.Connect(r.Context(), *installed); err != nil {
-		log.Printf("MCP library %s: connect to %s failed (best-effort): %v", logAction, installed.Name, err)
-	}
-
-	tools, err := s.MCP.ListTools(r.Context(), installed.ID)
+	tools, err := s.MCP.ListTools(ctx, installed.ID)
 	if err != nil {
-		log.Printf("MCP library %s: list tools for %s failed: %v", logAction, installed.Name, err)
+		log.Printf("MCPA: %s %s: list tools: %s", logAction, name, redactedMCPErrorText(err))
 		tools = []mcp.ToolDef{}
 	}
 	if tools == nil {
 		tools = []mcp.ToolDef{}
 	}
-
-	return mcpLibraryInstallResult{
-		Server: *installed,
-		Tools:  tools,
-	}, true
+	return mcpLibraryInstallResult{Server: *installed, Tools: tools, SelfApproved: selfApproved, AuditEventID: auditID}, true
 }

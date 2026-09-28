@@ -23,14 +23,14 @@ func TestHandleMCPList_NilSubsystem(t *testing.T) {
 func TestHandleMCPDelete_NilSubsystem(t *testing.T) {
 	s := newTestServer()
 	mux := setupMux(t, "DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mcp/servers/some-id", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mcp/servers/some-id", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
 func TestHandleMCPDelete_InvalidUUID(t *testing.T) {
 	s := newTestServer(withMCPStubs())
 	mux := setupMux(t, "DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mcp/servers/not-a-uuid", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mcp/servers/not-a-uuid", "")
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
@@ -189,17 +189,20 @@ func TestHandleMCPList_EmptyDB(t *testing.T) {
 }
 
 func TestHandleMCPDelete_HappyPath(t *testing.T) {
-	opt, mock := withMCPDB(t)
+	opt, mock := mcpaSharedDB(t)
 	s := newTestServer(opt)
-	serverUUID := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+	serverUUID := uuid.MustParse(mcpaServerID)
 
+	mcpaExpectServerGet(mock, true)
+	mcpaExpectAudit(mock, false)
 	mock.ExpectExec("DELETE FROM mcp_servers WHERE id = \\$1").
 		WithArgs(serverUUID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	mux := setupMux(t, "DELETE /api/v1/mcp/servers/{id}", s.handleMCPDelete)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mcp/servers/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mcp/servers/"+mcpaServerID, "")
 	assertStatus(t, rr, http.StatusOK)
+	mcpaAssertMet(t, mock)
 }
 
 func TestHandleMCPToolsList_HappyPath(t *testing.T) {

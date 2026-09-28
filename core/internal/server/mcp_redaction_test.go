@@ -8,7 +8,6 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
-	"github.com/mycelis/core/internal/mcp"
 )
 
 func assertNoMCPSecretLeak(t *testing.T, body string) {
@@ -41,9 +40,7 @@ func TestHandleMCPList_RedactsEnvAndHeaders(t *testing.T) {
 }
 
 func TestHandleMCPLibraryInstall_RedactsEnvAndHeaders(t *testing.T) {
-	opt, mock := withMCPDB(t)
-	s := newTestServer(opt, withSecretFetchLibrary())
-	expectSecretFetchInstall(mock)
+	s := newSecretFetchInstallServer(t)
 
 	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryInstall), "POST", "/api/v1/mcp/library/install", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
@@ -51,36 +48,22 @@ func TestHandleMCPLibraryInstall_RedactsEnvAndHeaders(t *testing.T) {
 }
 
 func TestHandleMCPLibraryApply_RedactsEnvAndHeaders(t *testing.T) {
-	opt, mock := withMCPDB(t)
-	s := newTestServer(opt, withSecretFetchLibrary())
-	expectSecretFetchInstall(mock)
+	s := newSecretFetchInstallServer(t)
 
 	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleMCPLibraryApply), "POST", "/api/v1/mcp/library/apply", `{"name":"fetch"}`)
 	assertStatus(t, rr, http.StatusOK)
 	assertNoMCPSecretLeak(t, rr.Body.String())
 }
 
-func withSecretFetchLibrary() func(*AdminServer) {
-	return func(s *AdminServer) {
-		s.MCPLibrary = &mcp.Library{Categories: []mcp.LibraryCategory{{
-			Name:    "Default",
-			Servers: []mcp.LibraryEntry{{Name: "fetch", Transport: "unsupported"}},
-		}}}
-	}
-}
-
-func expectSecretFetchInstall(mock sqlmock.Sqlmock) {
-	now := time.Now()
-	mock.ExpectQuery("INSERT INTO mcp_servers").
-		WithArgs("fetch", "unsupported", "", sqlmock.AnyArg(), sqlmock.AnyArg(), "", sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
-			AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "fetch", "unsupported", "", `[]`, `{"FETCH_TOKEN":"live-secret"}`, "", `{"Authorization":"Bearer live-secret"}`, "installed", nil, now, now))
-	mock.ExpectExec("UPDATE mcp_servers").
-		WithArgs("error", sqlmock.AnyArg(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
-		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
-		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
+// newSecretFetchInstallServer wires a live fetch install whose stored row
+// carries secret env and headers (MCPA: audit first, real connect).
+func newSecretFetchInstallServer(t *testing.T) *AdminServer {
+	t.Helper()
+	url := mcpaFixtureURL(t)
+	opt, mock := mcpaSharedDB(t)
+	s := newTestServer(opt, mcpaLiveLibrary(url))
+	mcpaExpectLiveInstall(t, s, mock, "fetch", sqlmock.AnyArg(), url, `{"FETCH_TOKEN":"live-secret"}`, `{"Authorization":"Bearer live-secret"}`, false)
+	return s
 }
 
 // MCPS D7: nested keys, arrays and header-style keys are redacted in a copy.

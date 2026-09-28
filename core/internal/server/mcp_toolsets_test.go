@@ -21,6 +21,7 @@ func withMCPToolSets(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 	t.Cleanup(func() { db.Close() })
 	return func(s *AdminServer) {
 		s.MCPToolSets = mcp.NewToolSetService(db)
+		s.DB = db // MCPA D7: the audit store shares the mock, so order is asserted
 	}, mock
 }
 
@@ -79,6 +80,7 @@ func TestHandleCreateToolSet_HappyPath(t *testing.T) {
 	s := newTestServer(opt)
 	now := time.Now()
 
+	mcpaExpectAudit(mock, false)
 	mock.ExpectQuery("INSERT INTO mcp_tool_sets").
 		WithArgs("development", "Dev tools", sqlmock.AnyArg(), "group", "dev-team").
 		WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at"}).
@@ -86,7 +88,7 @@ func TestHandleCreateToolSet_HappyPath(t *testing.T) {
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
 	body := `{"name":"development","description":"Dev tools","tool_refs":["mcp:filesystem/*","mcp:github/*"],"scope_kind":"group","scope_ref":"dev-team"}`
-	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", body)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mcp/toolsets", body)
 
 	assertStatus(t, rr, http.StatusCreated)
 	var resp map[string]interface{}
@@ -101,7 +103,7 @@ func TestHandleCreateToolSet_MissingName(t *testing.T) {
 	s := newTestServer(opt)
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
-	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"description":"no name"}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"description":"no name"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -111,17 +113,19 @@ func TestHandleCreateToolSet_BadJSON(t *testing.T) {
 	s := newTestServer(opt)
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
-	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{invalid}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{invalid}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
 func TestHandleCreateToolSet_GroupScopeMissingRef(t *testing.T) {
-	opt, _ := withMCPToolSets(t)
+	opt, mock := withMCPToolSets(t)
 	s := newTestServer(opt)
+	mcpaExpectAudit(mock, false) // audited attempt
+	mcpaExpectAudit(mock, false) // mcp_toolset_create_failed
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
-	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"name":"team-tools","scope_kind":"group"}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"name":"team-tools","scope_kind":"group"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -132,12 +136,15 @@ func TestHandleDeleteToolSet_HappyPath(t *testing.T) {
 	opt, mock := withMCPToolSets(t)
 	s := newTestServer(opt)
 
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets").WillReturnRows(sqlmock.NewRows(toolSetColumns()).
+		AddRow("ccc33333-cccc-cccc-cccc-cccccccccccc", "deploy", "", `["mcp:ssh/*"]`, "all", "", "default", time.Now(), time.Now()))
+	mcpaExpectAudit(mock, false)
 	mock.ExpectExec("DELETE FROM mcp_tool_sets WHERE id = \\$1").
 		WithArgs(sqlmock.AnyArg()).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
 	mux := setupMux(t, "DELETE /api/v1/mcp/toolsets/{id}", s.handleDeleteToolSet)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mcp/toolsets/ccc33333-cccc-cccc-cccc-cccccccccccc", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mcp/toolsets/ccc33333-cccc-cccc-cccc-cccccccccccc", "")
 
 	assertStatus(t, rr, http.StatusOK)
 }
@@ -147,7 +154,7 @@ func TestHandleDeleteToolSet_BadUUID(t *testing.T) {
 	s := newTestServer(opt)
 
 	mux := setupMux(t, "DELETE /api/v1/mcp/toolsets/{id}", s.handleDeleteToolSet)
-	rr := doRequest(t, mux, "DELETE", "/api/v1/mcp/toolsets/not-a-uuid", "")
+	rr := doAuthenticatedRequest(t, mux, "DELETE", "/api/v1/mcp/toolsets/not-a-uuid", "")
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -159,6 +166,9 @@ func TestHandleUpdateToolSet_HappyPath(t *testing.T) {
 	s := newTestServer(opt)
 	now := time.Now()
 
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets").WillReturnRows(sqlmock.NewRows(toolSetColumns()).
+		AddRow("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", "workspace", "File I/O", `["mcp:filesystem/*"]`, "all", "", "default", now, now))
+	mcpaExpectAudit(mock, false)
 	mock.ExpectQuery("UPDATE mcp_tool_sets SET").
 		WithArgs("workspace", "Updated", sqlmock.AnyArg(), "host", "edge-node-1", sqlmock.AnyArg()).
 		WillReturnRows(sqlmock.NewRows(toolSetColumns()).
@@ -166,7 +176,7 @@ func TestHandleUpdateToolSet_HappyPath(t *testing.T) {
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
 	body := `{"name":"workspace","description":"Updated","tool_refs":["mcp:filesystem/*"],"scope_kind":"host","scope_ref":"edge-node-1"}`
-	rr := doRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", body)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", body)
 
 	assertStatus(t, rr, http.StatusOK)
 }
@@ -175,12 +185,11 @@ func TestHandleUpdateToolSet_NotFound(t *testing.T) {
 	opt, mock := withMCPToolSets(t)
 	s := newTestServer(opt)
 
-	mock.ExpectQuery("UPDATE mcp_tool_sets SET").
-		WithArgs("workspace", "", sqlmock.AnyArg(), "all", "", sqlmock.AnyArg()).
-		WillReturnError(sql.ErrNoRows)
+	// MCPA: the set is resolved before the audit; an unknown id writes nothing.
+	mock.ExpectQuery("SELECT .+ FROM mcp_tool_sets").WillReturnError(sql.ErrNoRows)
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", `{"name":"workspace"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", `{"name":"workspace"}`)
 
 	assertStatus(t, rr, http.StatusNotFound)
 }
@@ -190,7 +199,7 @@ func TestHandleUpdateToolSet_BadUUID(t *testing.T) {
 	s := newTestServer(opt)
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/not-a-uuid", `{"name":"workspace"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/not-a-uuid", `{"name":"workspace"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -200,7 +209,7 @@ func TestHandleUpdateToolSet_MissingName(t *testing.T) {
 	s := newTestServer(opt)
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", `{"description":"missing"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", `{"description":"missing"}`)
 
 	assertStatus(t, rr, http.StatusBadRequest)
 }
@@ -209,7 +218,7 @@ func TestHandleCreateToolSet_NilService(t *testing.T) {
 	s := newTestServer()
 
 	mux := setupMux(t, "POST /api/v1/mcp/toolsets", s.handleCreateToolSet)
-	rr := doRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"name":"workspace"}`)
+	rr := doAuthenticatedRequest(t, mux, "POST", "/api/v1/mcp/toolsets", `{"name":"workspace"}`)
 
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
@@ -218,7 +227,7 @@ func TestHandleUpdateToolSet_NilService(t *testing.T) {
 	s := newTestServer()
 
 	mux := setupMux(t, "PUT /api/v1/mcp/toolsets/{id}", s.handleUpdateToolSet)
-	rr := doRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", `{"name":"workspace"}`)
+	rr := doAuthenticatedRequest(t, mux, "PUT", "/api/v1/mcp/toolsets/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", `{"name":"workspace"}`)
 
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
