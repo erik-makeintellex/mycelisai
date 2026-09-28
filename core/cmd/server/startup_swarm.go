@@ -69,7 +69,6 @@ func startSomaRuntime(
 		log.Printf("WARN: Failed to start Soma: %v", err)
 	}
 	mux.HandleFunc("/api/swarm/teams", soma.HandleCreateTeam)
-	mux.HandleFunc("/api/swarm/command", soma.HandleCommand)
 	mux.HandleFunc("/api/v1/swarm/broadcast", soma.HandleBroadcast)
 	return soma
 }

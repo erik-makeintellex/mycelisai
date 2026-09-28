@@ -68,39 +68,6 @@ func (s *Soma) HandleListTeams(w http.ResponseWriter, _ *http.Request) {
 	json.NewEncoder(w).Encode(s.ListTeams())
 }
 
-// HandleCommand injects a user command into the swarm global input bus.
-func (s *Soma) HandleCommand(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var payload struct {
-		Content string `json:"content"`
-		Source  string `json:"source"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	if payload.Content == "" {
-		http.Error(w, "Missing content", http.StatusBadRequest)
-		return
-	}
-
-	// Source is a caller label, not authority to select an arbitrary bus channel.
-	// Operator commands always enter through the guarded user-intent lane.
-	subject := protocol.TopicGlobalInputUser
-	if err := s.nc.Publish(subject, []byte(payload.Content)); err != nil {
-		log.Printf("Failed to publish command: %v", err)
-		http.Error(w, "Failed to inject command", http.StatusInternalServerError)
-		return
-	}
-	s.nc.Flush()
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "sent", "subject": subject})
-}
-
 type BroadcastReply struct {
 	TeamID  string `json:"team_id"`
 	Content string `json:"content"`
