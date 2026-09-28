@@ -2,7 +2,6 @@ package cognitive
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -50,12 +49,15 @@ type BudgetWarning struct {
 }
 
 // BudgetUsage is the read model served by GET /api/v1/cognitive/budgets/usage.
+// Reserved is the output allowance held by in-flight calls; Remaining is
+// limit - used - reserved (never negative).
 type BudgetUsage struct {
 	Scope         string     `json:"scope"`
 	Ref           string     `json:"ref"`
 	Used          int        `json:"used"`
 	Limit         int        `json:"limit"`
 	Remaining     int        `json:"remaining"`
+	Reserved      int        `json:"reserved"`
 	Warn          bool       `json:"warn"`
 	WarnPct       int        `json:"warn_pct"`
 	Period        string     `json:"period"`
@@ -63,28 +65,39 @@ type BudgetUsage struct {
 	UsageReported bool       `json:"usage_reported"`
 }
 
+// periodCounter is one run or day scope. All fields are guarded by g.mu.
 type periodCounter struct {
 	used       int
+	reserved   int // output clamps of admitted, unsettled calls
 	unreported bool
 	source     string
 	warned     bool
+	loaded     bool      // durable total applied, or no ledger to load from
+	lastLoad   time.Time // last ledger read attempt (retry rate limit)
+	lastTouch  time.Time
+	day        string // UTC day for day scopes, "" for run scopes
+	pins       int    // in-flight calls holding this counter; pinned counters are never evicted
 }
 
-// BudgetGovernor resolves limits, refuses calls that would start below the
-// headroom floor, and charges provider-reported usage. Period totals are read
-// once per scope from the ledger and then kept as write-through counters; when
-// the ledger is unavailable they are since-restart counters and say so.
+// BudgetGovernor resolves limits, reserves each admitted call's output clamp
+// against every applicable scope, and settles provider-reported usage. Period
+// totals load from the ledger into bounded write-through counters; while the
+// ledger is unreadable they are since-restart counters, say so, and retry.
 type BudgetGovernor struct {
-	mu       sync.Mutex
-	policy   protocol.TokenBudgetPolicySpec
-	ledger   BudgetLedger
-	counters map[string]*periodCounter
-	warn     func(BudgetWarning)
-	now      func() time.Time
+	mu          sync.Mutex
+	policy      protocol.TokenBudgetPolicySpec
+	ledger      BudgetLedger
+	counters    map[string]*periodCounter
+	warn        func(BudgetWarning)
+	now         func() time.Time
+	maxCounters int
+	sweptDay    string
+	sweptAt     time.Time
 }
 
 func NewBudgetGovernor(spec protocol.TokenBudgetPolicySpec, ledger BudgetLedger) *BudgetGovernor {
-	return &BudgetGovernor{policy: cloneBudgetSpec(spec), ledger: ledger, counters: map[string]*periodCounter{}, now: time.Now}
+	return &BudgetGovernor{policy: cloneBudgetSpec(spec), ledger: ledger, counters: map[string]*periodCounter{},
+		now: time.Now, maxCounters: budgetMaxCounters}
 }
 
 // Policy returns a copy of the effective policy.
@@ -119,10 +132,10 @@ func (g *BudgetGovernor) Limits(subject BudgetSubject) protocol.TokenBudgetLimit
 type budgetScope struct {
 	scope, ref string
 	limit      int
-	counter    *periodCounter // nil for the execution scope
+	counter    *periodCounter // pinned by periodScopes
 }
 
-// budgetCharge carries one admitted call from preflight to charge.
+// budgetCharge carries one admitted call from preflight to settlement.
 type budgetCharge struct {
 	meter               *ExecutionMeter
 	correlation         InferenceCorrelation
@@ -130,37 +143,44 @@ type budgetCharge struct {
 	limits              protocol.TokenBudgetLimits
 	providerID, modelID string
 	reservation         int
-	keys                []string
+	scopes              []budgetScope // the counters holding the reservation
+	settled             bool          // guarded by g.mu
 }
 
-func (g *BudgetGovernor) periodScopes(ctx context.Context, meter *ExecutionMeter, correlation InferenceCorrelation, limits protocol.TokenBudgetLimits) ([]budgetScope, []string) {
+// periodScopes returns the pinned run/team-day/agent-day counters for one
+// call; the caller must unpin them (unpinLocked) when done.
+func (g *BudgetGovernor) periodScopes(ctx context.Context, meter *ExecutionMeter, correlation InferenceCorrelation, limits protocol.TokenBudgetLimits) []budgetScope {
 	if meter.kind == ExecutionKindSystem {
-		return nil, nil
+		return nil
 	}
 	var scopes []budgetScope
-	var keys []string
 	add := func(scope, ref string, limit int) {
 		if ref == "" {
 			return
 		}
-		key, counter := g.counter(ctx, scope, ref)
-		scopes = append(scopes, budgetScope{scope, ref, limit, counter})
-		keys = append(keys, key)
+		scopes = append(scopes, budgetScope{scope, ref, limit, g.counter(ctx, scope, ref)})
 	}
 	add(protocol.TokenBudgetScopeRun, correlation.RunID, limits.PerRun)
 	add(protocol.TokenBudgetScopeTeamDay, correlation.TeamID, limits.PerTeamDay)
 	add(protocol.TokenBudgetScopeAgentDay, correlation.AgentID, limits.PerAgentDay)
-	return scopes, keys
+	return scopes
 }
 
-// remainingLocked returns the tightest scope. Caller holds g.mu and meter.mu.
-func (g *BudgetGovernor) remainingLocked(meter *ExecutionMeter, limits protocol.TokenBudgetLimits, scopes []budgetScope) (int, *TokenBudgetExhaustedError) {
-	best := limits.PerExecution - meter.used
-	stop := &TokenBudgetExhaustedError{Scope: protocol.TokenBudgetScopeExecution, Ref: meter.id, Used: meter.used, Limit: limits.PerExecution}
+func (g *BudgetGovernor) unpinLocked(scopes []budgetScope) {
 	for _, s := range scopes {
-		if left := s.limit - s.counter.used; left < best {
+		s.counter.pins--
+	}
+}
+
+// remainingLocked returns the tightest scope net of in-flight reservations.
+// Caller holds g.mu and meter.mu.
+func (g *BudgetGovernor) remainingLocked(meter *ExecutionMeter, limits protocol.TokenBudgetLimits, scopes []budgetScope) (int, *TokenBudgetExhaustedError) {
+	best := limits.PerExecution - meter.used - meter.reserved
+	stop := &TokenBudgetExhaustedError{Scope: protocol.TokenBudgetScopeExecution, Ref: meter.id, Used: meter.used, Reserved: meter.reserved, Limit: limits.PerExecution}
+	for _, s := range scopes {
+		if left := s.limit - s.counter.used - s.counter.reserved; left < best {
 			best = left
-			stop = &TokenBudgetExhaustedError{Scope: s.scope, Ref: s.ref, Used: s.counter.used, Limit: s.limit}
+			stop = &TokenBudgetExhaustedError{Scope: s.scope, Ref: s.ref, Used: s.counter.used, Reserved: s.counter.reserved, Limit: s.limit}
 			if s.scope != protocol.TokenBudgetScopeRun {
 				stop.ResetsAt = g.nextUTCDay()
 			}
@@ -169,114 +189,14 @@ func (g *BudgetGovernor) remainingLocked(meter *ExecutionMeter, limits protocol.
 	return best, stop
 }
 
-// Headroom reports the tokens left for one more call without charging.
+// Headroom reports the tokens left for one more call without reserving.
 func (g *BudgetGovernor) Headroom(ctx context.Context, meter *ExecutionMeter, correlation InferenceCorrelation, subject BudgetSubject) (int, *TokenBudgetExhaustedError) {
 	limits := g.Limits(subject)
-	scopes, _ := g.periodScopes(ctx, meter, correlation, limits)
+	scopes := g.periodScopes(ctx, meter, correlation, limits)
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	defer g.unpinLocked(scopes)
 	meter.mu.Lock()
 	defer meter.mu.Unlock()
 	return g.remainingLocked(meter, limits, scopes)
-}
-
-// preflight admits or refuses one call and returns the output clamp.
-func (g *BudgetGovernor) preflight(ctx context.Context, meter *ExecutionMeter, correlation InferenceCorrelation, subject BudgetSubject, providerID, modelID string, maxOutput int) (*budgetCharge, int, error) {
-	limits := g.Limits(subject)
-	scopes, keys := g.periodScopes(ctx, meter, correlation, limits)
-	g.mu.Lock()
-	meter.mu.Lock()
-	remaining, stop := g.remainingLocked(meter, limits, scopes)
-	if remaining < MinBudgetHeadroom {
-		meter.stop = stop
-	}
-	meter.mu.Unlock()
-	g.mu.Unlock()
-	charge := &budgetCharge{meter: meter, correlation: correlation, subject: subject, limits: limits, providerID: providerID, modelID: modelID, keys: keys}
-	if remaining < MinBudgetHeadroom {
-		g.append(ctx, charge, TokenLedgerEntry{Outcome: TokenLedgerOutcomeRefused, UsageReported: true})
-		return nil, 0, stop
-	}
-	clamp := maxOutput
-	if clamp <= 0 || clamp > remaining {
-		clamp = remaining
-	}
-	charge.reservation = clamp
-	return charge, clamp, nil
-}
-
-// charge records provider-reported usage; with none reported it charges the
-// clamped reservation (a configured bound, not a text estimate) and marks the
-// row usage_reported=false.
-func (g *BudgetGovernor) charge(ctx context.Context, c *budgetCharge, resp *InferResponse) {
-	entry := TokenLedgerEntry{Outcome: TokenLedgerOutcomeCharged, PromptTokens: resp.PromptTokens, CompletionTokens: resp.CompletionTokens}
-	entry.TotalTokens = resp.TokensUsed
-	if entry.TotalTokens <= 0 {
-		entry.TotalTokens = resp.PromptTokens + resp.CompletionTokens
-	}
-	entry.UsageReported = entry.TotalTokens > 0
-	if !entry.UsageReported {
-		entry.TotalTokens, entry.PromptTokens, entry.CompletionTokens = c.reservation, 0, 0
-	}
-	if resp.ModelUsed != "" {
-		c.modelID = resp.ModelUsed
-	}
-	scopes, _ := g.periodScopes(ctx, c.meter, c.correlation, c.limits)
-	var warnings []BudgetWarning
-	g.mu.Lock()
-	c.meter.mu.Lock()
-	c.meter.used += entry.TotalTokens
-	if crossed(c.meter.used, c.limits.PerExecution, c.limits.WarnPct) && !c.meter.warned {
-		c.meter.warned = true
-		warnings = append(warnings, g.warning(c, protocol.TokenBudgetScopeExecution, c.meter.id, c.meter.used, c.limits.PerExecution))
-	}
-	c.meter.mu.Unlock()
-	for _, s := range scopes {
-		s.counter.used += entry.TotalTokens
-		s.counter.unreported = s.counter.unreported || !entry.UsageReported
-		if crossed(s.counter.used, s.limit, c.limits.WarnPct) && !s.counter.warned {
-			s.counter.warned = true
-			warnings = append(warnings, g.warning(c, s.scope, s.ref, s.counter.used, s.limit))
-		}
-	}
-	sink := g.warn
-	g.mu.Unlock()
-	g.append(ctx, c, entry)
-	if sink != nil {
-		for _, w := range warnings {
-			sink(w)
-		}
-	}
-}
-
-func crossed(used, limit, warnPct int) bool {
-	return limit > 0 && warnPct > 0 && used*100 >= limit*warnPct
-}
-
-func (g *BudgetGovernor) warning(c *budgetCharge, scope, ref string, used, limit int) BudgetWarning {
-	return BudgetWarning{Scope: scope, Ref: ref, Used: used, Limit: limit, WarnPct: c.limits.WarnPct,
-		ExecutionID: c.meter.id, ExecutionKind: c.meter.kind, RunID: c.correlation.RunID, TeamID: c.correlation.TeamID,
-		AgentID: c.correlation.AgentID, BudgetClass: c.subject.Class}
-}
-
-func (g *BudgetGovernor) append(ctx context.Context, c *budgetCharge, entry TokenLedgerEntry) {
-	if g.ledger == nil {
-		return
-	}
-	entry.OccurredAt = g.now().UTC()
-	entry.ExecutionID, entry.ExecutionKind = c.meter.id, c.meter.kind
-	entry.RunID, entry.TeamID, entry.AgentID = c.correlation.RunID, c.correlation.TeamID, c.correlation.AgentID
-	entry.ProviderID, entry.ModelID, entry.BudgetClass = c.providerID, c.modelID, c.subject.Class
-	if err := g.ledger.Append(context.WithoutCancel(ctx), entry); err != nil {
-		// The in-memory counters stay exact; the durable record is now
-		// incomplete, so these periods are labelled since restart.
-		log.Printf("WARN: token usage ledger append failed (execution %s): %v", entry.ExecutionID, err)
-		g.mu.Lock()
-		for _, key := range c.keys {
-			if counter := g.counters[key]; counter != nil {
-				counter.source = protocol.TokenBudgetPeriodSinceRestart
-			}
-		}
-		g.mu.Unlock()
-	}
 }

@@ -253,6 +253,7 @@ func (r *Router) InferWithContract(ctx context.Context, req InferRequest) (*Infe
 	if err != nil {
 		return nil, err
 	}
+	defer r.budgetRelease(budget)
 	resp, err := adapter.Infer(ctx, req.Prompt, opts)
 	if err == nil && resp != nil {
 		r.finalizeInferenceResponse(providerID, resp)

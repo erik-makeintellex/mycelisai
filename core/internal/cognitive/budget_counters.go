@@ -8,6 +8,18 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+const (
+	// budgetLedgerRetryInterval rate-limits durable reloads per counter.
+	budgetLedgerRetryInterval = 30 * time.Second
+	// budgetRunCounterIdleTTL evicts run counters nobody has touched.
+	budgetRunCounterIdleTTL = time.Hour
+	// budgetCounterSweepInterval rate-limits the sweep below the size cap.
+	budgetCounterSweepInterval = time.Minute
+	// budgetMaxCounters caps live counters; the least recently used
+	// unpinned counter is evicted at the cap.
+	budgetMaxCounters = 20000
+)
+
 func (g *BudgetGovernor) dayStart() time.Time {
 	now := g.now().UTC()
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
@@ -15,46 +27,129 @@ func (g *BudgetGovernor) dayStart() time.Time {
 
 func (g *BudgetGovernor) nextUTCDay() time.Time { return g.dayStart().Add(24 * time.Hour) }
 
-// counter returns the write-through counter for one period scope, loading its
-// durable total once. The ledger read runs outside g.mu.
-func (g *BudgetGovernor) counter(ctx context.Context, scope, ref string) (string, *periodCounter) {
-	since := time.Time{}
-	key := scope + "|" + ref
-	if scope != protocol.TokenBudgetScopeRun {
-		since = g.dayStart()
-		key += "|" + since.Format("2006-01-02")
+// counterKey names one period scope; day scopes key on the current UTC day.
+func (g *BudgetGovernor) counterKey(scope, ref string) (key string, since time.Time, day string) {
+	if scope == protocol.TokenBudgetScopeRun {
+		return scope + "|" + ref, time.Time{}, ""
 	}
+	since = g.dayStart()
+	day = since.Format("2006-01-02")
+	return scope + "|" + ref + "|" + day, since, day
+}
+
+func budgetPeriodLabel(scope string) string {
+	if scope == protocol.TokenBudgetScopeRun {
+		return protocol.TokenBudgetPeriodRun
+	}
+	return protocol.TokenBudgetPeriodUTCDay
+}
+
+func (g *BudgetGovernor) readPeriod(ctx context.Context, scope, ref string, since time.Time) (int, bool, error) {
+	total, unreported, err := g.ledger.PeriodTotal(context.WithoutCancel(ctx), scope, ref, since)
+	if err != nil {
+		log.Printf("WARN: token usage ledger unavailable for %s %s; enforcing since-restart counters: %v", scope, ref, err)
+	}
+	return total, unreported, err
+}
+
+// counter returns the pinned write-through counter for one period scope,
+// creating it (with one durable read outside g.mu) on first touch. The caller
+// must unpin it. An unloaded counter retries its durable read.
+func (g *BudgetGovernor) counter(ctx context.Context, scope, ref string) *periodCounter {
+	key, since, day := g.counterKey(scope, ref)
 	g.mu.Lock()
-	existing := g.counters[key]
-	g.mu.Unlock()
-	if existing != nil {
-		return key, existing
+	if existing := g.counters[key]; existing != nil {
+		existing.pins++
+		existing.lastTouch = g.now()
+		g.mu.Unlock()
+		g.reload(ctx, scope, ref, since, existing)
+		return existing
 	}
-	loaded := &periodCounter{source: protocol.TokenBudgetPeriodSinceRestart}
+	g.mu.Unlock()
+	fresh := &periodCounter{source: protocol.TokenBudgetPeriodSinceRestart, day: day, loaded: g.ledger == nil}
 	if g.ledger != nil {
-		total, unreported, err := g.ledger.PeriodTotal(context.WithoutCancel(ctx), scope, ref, since)
-		if err != nil {
-			log.Printf("WARN: token usage ledger unavailable for %s %s; enforcing since-restart counters: %v", scope, ref, err)
-		} else {
-			loaded.used, loaded.unreported = total, unreported
-			loaded.source = protocol.TokenBudgetPeriodUTCDay
-			if scope == protocol.TokenBudgetScopeRun {
-				loaded.source = protocol.TokenBudgetPeriodRun
-			}
+		fresh.lastLoad = g.now()
+		if total, unreported, err := g.readPeriod(ctx, scope, ref, since); err == nil {
+			fresh.used, fresh.unreported, fresh.source, fresh.loaded = total, unreported, budgetPeriodLabel(scope), true
 		}
 	}
 	g.mu.Lock()
 	defer g.mu.Unlock()
+	now := g.now()
 	if existing := g.counters[key]; existing != nil {
-		return key, existing
+		existing.pins++
+		existing.lastTouch = now
+		return existing
 	}
-	g.counters[key] = loaded
-	return key, loaded
+	g.sweepLocked(now)
+	fresh.pins, fresh.lastTouch = 1, now
+	g.counters[key] = fresh
+	return fresh
 }
 
-// Usage reports one period scope against the given limits.
+// reload retries the durable read of an unloaded counter, at most once per
+// budgetLedgerRetryInterval. On success used becomes max(durable, in-memory):
+// charges whose appends failed stay counted and nothing is counted twice.
+func (g *BudgetGovernor) reload(ctx context.Context, scope, ref string, since time.Time, c *periodCounter) {
+	if g.ledger == nil {
+		return
+	}
+	g.mu.Lock()
+	now := g.now()
+	if c.loaded || now.Sub(c.lastLoad) < budgetLedgerRetryInterval {
+		g.mu.Unlock()
+		return
+	}
+	c.lastLoad = now
+	g.mu.Unlock()
+	total, unreported, err := g.readPeriod(ctx, scope, ref, since)
+	if err != nil {
+		return
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if total > c.used {
+		c.used = total
+	}
+	c.unreported = c.unreported || unreported
+	c.source, c.loaded = budgetPeriodLabel(scope), true
+}
+
+// sweepLocked bounds the counter map: past-day counters and idle run counters
+// go, and at the size cap the least recently touched counter goes. Pinned
+// counters stay. An evicted counter reloads from the ledger on its next
+// touch; without a ledger its count restarts at zero. Caller holds g.mu.
+func (g *BudgetGovernor) sweepLocked(now time.Time) {
+	today := g.dayStart().Format("2006-01-02")
+	full := len(g.counters) >= g.maxCounters
+	if !full && today == g.sweptDay && now.Sub(g.sweptAt) < budgetCounterSweepInterval {
+		return
+	}
+	g.sweptDay, g.sweptAt = today, now
+	lru := ""
+	var lruAt time.Time
+	for key, c := range g.counters {
+		if c.pins > 0 {
+			continue
+		}
+		if (c.day != "" && c.day != today) || (c.day == "" && now.Sub(c.lastTouch) >= budgetRunCounterIdleTTL) {
+			delete(g.counters, key)
+			continue
+		}
+		if lru == "" || c.lastTouch.Before(lruAt) {
+			lru, lruAt = key, c.lastTouch
+		}
+	}
+	if len(g.counters) >= g.maxCounters && lru != "" {
+		delete(g.counters, lru)
+	}
+}
+
+// Usage reports one period scope against the given limits. It never creates
+// a counter: an unknown ref is read from the ledger without caching (zero,
+// labelled since_restart, when there is no readable ledger).
 func (g *BudgetGovernor) Usage(ctx context.Context, scope, ref string, limits protocol.TokenBudgetLimits) BudgetUsage {
-	_, counter := g.counter(ctx, scope, ref)
+	key, since, _ := g.counterKey(scope, ref)
 	limit := limits.PerRun
 	switch scope {
 	case protocol.TokenBudgetScopeTeamDay:
@@ -62,11 +157,22 @@ func (g *BudgetGovernor) Usage(ctx context.Context, scope, ref string, limits pr
 	case protocol.TokenBudgetScopeAgentDay:
 		limit = limits.PerAgentDay
 	}
+	usage := BudgetUsage{Scope: scope, Ref: ref, Limit: limit, WarnPct: limits.WarnPct, Period: protocol.TokenBudgetPeriodSinceRestart, UsageReported: true}
 	g.mu.Lock()
-	defer g.mu.Unlock()
-	usage := BudgetUsage{Scope: scope, Ref: ref, Used: counter.used, Limit: limit, WarnPct: limits.WarnPct,
-		Warn: crossed(counter.used, limit, limits.WarnPct), Period: counter.source, UsageReported: !counter.unreported}
-	if usage.Remaining = limit - counter.used; usage.Remaining < 0 {
+	existing := g.counters[key]
+	g.mu.Unlock()
+	if existing != nil {
+		g.reload(ctx, scope, ref, since, existing)
+		g.mu.Lock()
+		usage.Used, usage.Reserved, usage.Period, usage.UsageReported = existing.used, existing.reserved, existing.source, !existing.unreported
+		g.mu.Unlock()
+	} else if g.ledger != nil {
+		if total, unreported, err := g.readPeriod(ctx, scope, ref, since); err == nil {
+			usage.Used, usage.Period, usage.UsageReported = total, budgetPeriodLabel(scope), !unreported
+		}
+	}
+	usage.Warn = crossed(usage.Used, limit, limits.WarnPct)
+	if usage.Remaining = limit - usage.Used - usage.Reserved; usage.Remaining < 0 {
 		usage.Remaining = 0
 	}
 	if scope != protocol.TokenBudgetScopeRun {
