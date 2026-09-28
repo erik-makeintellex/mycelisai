@@ -157,12 +157,18 @@ func (h *mcpsH) expectResolve() {
 	h.expectToolCache()
 }
 
-// expectServerRow answers the registry row for the harness server.
+// expectServerRow answers the registry row for the harness server. A
+// harness server named "filesystem" carries the curated library command,
+// because MCPL2 identifies filesystem servers by package, not by name.
 func (h *mcpsH) expectServerRow() {
 	now := time.Now()
+	command, args := "", `[]`
+	if h.serverName == "filesystem" {
+		command, args = "npx", `["-y","@modelcontextprotocol/server-filesystem","./workspace"]`
+	}
 	h.mcpMock.ExpectQuery("SELECT .+ FROM mcp_servers").WithArgs(h.serverID).
 		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
-			AddRow(h.serverID.String(), h.serverName, "sse", "", `[]`, `{}`, "http://fixture", `{}`, h.status, nil, now, now))
+			AddRow(h.serverID.String(), h.serverName, "sse", command, args, `{}`, "http://fixture", `{}`, h.status, nil, now, now))
 }
 
 // expectToolCache answers the discovered tool cache for the harness server.

@@ -33,7 +33,7 @@ Owner: Core authority and MCP runtime. Product authority remains the [canonical 
   - Install goes through `MCPLibraryBrowser.tsx:49` → `installFromLibrary` (store :241-285). Its success copy says "Installed into your current MCP group" (:273), but servers are global, with no owner/group column (schema :381-394).
   - Delete goes through `MCPToolRegistry.tsx:211` → `deleteMCPServer`, which swallows non-2xx silently (store :90-101).
   - Toolset create goes through `MCPToolSetLayersPanel.tsx:234`.
-  - `/api/v1/user/me` reports `role`, not scopes (identity.go:46-56).
+  - `/api/v1/user/me` reported `role` only when this contract was written; since MCPL it also reports `scopes` and `is_approver` as interface hints (identity.go `HandleMe`). Core still re-checks every route.
   - e2e: mcp-connected-tools (legacy cap 515), mcp-connected-tools-edge, mcp-toolset-layers.
 
 ## Threat model
