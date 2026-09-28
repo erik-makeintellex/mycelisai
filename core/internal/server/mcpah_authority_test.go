@@ -3,7 +3,6 @@ package server
 import (
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/mcp"
@@ -38,22 +37,6 @@ func mcpahLibrary() func(*AdminServer) {
 			},
 		}}}
 	}
-}
-
-// mcpahExpectInstall scripts exactly one Install + failed Connect + ListTools.
-func mcpahExpectInstall(mock sqlmock.Sqlmock, name string, envArg any) {
-	now := time.Now()
-	id := "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
-	mock.ExpectQuery("INSERT INTO mcp_servers").
-		WithArgs(name, "unsupported", "", sqlmock.AnyArg(), envArg, "", sqlmock.AnyArg()).
-		WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
-			AddRow(id, name, "unsupported", "", `[]`, `{}`, "", `{}`, "installed", nil, now, now))
-	mock.ExpectExec("UPDATE mcp_servers").
-		WithArgs("error", sqlmock.AnyArg(), id).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery("SELECT .+ FROM mcp_tools").
-		WithArgs(id).
-		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
 }
 
 func mcpahAssertNoDBCalls(t *testing.T, mock sqlmock.Sqlmock) {
@@ -127,12 +110,13 @@ func TestMcpahLibraryWrite_ScopedAndRootAdminsInstallWithoutEnv(t *testing.T) {
 		"root":   localAdminIdentityForTest(),
 		"scoped": adminWithScopes(scopeMCPConfigWrite),
 	}
+	url := mcpaFixtureURL(t)
 	for label, identity := range admins {
 		for _, route := range mcpahWriteRoutes() {
 			for _, name := range []string{"fetch", "filesystem"} {
-				opt, mock := withMCPDB(t)
-				s := newTestServer(opt, mcpahLibrary())
-				mcpahExpectInstall(mock, name, sqlmock.AnyArg())
+				opt, mock := mcpaSharedDB(t)
+				s := newTestServer(opt, mcpaLiveLibrary(url))
+				mcpaExpectLiveInstall(t, s, mock, name, sqlmock.AnyArg(), url, `{}`, `{}`, false)
 				rr := doAuthenticatedRequestAs(t, route.handler(s), "POST", route.path, `{"name":"`+name+`"}`, identity)
 				if rr.Code != http.StatusOK {
 					t.Fatalf("%s %s %s: status = %d body %s", label, route.name, name, rr.Code, rr.Body.String())

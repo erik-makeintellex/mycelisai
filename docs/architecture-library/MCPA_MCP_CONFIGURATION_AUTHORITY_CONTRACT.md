@@ -2,7 +2,9 @@
 
 Owner: Core authority and MCP runtime. Product authority remains the [canonical PRD](MYCELIS_CANONICAL_PRD.md).
 
-> Draft contract for gating MCP *configuration* routes (architect draft 2026-09-28; owner answers pending). Slice id `MCPA`, the follow-up named by MCPS D10. Packet base `dev` @f16e32b7; every citation was read at `dev` 111f62f4 (f16e32b7 + HYG gofmt, which changed no cited file). Sibling: [MCPS contract](MCPS_OPERATOR_MCP_SCOPE_CONTRACT.md) (call authority, W1 worktree `mcps-authority` has no edits yet).
+> **Frozen (owner defaults applied 2026-09-28):** Q1 `mcp_config:write`, Q2 approvers install directly (self-approved tier 2), Q3 env secrets at rest out of scope, Q4 toolset writes need `mcp_config:write` plus audit. W1 froze D9 as resolve → audit → Disconnect → Delete (the record needs the server name, D7), and a Connect failure after install answers `502 mcp_connect_failed`, never "installed".
+>
+> Contract for gating MCP *configuration* routes (architect draft 2026-09-28). Slice id `MCPA`, the follow-up named by MCPS D10. Packet base `dev` @f16e32b7; every citation was read at `dev` 111f62f4 (f16e32b7 + HYG gofmt, which changed no cited file). Sibling: [MCPS contract](MCPS_OPERATOR_MCP_SCOPE_CONTRACT.md) (call authority, W1 worktree `mcps-authority` has no edits yet).
 
 ## Verified today (source facts)
 - **Routes** (server/admin_routes.go): servers list :186, delete :187, library list :191, inspect :192, install :193, apply :194, toolsets list/create/update/delete :270-273. Raw install is a hard 403 (:181-185). No other HTTP path writes `mcp_servers` or `mcp_tool_sets`: `config_documents*.go`, `organization*.go` and `deployment*.go` never touch MCP, and `templates_execution*.go` only *calls* tools (MCPS scope). Non-HTTP writers are startup only: `BootstrapDefaults` installs `filesystem` and `fetch` and seeds the `workspace`/`research` toolsets (mcp/service_bootstrap.go:11, :78-81), and `EnsureRuntimeDefaults` runs at cmd/server/startup_product.go:255.
@@ -69,7 +71,7 @@ Other threats:
 - **D8. Secrets hygiene without schema.**
   - Install and delete errors return a fixed message, and the raw `err` goes only to a redacted log via `mcp.RedactToolText` (the MCPS W1 export). No env value appears in responses, audit or logs.
   - Plaintext `mcp_servers.env` at rest is **out of scope** (owner Q3).
-- **D9. Delete ordering.** Authority, then audit, then `MCP.Get` (404 `mcp_server_not_found` when absent, no disconnect), then Disconnect, then Delete. An unknown id no longer disconnects anything.
+- **D9. Delete ordering (frozen by W1).** Authority, then `MCP.Get` (404 `mcp_server_not_found` when absent, no audit and no disconnect), then the audit (it names the server), then Disconnect, then Delete. An unknown id no longer disconnects anything.
 - **D10. Interface.**
   - Resources → Tools hides install, delete and new-layer controls unless `/user/me` role is `admin`, and shows `blockerCopy` on any 403.
   - `deleteMCPServer` and `createMCPToolSet` surface the blocker envelope instead of failing silently or showing raw text.

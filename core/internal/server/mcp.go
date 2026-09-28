@@ -62,33 +62,22 @@ func (s *AdminServer) handleMCPList(w http.ResponseWriter, r *http.Request) {
 
 // handleMCPDelete removes an MCP server and disconnects the live client.
 // DELETE /api/v1/mcp/servers/{id}
+// MCPA D1/D9: mcp_config:write first, then resolve, audit, disconnect, delete.
 func (s *AdminServer) handleMCPDelete(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireMCPConfigWrite(w, r); !ok {
+		return
+	}
 	if s.MCP == nil || s.MCPPool == nil {
 		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
 		return
 	}
 
-	idStr := r.PathValue("id")
-	serverID, err := uuid.Parse(idStr)
+	serverID, err := uuid.Parse(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid server id: %s"}`, idStr), http.StatusBadRequest)
+		respondAPIError(w, "invalid server id", http.StatusBadRequest)
 		return
 	}
-
-	ctx := r.Context()
-
-	// Disconnect live client (best-effort — ignore "not found in pool" errors).
-	if err := s.MCPPool.Disconnect(serverID); err != nil {
-		log.Printf("MCP delete: disconnect %s (best-effort): %v", serverID, err)
-	}
-
-	// Delete from DB (CASCADE deletes tools).
-	if err := s.MCP.Delete(ctx, serverID); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"delete failed: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
-	}
-
-	respondJSON(w, map[string]string{"status": "deleted"})
+	s.deleteMCPServer(w, r, serverID)
 }
 
 // handleMCPToolCall invokes a tool on a specific MCP server.
@@ -128,7 +117,8 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 
 	result, err := s.MCPPool.CallTool(r.Context(), serverID, toolName, args)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"tool call failed: %s"}`, err.Error()), http.StatusBadGateway)
+		// MCPA: transport/JSON-RPC errors are redacted, capped and JSON-encoded.
+		respondAPIError(w, "tool call failed: "+redactedMCPErrorText(err), http.StatusBadGateway)
 		return
 	}
 	s.finishMCPToolCall(w, r, serverID, serverName, toolName, args, result)

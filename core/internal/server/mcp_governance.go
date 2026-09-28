@@ -28,22 +28,19 @@ type mcpGovernanceDecision struct {
 	Reasons          []string `json:"reasons,omitempty"`
 }
 
+// normalizeMCPGovernanceContext takes owner and role from the identity only
+// (MCPA D6); body owner_user_id/actor_role are ignored. source_surface,
+// config_scope and group_id remain caller labels.
 func normalizeMCPGovernanceContext(r *http.Request, incoming mcpGovernanceContext) mcpGovernanceContext {
 	ctx := mcpGovernanceContext{
 		SourceSurface: strings.TrimSpace(incoming.SourceSurface),
 		ConfigScope:   strings.TrimSpace(incoming.ConfigScope),
 		GroupID:       strings.TrimSpace(incoming.GroupID),
-		OwnerUserID:   strings.TrimSpace(incoming.OwnerUserID),
-		ActorRole:     normalizeGovernanceRole(incoming.ActorRole),
 	}
 
 	if identity := IdentityFromContext(r.Context()); identity != nil {
-		if ctx.OwnerUserID == "" {
-			ctx.OwnerUserID = strings.TrimSpace(identity.UserID)
-		}
-		if ctx.ActorRole == "" {
-			ctx.ActorRole = normalizeGovernanceRole(identity.Role)
-		}
+		ctx.OwnerUserID = strings.TrimSpace(identity.UserID)
+		ctx.ActorRole = normalizeGovernanceRole(identity.Role)
 	}
 
 	if ctx.SourceSurface == "" {
@@ -211,12 +208,16 @@ func buildMCPLibraryInspectionReport(entry *mcp.LibraryEntry, ctx mcpGovernanceC
 	deploymentBoundary := mcpLibraryDeploymentBoundary(entry)
 	credentialBoundary := mcpLibraryCredentialBoundary(entry)
 	decision := buildMCPLibraryGovernanceDecision(entry, ctx)
+	requiredScopes := []string{scopeMCPConfigWrite}
+	if decision.Decision == "require_approval" {
+		requiredScopes = append(requiredScopes, scopeApprovalsDecide)
+	}
 
 	return map[string]any{
 		"service_name":           strings.TrimSpace(entry.Name),
 		"source":                 "curated_library",
 		"risk_level":             riskLevel,
-		"required_scopes":        []string{"mcp:write"},
+		"required_scopes":        requiredScopes,
 		"network_locality":       locality,
 		"deployment_boundary":    deploymentBoundary,
 		"credential_boundary":    credentialBoundary,

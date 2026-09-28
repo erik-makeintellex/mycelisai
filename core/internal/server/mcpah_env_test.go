@@ -93,10 +93,11 @@ func (m mcpahEnvKeys) Match(v driver.Value) bool {
 }
 
 func TestMcpahEnv_DeclaredKeysReachInstallAndStayRedacted(t *testing.T) {
+	url := mcpaFixtureURL(t)
 	for _, route := range mcpahWriteRoutes() {
-		opt, mock := withMCPDB(t)
-		s := newTestServer(opt, mcpahLibrary())
-		mcpahExpectInstall(mock, "tokened", mcpahEnvKeys{"FETCH_REGION", "FETCH_TOKEN"})
+		opt, mock := mcpaSharedDB(t)
+		s := newTestServer(opt, mcpaLiveLibrary(url))
+		mcpaExpectLiveInstall(t, s, mock, "tokened", mcpahEnvKeys{"FETCH_REGION", "FETCH_TOKEN"}, url, `{}`, `{}`, false)
 		body := `{"name":"tokened","env":{"FETCH_TOKEN":"mcpah-declared-secret","FETCH_REGION":"eu"}}`
 		rr := doAuthenticatedRequest(t, route.handler(s), "POST", route.path, body)
 		assertStatus(t, rr, http.StatusOK)
@@ -108,13 +109,15 @@ func TestMcpahEnv_DeclaredKeysReachInstallAndStayRedacted(t *testing.T) {
 }
 
 func TestMcpahEnv_DeclaredGitHubKeyPassesEnvCheck(t *testing.T) {
+	url := mcpaFixtureURL(t)
 	for _, route := range mcpahWriteRoutes() {
-		opt, mock := withMCPDB(t)
-		s := newTestServer(opt, func(s *AdminServer) { s.MCPLibrary = loadStandardMCPLibrary(t) })
+		opt, mock := mcpaSharedDB(t)
+		s := newTestServer(opt, mcpaLiveLibrary(url))
+		mcpaExpectLiveInstall(t, s, mock, "github", mcpahEnvKeys{"GITHUB_PERSONAL_ACCESS_TOKEN"}, url, `{}`, `{}`, false)
 		body := `{"name":"github","env":{"GITHUB_PERSONAL_ACCESS_TOKEN":"mcpah-gh-value"}}`
 		rr := doAuthenticatedRequest(t, route.handler(s), "POST", route.path, body)
-		// The existing external_saas approval boundary (202) is unchanged by MCPA-H.
-		assertStatus(t, rr, http.StatusAccepted)
+		// MCPA D5: an approver ("*") installs it directly; there is no 202.
+		assertStatus(t, rr, http.StatusOK)
 		if strings.Contains(rr.Body.String(), "mcpah-gh-value") {
 			t.Fatalf("%s: response echoed the token value", route.name)
 		}
@@ -123,9 +126,10 @@ func TestMcpahEnv_DeclaredGitHubKeyPassesEnvCheck(t *testing.T) {
 }
 
 func TestMcpahEnv_RejectedCopyIsRoleAwareAndPlain(t *testing.T) {
-	user := mcpEnvRejectedCopy.User
-	if user.Message == "" || user.Action == "" || mcpEnvRejectedCopy.Admin.Message == "" {
-		t.Fatalf("mcp_env_rejected needs user message+action and admin message: %+v", mcpEnvRejectedCopy)
+	copy := blockerCopies[codeMCPEnvRejected]
+	user := copy.User
+	if user.Message == "" || user.Action == "" || copy.Admin.Message == "" {
+		t.Fatalf("mcp_env_rejected needs user message+action and admin message: %+v", copy)
 	}
 	assertUserSafe(t, codeMCPEnvRejected, user.Message, user.Action)
 	for _, bad := range []string{"env", "NODE_OPTIONS", "variable"} {

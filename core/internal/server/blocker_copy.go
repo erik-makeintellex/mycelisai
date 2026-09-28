@@ -29,6 +29,16 @@ const (
 	codeMCPCallForbidden = "mcp_call_forbidden"
 )
 
+// MCPA MCP configuration writes: 400 when a request carries env keys the
+// library entry does not declare (nothing installed or launched), 404 when a
+// delete names no registered server (nothing disconnected or deleted), 502
+// when an install registered the server but it could not start.
+const (
+	codeMCPEnvRejected    = "mcp_env_rejected"
+	codeMCPServerNotFound = "mcp_server_not_found"
+	codeMCPConnectFailed  = "mcp_connect_failed"
+)
+
 // codeTeamServiceOffline marks the agent runtime (Soma's team service) as
 // down; it reuses the existing chat transport code.
 const codeTeamServiceOffline = "transport_unavailable"
@@ -121,6 +131,24 @@ var blockerCopies = map[string]roleBlockerText{
 		User: blockerText{"Your account can't use this tool directly. Nothing ran.",
 			"Ask Soma to do it for you, or ask an admin for access."},
 		Admin: blockerText{Action: "Direct read tools need outputs:read on the caller's account. Nothing ran."},
+	},
+	codeMCPEnvRejected: {
+		User: blockerText{"This tool can't be set up with those settings.",
+			"Remove the settings this tool doesn't use and try again. Nothing was installed."},
+		Admin: blockerText{"This install sets environment variables the library entry does not declare.",
+			"Send only the keys in allowed_env_keys (exact spelling and case); rejected_env_keys lists the others. Nothing was installed or started."},
+	},
+	codeMCPServerNotFound: {
+		User: blockerText{"That connection no longer exists. Nothing was changed.",
+			"Refresh the list of connected tools and try again."},
+		Admin: blockerText{"No MCP server with this id is registered. Nothing was disconnected or deleted.",
+			"Refresh Resources to see the registered MCP servers."},
+	},
+	codeMCPConnectFailed: {
+		User: blockerText{"This tool was added but couldn't start, so it isn't available yet.",
+			"Ask an admin to check its settings, then try again or remove it."},
+		Admin: blockerText{"The MCP server was registered but could not be started or connected; it is saved with status error.",
+			"Read detail for the redacted reason, fix the settings and install again, or delete the server."},
 	},
 	governancePolicyUnavailableCode: {
 		// GET /governance/policy is admin-only; the user variant exists so a
