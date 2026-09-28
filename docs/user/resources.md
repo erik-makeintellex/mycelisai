@@ -160,10 +160,11 @@ Review/edit expectation:
 - after changing structure or secrets, return to Servers and confirm the server card, tool list, and recent MCP activity match the expected shape
 
 Current posture:
-- curated library installs are the default path
+- curated library installs are the default path, and installing or reapplying a server needs an admin: it starts a program inside Mycelis, so a standard account sees "This area is for admins." and nothing is installed (admins need the `mcp_config:write` permission, which full admins already hold)
+- an install may only set the environment variables the library entry declares, spelled exactly as listed; any other variable is refused (`mcp_env_rejected`) and nothing is installed or started
 - `/api/v1/mcp/library/apply` is the one-call API for applying a curated potential source: it returns `installed` with server/tools/governance when allowed, or `requires_approval` with the inspection report when a policy boundary is still required
 - curated `filesystem` installs are repeat-safe and bind to the deployment workspace root, such as `/data/workspace` in the supported Docker Compose runtime
-- local-first current-group configuration can install directly when policy allows
+- for an admin, local-first entries install directly when policy allows
 - remote or higher-risk entries can return an explicit approval boundary instead of silently installing
 - credentialed external SaaS entries such as Slack, GitHub, hosted search, and hosted media should now be expected to require approval rather than behaving like low-risk local tools
 - `brave-search` provides optional MCP-governed web search when installed with `BRAVE_API_KEY`; `fetch` retrieves explicit URLs for analysis, while built-in Mycelis `web_search` remains the default Soma search path when configured
