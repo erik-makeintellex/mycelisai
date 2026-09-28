@@ -79,19 +79,3 @@ def generate(c):
 
 ns_proto = Collection("proto")
 ns_proto.add_task(generate)
-
-# -- RELAY --
-@task
-def test(c):
-    """Run Python Relay SDK Tests."""
-    c.run("uv run pytest sdk/python")
-
-@task
-def demo(c):
-    """Run the Reference Worker Agent."""
-    env = {"PYTHONPATH": "sdk/python/src"}
-    c.run("uv run python agents/reference_worker.py", env=env)
-
-ns_relay = Collection("relay")
-ns_relay.add_task(test)
-ns_relay.add_task(demo)

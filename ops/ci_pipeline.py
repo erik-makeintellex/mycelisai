@@ -1,5 +1,4 @@
 import sys
-import time
 
 
 def _core_go_command(core_dir, arguments: str) -> str:
@@ -114,32 +113,6 @@ def run_build(c, *, cache_tasks, core_tasks, interface_tasks):
         print(f"BUILD FAILED: {', '.join(errors)}")
         raise SystemExit(1)
     print("BUILD PASSED")
-
-
-def run_check(c, *, lint_task, test_task, build_task):
-    start = time.time()
-    print("=" * 60)
-    print("  MYCELIS LOCAL CI PIPELINE")
-    print("=" * 60)
-    print()
-
-    for name, fn in (("LINT", lint_task), ("TEST", test_task), ("BUILD", build_task)):
-        stage_start = time.time()
-        try:
-            fn(c)
-        except SystemExit:
-            elapsed = time.time() - start
-            print()
-            print(f"PIPELINE FAILED at stage: {name} ({elapsed:.1f}s)")
-            raise SystemExit(1)
-        stage_elapsed = time.time() - stage_start
-        print(f"  [{name} completed in {stage_elapsed:.1f}s]")
-        print()
-
-    elapsed = time.time() - start
-    print("=" * 60)
-    print(f"  PIPELINE PASSED ({elapsed:.1f}s)")
-    print("=" * 60)
 
 
 def _run_baseline_step(label: str, action, errors: list[str], failure: str):

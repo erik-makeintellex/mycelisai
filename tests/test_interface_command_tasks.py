@@ -32,21 +32,6 @@ def test_typecheck_uses_direct_shell_command(monkeypatch):
     assert shell_calls == [["npx", "tsc", "--noEmit"]]
 
 
-def test_test_coverage_uses_direct_shell_command(monkeypatch):
-    shell_calls: list[list[str]] = []
-    ctx = FakeContext()
-
-    monkeypatch.setattr(
-        interface,
-        "_run_interface_shell_command",
-        lambda command, extra_env=None: shell_calls.append(command) or interface.CommandResult(exited=0, stdout="", stderr=""),
-    )
-
-    interface.test_coverage.body(ctx)
-
-    assert shell_calls == [["npx", "vitest", "run", "--coverage"]]
-
-
 def test_interface_ready_urls_prioritize_requested_host_then_loopback_fallbacks():
     urls = interface._interface_ready_urls("127.0.0.1", 3000)
 
