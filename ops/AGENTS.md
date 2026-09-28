@@ -20,5 +20,5 @@
 
 ## Gotchas
 - Discover configured targets (ports, hosts, Docker owner, provider endpoints) from `.env`/`.env.compose`/task defaults instead of assuming a host; see root `AGENTS.md` "Runtime Config And Proof Boundary" and "Configured Service Target Standard" for the full discovery order.
-- A writer in this area never starts, stops, or recreates the shared `mycelis-home-*`/`vllm-node` stack; the only allowed container is one disposable `docker run --rm` Postgres for DB tests.
+- A writer in this area never starts, stops, or recreates the shared `mycelis-home-*` stack or `vllm-node` (stopped; the root is Windows Ollama); the only allowed container is one disposable `docker run --rm` Postgres for DB tests.
 - WSL shuts down its VM when no `wsl.exe` session is active, and containers restart on the next boot — a "service down" symptom may just be an idle VM, not a real regression.

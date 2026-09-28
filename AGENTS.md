@@ -77,14 +77,14 @@ Feature folders carry their own `AGENTS.md` with owned paths, the roster role th
 
 Use the smallest tier that passes the task's proof gate; optimize accepted results, not token price alone. These developer-agent choices do not configure Mycelis runtime providers. Pick the tier first, then the harness model.
 
-| Tier | Work | Codex | Claude | Local vLLM (`127.0.0.1:8000`) |
+| Tier | Work | Codex | Claude | Local model (Ollama `127.0.0.1:11434`) |
 | --- | --- | --- | --- | --- |
 | T0 inventory | Read-only search, file/route inventory, log triage, evidence formatting | `gpt-6-luna` / high | Haiku | Allowed: summarizing supplied text |
 | T1 routine | Specified coding, tests, UI copy, docs sync, automation | `gpt-6-sol` / medium | Sonnet | Only small scoped edits with a passing test gate |
 | T2 hard | Concurrency, persistence, schema, security fixes, difficult coding | `gpt-6-sol` / high | Opus | Not allowed |
 | T3 authority | Contract freeze, architecture conflicts, independent security QA, final GO | `gpt-6-astra` / low→high | Opus | Not allowed |
 
-- The local model (currently Qwen2.5-Coder-14B-AWQ, 16k context, hermes tool calls) keeps data on the host and suits confidential or offline work. It never owns authority, schema, security review, or final GO, and its output needs a stronger-tier review before merge. Record the served model id; `/v1/models` is the source of truth.
+- The local model (currently Windows Ollama qwen3:14b; WSL vLLM is stopped because it locked WSL up) keeps data on the host and suits confidential or offline work. It never owns authority, schema, security review, or final GO, and its output needs a stronger-tier review before merge. Record the served model id; the provider's `/v1/models` is the source of truth.
 - A newly available model enters a tier only after it passes that tier's proof gate on a bounded slice. A model name is not evidence.
 - One agent is the default; spawn only authorized, independent work. Escalate a tier after a concrete failed proof or unresolved ambiguity, not for routine command execution.
 - Record model, tier, token usage, latency, and retries in close-out when the harness exposes them. Do not invent savings or confuse the lead session's model with spawn settings.

@@ -19,5 +19,5 @@
 
 ## Gotchas
 - Local model posture is vLLM on host port 8000; Mycelis reads `MYCELIS_PROVIDER_VLLM_MODEL_ID`, and a model switch must be proven from inside the Core container (`host.docker.internal:8000/v1`), not just from the host.
-- After a Docker/WSL restart, `vllm-node` needs time to load; wait for `127.0.0.1:8000/v1/models` before trusting any live inference proof.
+- The live root is Windows Ollama (qwen3:14b) through the `mycelis-home-ollama-relay` container; `vllm-node` is stopped because WSL vLLM locked up. After a restart, run `uv run inv compose.warm-cognitive` before trusting any live inference proof. If vLLM is re-enabled, wait for `127.0.0.1:8000/v1/models` instead.
 - `MaxOutputTokens` (`types.go`, default 1024 via `DefaultMaxTokensForBudget`) caps output per provider; committed values in `core/config/cognitive.yaml` are 1024 or 2048 depending on provider (`vllm`: 1024) — read the active config (`uv run inv cognitive.*` status task) before assuming a budget.

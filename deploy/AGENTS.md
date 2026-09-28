@@ -8,7 +8,7 @@
 
 ## Contracts
 - `.env` is the local secret store; `.env.compose` is topology and non-secret runtime shape only, and secret-like values from `.env` are authoritative over stale `.env.compose` values.
-- The retained `mycelis-home-*` Compose stack and `vllm-node` are shared and already up; no slice agent starts, stops, or recreates them, and only one disposable `docker run --rm` Postgres is allowed for DB tests.
+- The retained `mycelis-home-*` Compose stack (including `mycelis-home-ollama-relay` to Windows Ollama) is shared and already up, and `vllm-node` is intentionally stopped; no slice agent starts, stops, or recreates them, and only one disposable `docker run --rm` Postgres is allowed for DB tests.
 - The operator-approved Compose-only authenticated-Core control-peer exception is canonical (`.state/V8_DEV_STATE.md` "B2 Private Deployment Delivery Evidence"); do not extend that exception to Kubernetes without a new architecture decision.
 
 ## Gates
