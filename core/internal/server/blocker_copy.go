@@ -29,6 +29,10 @@ const (
 	codeMCPCallForbidden = "mcp_call_forbidden"
 )
 
+// MCPL: 403 when a filesystem MCP path argument resolves outside the
+// MYCELIS_WORKSPACE root (lexically or through a symlink). Nothing ran.
+const codeMCPPathOutsideWorkspace = "mcp_path_outside_workspace"
+
 // MCPA MCP configuration writes: 400 when a request carries env keys the
 // library entry does not declare (nothing installed or launched), 404 when a
 // delete names no registered server (nothing disconnected or deleted), 502
@@ -131,6 +135,12 @@ var blockerCopies = map[string]roleBlockerText{
 		User: blockerText{"Your account can't use this tool directly. Nothing ran.",
 			"Ask Soma to do it for you, or ask an admin for access."},
 		Admin: blockerText{Action: "Direct read tools need outputs:read on the caller's account. Nothing ran."},
+	},
+	codeMCPPathOutsideWorkspace: {
+		User: blockerText{"That file or folder is outside the shared workspace, so this tool can't open it. Nothing ran.",
+			"Pick a file or folder inside the workspace and try again."},
+		Admin: blockerText{"A path argument resolves outside the MYCELIS_WORKSPACE root, directly, through .. or through a symlink. Nothing ran.",
+			"Use a path inside the workspace root; detail names the refused argument."},
 	},
 	codeMCPEnvRejected: {
 		User: blockerText{"This tool can't be set up with those settings.",
