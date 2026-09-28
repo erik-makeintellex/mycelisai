@@ -4,10 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -19,6 +22,9 @@ type Guard struct {
 	PendingBuffer map[string]*pb.ApprovalRequest
 	mu            sync.RWMutex
 	applyMu       sync.Mutex // serializes ReplacePolicy (persist + swap)
+	// ingressProviders are extra global-input provider tokens admitted by
+	// ValidateIngress (F16); guarded by mu.
+	ingressProviders map[string]struct{}
 }
 
 func NewGuard(policyPath string) (*Guard, error) {
@@ -168,26 +174,53 @@ func (g *Guard) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelo
 	return nil, nil // Nil message means nothing to forward
 }
 
-// ValidateIngress checks raw NATS messages before they enter the Soma processing loop.
-// It enforces size limits and subject allowlists.
+// MaxIngressBytes caps one global-input message.
+const MaxIngressBytes = 1024 * 1024
+
+var ingressProviderToken = regexp.MustCompile(`^[a-z0-9_-]{1,32}$`)
+
+// ValidIngressProviderToken reports whether p is a single lowercase subject
+// token that may name a global-input provider (F16): no dots, wildcards,
+// slashes, percent signs, whitespace or upper case.
+func ValidIngressProviderToken(p string) bool {
+	return ingressProviderToken.MatchString(p)
+}
+
+// SetIngressProviders replaces the extra provider tokens ValidateIngress
+// admits beside the protocol lanes. Invalid tokens are dropped.
+func (g *Guard) SetIngressProviders(providers []string) {
+	allowed := make(map[string]struct{}, len(providers))
+	for _, p := range providers {
+		if ValidIngressProviderToken(p) {
+			allowed[p] = struct{}{}
+		}
+	}
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.ingressProviders = allowed
+}
+
+// ValidateIngress checks raw NATS messages before they enter the Soma
+// processing loop: a size cap and an exact-match subject set (F16). The set is
+// the protocol's user lane plus the providers given to SetIngressProviders;
+// prefixes, wildcards, empty or deep tokens are never admitted.
 func (g *Guard) ValidateIngress(subject string, data []byte) error {
-	// 1. Size Limit (e.g., 1MB)
-	if len(data) > 1024*1024 {
+	if len(data) > MaxIngressBytes {
 		return fmt.Errorf("payload too large: %d bytes", len(data))
 	}
-
-	// 2. Subject Allowlists (Basic Guard Rails)
-	// Only allow specific global input channels
-	// swarm.global.input.gui -> User Interface
-	// swarm.global.input.sensor -> Hardware Sensors
-	// swarm.global.input.cli -> Command Line
-	// allowed := []string{"swarm.global.input.gui", "swarm.global.input.sensor", "swarm.global.input.cli"}
-	// For now, just check prefix
-	if len(subject) < 18 || subject[:18] != "swarm.global.input" {
-		return fmt.Errorf("invalid ingress subject: %s", subject)
+	if subject == protocol.TopicGlobalInputUser {
+		return nil
 	}
-
-	return nil
+	provider, ok := strings.CutPrefix(subject, strings.TrimSuffix(protocol.TopicGlobalInputFmt, "%s"))
+	if ok && ValidIngressProviderToken(provider) && g != nil {
+		g.mu.RLock()
+		_, allowed := g.ingressProviders[provider]
+		g.mu.RUnlock()
+		if allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid ingress subject: %q", subject)
 }
 
 // GetPolicyConfig returns the current policy configuration (nil when degraded).

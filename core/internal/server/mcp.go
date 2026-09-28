@@ -107,18 +107,20 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// MCPS: resolve, authorize and (for high risk) audit before anything runs.
+	// MCPS: resolve, authorize, confine paths (MCPL) and (for high risk)
+	// audit before anything runs. call.Args are the confined arguments.
 	r, call, ok := s.authorizeMCPToolCall(w, r, serverID, toolName, args)
 	if !ok {
 		return
 	}
 	serverName := call.ServerName
-	args = normalizeMCPToolCallArgumentsForServer(serverName, args)
+	args = call.Args
 
 	result, err := s.MCPPool.CallTool(r.Context(), serverID, toolName, args)
 	if err != nil {
-		// MCPA: transport/JSON-RPC errors are redacted, capped and JSON-encoded.
-		respondAPIError(w, "tool call failed: "+redactedMCPErrorText(err), http.StatusBadGateway)
+		// MCPL: a stale tool cache or a transport failure after authorization
+		// still gets an outcome record; the 502 text stays redacted (MCPA).
+		s.recordMCPToolCallFailure(w, r, serverID, call, toolName, args, err)
 		return
 	}
 	s.finishMCPToolCall(w, r, serverID, serverName, toolName, args, result)
@@ -214,57 +216,62 @@ func decodeMCPToolCallArguments(reader io.Reader) (map[string]any, error) {
 	return body, nil
 }
 
-func normalizeMCPToolCallArgumentsForServer(serverName string, args map[string]any) map[string]any {
+// normalizeMCPToolCallArgumentsForServer confines a filesystem MCP call
+// (MCPL): every path argument ("path", "source", "destination", each of
+// "paths") becomes an absolute path under the MYCELIS_WORKSPACE root, or the
+// call is refused with an *mcpPathError. The workspace/ and /workspace/
+// aliases and relative paths resolve against the root; the upstream server
+// never sees a relative path. Other servers' arguments pass unchanged.
+func normalizeMCPToolCallArgumentsForServer(serverName string, args map[string]any) (map[string]any, error) {
 	if !strings.EqualFold(strings.TrimSpace(serverName), "filesystem") || len(args) == 0 {
-		return args
+		return args, nil
+	}
+	root, err := resolveMCPWorkspaceRoot()
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]any, len(args))
+	for key, value := range args {
+		out[key] = value
 	}
 	for _, key := range []string{"path", "source", "destination"} {
-		if raw, ok := args[key].(string); ok {
-			args[key] = normalizeFilesystemMCPPath(raw)
-		}
-	}
-	if rawPaths, ok := args["paths"].([]any); ok {
-		paths := make([]any, 0, len(rawPaths))
-		for _, raw := range rawPaths {
-			if pathValue, ok := raw.(string); ok {
-				paths = append(paths, normalizeFilesystemMCPPath(pathValue))
-				continue
+		if raw, present := args[key]; present {
+			if out[key], err = root.confine(key, raw); err != nil {
+				return nil, err
 			}
-			paths = append(paths, raw)
 		}
-		args["paths"] = paths
 	}
-	return args
+	if raw, present := args["paths"]; present {
+		list, ok := raw.([]any)
+		if !ok {
+			return nil, &mcpPathError{Key: "paths", Reason: "is not a list of paths"}
+		}
+		paths := make([]any, len(list))
+		for i, item := range list {
+			if paths[i], err = root.confine("paths", item); err != nil {
+				return nil, err
+			}
+		}
+		out["paths"] = paths
+	}
+	return out, nil
 }
 
-func normalizeFilesystemMCPPath(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return raw
-	}
-	normalized := strings.ReplaceAll(trimmed, "\\", "/")
-	normalized = strings.TrimPrefix(normalized, "./")
-
-	var rel string
+// lexical maps a caller path onto an absolute, cleaned path: the workspace
+// aliases and relative paths join the root; absolute paths stay absolute.
+func (ws mcpWorkspaceRoot) lexical(raw string) string {
+	p := strings.TrimPrefix(strings.ReplaceAll(strings.TrimSpace(raw), "\\", "/"), "./")
 	switch {
-	case normalized == "workspace" || normalized == "/workspace":
-		rel = ""
-	case strings.HasPrefix(normalized, "workspace/"):
-		rel = strings.TrimPrefix(normalized, "workspace/")
-	case strings.HasPrefix(normalized, "/workspace/"):
-		rel = strings.TrimPrefix(normalized, "/workspace/")
-	default:
-		return raw
+	case p == "" || p == "." || p == "workspace" || p == "/workspace":
+		return ws.abs
+	case strings.HasPrefix(p, "workspace/"):
+		p = strings.TrimPrefix(p, "workspace/")
+	case strings.HasPrefix(p, "/workspace/"):
+		p = strings.TrimPrefix(p, "/workspace/")
+	case filepath.IsAbs(filepath.FromSlash(p)):
+		return filepath.Clean(filepath.FromSlash(p))
 	}
-
-	root := strings.TrimSpace(mcp.ResolveFilesystemWorkspaceRoot())
-	if root == "" {
-		return raw
-	}
-	if rel == "" {
-		return root
-	}
-	return filepath.Join(root, filepath.FromSlash(rel))
+	return filepath.Join(ws.abs, filepath.FromSlash(p))
 }
 
 func extractMCPResultSummary(result any) string {

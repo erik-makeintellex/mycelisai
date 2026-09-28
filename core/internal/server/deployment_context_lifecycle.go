@@ -1,11 +1,15 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/mycelis/core/internal/deploymentcontext"
 	"github.com/mycelis/core/pkg/protocol"
@@ -17,6 +21,7 @@ import (
 //	POST   /api/v1/memory/deployment-context/{id}/archive
 //	POST   /api/v1/memory/deployment-context/{id}/restore
 //	DELETE /api/v1/memory/deployment-context/{id}
+//	PATCH  /api/v1/memory/deployment-context/{id}   (edit in place, MEM)
 //
 // Authority: the creator manages their own private or team entries; org-wide
 // entries (company_knowledge, soma_operating_context, or visibility global)
@@ -26,6 +31,8 @@ const (
 	codeMemoryEntryNotOwned = "memory_entry_not_owned"
 	codeMemoryEntryNotFound = "memory_entry_not_found"
 	codeMemoryChangeFailed  = "memory_change_failed"
+	codeMemoryEntryArchived = "memory_entry_archived"
+	codeMemoryEntryChanged  = "memory_entry_changed"
 	scopeMemoryWrite        = "memory:write"
 )
 
@@ -36,12 +43,17 @@ var memoryLifecycleCopy = map[string]roleBlockerText{
 		"Refresh the list. It may already have been deleted."}},
 	codeMemoryChangeFailed: {User: blockerText{"The change could not be saved, so nothing was changed.",
 		"Try again in a moment."}},
+	codeMemoryEntryArchived: {User: blockerText{"This saved item is archived, so it cannot be edited.",
+		"Restore it first, then edit it. Nothing was changed."}},
+	codeMemoryEntryChanged: {User: blockerText{"This saved item changed while you were editing it.",
+		"Refresh the list and try again. Nothing was changed."}},
 }
 
 func (s *AdminServer) registerDeploymentContextLifecycleRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/memory/deployment-context/{id}/archive", s.handleMemoryLifecycle("archive"))
 	mux.HandleFunc("POST /api/v1/memory/deployment-context/{id}/restore", s.handleMemoryLifecycle("restore"))
 	mux.HandleFunc("DELETE /api/v1/memory/deployment-context/{id}", s.handleMemoryLifecycle("delete"))
+	mux.HandleFunc("PATCH /api/v1/memory/deployment-context/{id}", s.handleMemoryEdit)
 }
 
 // isOrgWideMemory reports whether an entry needs admin authority to change.
@@ -91,6 +103,30 @@ func canManageMemoryEntry(identity *RequestIdentity, entry *deploymentcontext.En
 	return code == ""
 }
 
+// authorizeMemoryChange looks up the entry named in the path and applies the
+// lifecycle authority rule. It writes the refusal and returns ok=false when
+// the caller may not change the entry. Archive, restore, delete and edit share it.
+func (s *AdminServer) authorizeMemoryChange(w http.ResponseWriter, r *http.Request, identity *RequestIdentity) (*deploymentcontext.Service, *deploymentcontext.EntryRecord, bool) {
+	svc := s.deploymentContextService()
+	record, err := svc.Lookup(r.Context(), strings.TrimSpace(r.PathValue("id")))
+	switch {
+	case errors.Is(err, deploymentcontext.ErrEntryNotFound):
+		respondBlockerText(w, r, http.StatusNotFound, codeMemoryEntryNotFound, memoryLifecycleCopy[codeMemoryEntryNotFound], "", nil)
+		return nil, nil, false
+	case err != nil:
+		respondAPIError(w, "The memory store is unavailable. Nothing was changed.", http.StatusServiceUnavailable)
+		return nil, nil, false
+	}
+	if code, scope := memoryLifecycleDenial(identity, record); code == codeAdminRequired {
+		respondBlocker(w, r, http.StatusForbidden, code, "Missing required scope: "+scope, map[string]string{"required_scope": scope})
+		return nil, nil, false
+	} else if code != "" {
+		respondBlockerText(w, r, http.StatusForbidden, code, memoryLifecycleCopy[code], "", nil)
+		return nil, nil, false
+	}
+	return svc, record, true
+}
+
 func (s *AdminServer) handleMemoryLifecycle(action string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		identity := IdentityFromContext(r.Context())
@@ -98,21 +134,8 @@ func (s *AdminServer) handleMemoryLifecycle(action string) http.HandlerFunc {
 			respondAPIError(w, "Authentication required", http.StatusUnauthorized)
 			return
 		}
-		svc := s.deploymentContextService()
-		record, err := svc.Lookup(r.Context(), strings.TrimSpace(r.PathValue("id")))
-		switch {
-		case errors.Is(err, deploymentcontext.ErrEntryNotFound):
-			respondBlockerText(w, r, http.StatusNotFound, codeMemoryEntryNotFound, memoryLifecycleCopy[codeMemoryEntryNotFound], "", nil)
-			return
-		case err != nil:
-			respondAPIError(w, "The memory store is unavailable. Nothing was changed.", http.StatusServiceUnavailable)
-			return
-		}
-		if code, scope := memoryLifecycleDenial(identity, record); code == codeAdminRequired {
-			respondBlocker(w, r, http.StatusForbidden, code, "Missing required scope: "+scope, map[string]string{"required_scope": scope})
-			return
-		} else if code != "" {
-			respondBlockerText(w, r, http.StatusForbidden, code, memoryLifecycleCopy[code], "", nil)
+		svc, record, ok := s.authorizeMemoryChange(w, r, identity)
+		if !ok {
 			return
 		}
 		target := map[string]string{"archive": deploymentcontext.LifecycleArchived, "restore": deploymentcontext.LifecycleActive}[action]
@@ -168,5 +191,114 @@ func (s *AdminServer) auditMemoryLifecycle(r *http.Request, action, result strin
 	if removed, ok := extra["chunks_removed"]; ok {
 		ctx["chunks_removed"] = removed
 	}
+	return s.createAuditEvent(protocol.TemplateChatToProposal, "deployment-context-lifecycle", message, attachActorIdentity(ctx, r))
+}
+
+// memoryEditPatch is the PATCH body. Only these fields exist; knowledge_class
+// and visibility are rejected as unknown (moving classes is promotion).
+type memoryEditPatch struct {
+	Title       *string `json:"title"`
+	Content     *string `json:"content"`
+	SourceLabel *string `json:"source_label"`
+}
+
+func decodeMemoryEdit(r *http.Request) (deploymentcontext.EditRequest, error) {
+	var patch memoryEditPatch
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&patch); err != nil {
+		return deploymentcontext.EditRequest{}, fmt.Errorf("invalid edit body: %v", err)
+	}
+	if dec.More() {
+		return deploymentcontext.EditRequest{}, errors.New("invalid edit body: one JSON object expected")
+	}
+	req := deploymentcontext.EditRequest{Title: patch.Title, Content: patch.Content, SourceLabel: patch.SourceLabel}
+	return req, req.Validate()
+}
+
+// handleMemoryEdit edits a saved entry in place: same authority rule as
+// archive/delete, audit first and fail closed, archived entries answer 409.
+func (s *AdminServer) handleMemoryEdit(w http.ResponseWriter, r *http.Request) {
+	identity := IdentityFromContext(r.Context())
+	if identity == nil {
+		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+	req, err := decodeMemoryEdit(r)
+	if err != nil {
+		respondAPIError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	svc, record, ok := s.authorizeMemoryChange(w, r, identity)
+	if !ok {
+		return
+	}
+	if record.LifecycleState == deploymentcontext.LifecycleArchived {
+		respondBlockerText(w, r, http.StatusConflict, codeMemoryEntryArchived, memoryLifecycleCopy[codeMemoryEntryArchived], "", nil)
+		return
+	}
+	req.ArtifactID, req.Actor, req.Authorized = record.ArtifactID, auditUserLabelFromRequest(r), record
+	// Audit first. No audit record, no change.
+	auditID, err := s.auditMemoryEdit(r, "authorized", record, req, nil)
+	if err != nil || auditID == "" {
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeServiceUnavailable, fmt.Sprintf("audit unavailable: %v", err), nil)
+		return
+	}
+	result, err := svc.Edit(r.Context(), req)
+	if err != nil {
+		_, _ = s.auditMemoryEdit(r, "failed", record, req, nil)
+		switch {
+		case errors.Is(err, deploymentcontext.ErrEntryNotFound):
+			respondBlockerText(w, r, http.StatusNotFound, codeMemoryEntryNotFound, memoryLifecycleCopy[codeMemoryEntryNotFound], "", nil)
+		case errors.Is(err, deploymentcontext.ErrEntryArchived):
+			respondBlockerText(w, r, http.StatusConflict, codeMemoryEntryArchived, memoryLifecycleCopy[codeMemoryEntryArchived], "", nil)
+		case errors.Is(err, deploymentcontext.ErrEntryChanged):
+			respondBlockerText(w, r, http.StatusConflict, codeMemoryEntryChanged, memoryLifecycleCopy[codeMemoryEntryChanged], "", nil)
+		default:
+			log.Printf("memory edit %s failed: %v", record.ArtifactID, err)
+			respondBlockerText(w, r, http.StatusInternalServerError, codeMemoryChangeFailed, memoryLifecycleCopy[codeMemoryChangeFailed], err.Error(), nil)
+		}
+		return
+	}
+	status := "edited"
+	if !result.Changed {
+		status = "unchanged"
+	}
+	if _, err := s.auditMemoryEdit(r, status, record, req, result); err != nil {
+		log.Printf("memory edit %s: completion audit failed after the authorized record: %v", record.ArtifactID, err)
+	}
+	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(struct {
+		*deploymentcontext.EditResult
+		AuditEventID string `json:"audit_event_id"`
+	}{result, auditID}))
+}
+
+// auditMemoryEdit records an edit step: old and new title, the patched
+// fields, and for new content only its SHA-256 and length, never the text.
+func (s *AdminServer) auditMemoryEdit(r *http.Request, result string, record *deploymentcontext.EntryRecord, req deploymentcontext.EditRequest, done *deploymentcontext.EditResult) (string, error) {
+	newTitle, fields := record.Title, []string{}
+	if req.Title != nil {
+		newTitle, fields = strings.TrimSpace(*req.Title), append(fields, "title")
+	}
+	ctx := map[string]any{
+		"actor": "operator", "user": auditUserLabelFromRequest(r), "action": "deployment_context_edit",
+		"result_status": result, "artifact_id": record.ArtifactID, "knowledge_class": record.KnowledgeClass,
+		"visibility": record.Visibility, "old_title": record.Title, "new_title": newTitle,
+		"old_content_length": record.ContentLength, "old_chunk_count": record.ChunkCount,
+	}
+	if req.Content != nil {
+		content := strings.TrimSpace(*req.Content)
+		sum := sha256.Sum256([]byte(content))
+		ctx["content_sha256"], ctx["content_length"] = hex.EncodeToString(sum[:]), utf8.RuneCountInString(content)
+		fields = append(fields, "content")
+	}
+	if req.SourceLabel != nil {
+		fields = append(fields, "source_label")
+	}
+	ctx["fields"] = fields
+	if done != nil {
+		ctx["chunk_count"], ctx["chunks_removed"], ctx["embedding_status"] = done.ChunkCount, done.ChunksRemoved, done.EmbeddingStatus
+	}
+	message := fmt.Sprintf("Saved memory edit: %s (%s)", record.ArtifactID, result)
 	return s.createAuditEvent(protocol.TemplateChatToProposal, "deployment-context-lifecycle", message, attachActorIdentity(ctx, r))
 }

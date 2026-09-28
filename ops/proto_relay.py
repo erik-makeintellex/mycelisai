@@ -34,7 +34,7 @@ def _python_generator_prefix() -> str:
 # -- PROTO --
 @task
 def generate(c):
-    """Generate Go and Python Protobuf stubs."""
+    """Generate Go and Python Protobuf stubs. Use after editing proto/*.proto, before building Core or the relay SDK."""
     print("Generating Protobufs...")
 
     script_content = _go_generation_script()

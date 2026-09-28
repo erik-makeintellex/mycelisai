@@ -21,5 +21,17 @@ def coverage(c):
     print("Coverage reports generated.")
 
 
+@task
+def probe(c):
+    """
+    Run the live user-journey delivery probe (ops/live_journey_probe.py) against a running stack.
+    Use after `lifecycle.up`/`compose.up` to check real outcomes (ask, deliverable, memory
+    recall, sensors, search), not just health status; it is the delivery metric in
+    .state/V8_DEV_STATE.md. Requires MYCELIS_API_KEY in .env and a reachable Core on :8081.
+    """
+    c.run("uv run python ops/live_journey_probe.py", pty=not is_windows())
+
+
 ns = Collection("test")
 ns.add_task(coverage)
+ns.add_task(probe)
