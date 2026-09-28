@@ -24,7 +24,7 @@ The architect's audit (`audit/placeholder-inventory.md`, dev @244af327) found 5 
 - **The missions row stored "active"** — `server/mission_commit.go` returns `Status:"active"` even when `activateCommittedMission` returned nil; part of PH-D.
 - **`read_file` scoping** — currently workspace-wide with no team boundary; deferred as a named follow-up slice out of H1 (owner-confirmed Q3).
 - **Confirm-authority persistence** and **cancel-action ownership** — narrower authority-edge findings tracked on the scoreboard, not yet re-verified live.
-- **The `webAuth` test flake** — a known intermittent test failure, tracked but not yet root-caused.
+- **The `webAuth` test flake** — fixed: the "tampered last character" forged-token case in `webAuth.test.ts` toggled the signature's last base64url character between fixed `"A"`/`"B"` values, but that character's low 2 bits are padding discarded on decode, so ~1/16 of the time (whenever the timestamp-dependent HMAC signature happened to end in `A`/`B`/`C`/`D`) the "tamper" decoded to the same signature bytes and the forged token verified successfully, failing the test. `webAuth.ts` itself was already correct (constant-time HMAC verify, constant-time password compare). Test now flips a significant top-4 bit of that character so the decoded byte always changes.
 
 ## The live journey probe as the delivery metric
 
