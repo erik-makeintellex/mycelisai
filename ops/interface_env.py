@@ -45,9 +45,24 @@ def _load_env():
     # Root .env owns the Go Core HTTP port; Next.js must use INTERFACE_PORT.
     os.environ.pop("PORT", None)
 def _task_env(extra=None):
+    """Return the full subprocess environment: resolved `.env`/`.env.compose`
+    (including a linked worktree's fallback to the main checkout's copy) plus
+    the managed cache overlay.
+
+    `_load_env()` mutates the real `os.environ` in place, so this snapshots
+    `os.environ` *after* that call (not before) and layers the cache overlay
+    on top. Callers that build a subprocess env by copying `os.environ`
+    themselves and merging this dict in are safe either way, but callers that
+    pass this dict on as the *entire* subprocess env (e.g. `subprocess.run`/
+    `Popen(env=...)`, which replaces rather than merges) previously lost
+    every `.env` value, including `MYCELIS_LOCAL_ADMIN_PASSWORD`, whenever
+    this happened to be the first env-loading call in the process.
+    """
     _load_env()
     ensure_managed_cache_dirs()
-    return managed_cache_env(extra=extra)
+    env = os.environ.copy()
+    env.update(managed_cache_env(extra=extra))
+    return env
 
 
 @dataclass
@@ -136,9 +151,14 @@ def interface_task_env(extra=None):
 
 
 def _interface_subprocess_env(extra_env: dict[str, str] | None = None) -> dict[str, str]:
-    process_env = os.environ.copy()
-    process_env.update(_task_env(extra_env))
-    return process_env
+    """Full replacement env for `subprocess.run(..., env=...)` callers.
+
+    `_task_env` already returns the resolved `.env` merged with `os.environ`
+    and the cache overlay, so no separate `os.environ.copy()` is needed (and
+    doing one here, before `_task_env` runs `_load_env()`, previously dropped
+    every `.env` value from the subprocess env in a fresh process).
+    """
+    return _task_env(extra_env)
 
 
 def _resolve_interface_runner(command: list[str]) -> list[str]:
