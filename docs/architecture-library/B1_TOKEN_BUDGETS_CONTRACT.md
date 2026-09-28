@@ -68,6 +68,11 @@ CREATE INDEX IF NOT EXISTS idx_token_ledger_run ON token_usage_ledger(tenant_id,
 - Period totals are read once per scope and then kept as in-memory write-through counters.
 - If the DB is unavailable, period caps run on since-boot counters and every surface labels them "since restart" (owner Q2). There is no purge in B1.
 
+**Review fixes (B1R) to D4/D7.**
+- *Reservation.* Preflight reserves the clamped `MaxTokens` against the meter and every run/team-day/agent-day counter under the same lock as the remaining check, so `remaining = limit - used - reserved` and concurrent callers are never admitted past a limit. Settlement releases the reservation and charges actual usage (D6: missing usage charges the reservation). A provider error, a nil response or a panic releases without charging. The stop carries `Reserved` when in-flight calls caused it. The D4 overshoot is unchanged: at most one call's prompt, and the next call on that meter is refused before the provider.
+- *Recovery (Q2).* A failed ledger read or append leaves the counter unloaded and labelled `since_restart`. Later touches retry the read at most once per 30s per counter. On success `used = max(durable, in-memory)` (nothing double-counted; charges whose append failed stay counted) and the label returns to `utc_day`/`run`.
+- *Bounded counters.* `GET /budgets/usage` never creates a counter: unknown refs are read from the ledger uncached, or return zero labelled `since_restart` with no readable ledger. Past-day counters drop on roll-over, run counters idle for 1h are evicted, and at 20,000 counters the least recently used one is evicted. Counters held by in-flight calls are never evicted. With a DB an evicted counter reloads its durable total. An evicted counter's warn-once flag resets. **No-DB caveat:** without a ledger an evicted counter (idle run, or LRU at the cap) restarts at zero.
+
 **D8. Overrides API** (new `server/token_budgets.go`, routes in `admin_routes.go`):
 - `GET /api/v1/cognitive/budgets`: effective policy. Any authenticated user may read it; override provenance is shown to admins only.
 - `GET /api/v1/cognitive/budgets/usage?team_id|agent_id|run_id`: {used, limit, remaining, warn, period, usage_reported}.
