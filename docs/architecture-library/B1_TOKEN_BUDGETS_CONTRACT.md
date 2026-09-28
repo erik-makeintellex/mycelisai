@@ -68,6 +68,11 @@ CREATE INDEX IF NOT EXISTS idx_token_ledger_run ON token_usage_ledger(tenant_id,
 - Period totals are read once per scope and then kept as in-memory write-through counters.
 - If the DB is unavailable, period caps run on since-boot counters and every surface labels them "since restart" (owner Q2). There is no purge in B1.
 
+**Review fixes (B1R) to D4/D7.**
+- *Reservation.* Preflight reserves the clamped `MaxTokens` against the meter and every run/team-day/agent-day counter under the same lock as the remaining check, so `remaining = limit - used - reserved` and concurrent callers are never admitted past a limit. Settlement releases the reservation and charges actual usage (D6: missing usage charges the reservation). A provider error, a nil response or a panic releases without charging. The stop carries `Reserved` when in-flight calls caused it. The D4 overshoot is unchanged: at most one call's prompt, and the next call on that meter is refused before the provider.
+- *Recovery (Q2).* A failed ledger read or append leaves the counter unloaded and labelled `since_restart`. Later touches retry the read at most once per 30s per counter. On success `used = max(durable, in-memory)` (nothing double-counted; charges whose append failed stay counted) and the label returns to `utc_day`/`run`.
+- *Bounded counters.* `GET /budgets/usage` never creates a counter: unknown refs are read from the ledger uncached, or return zero labelled `since_restart` with no readable ledger. Past-day counters drop on roll-over, run counters idle for 1h are evicted, and at 20,000 counters the least recently used one is evicted. Counters held by in-flight calls are never evicted. With a DB an evicted counter reloads its durable total. An evicted counter's warn-once flag resets. **No-DB caveat:** without a ledger an evicted counter (idle run, or LRU at the cap) restarts at zero.
+
 **D8. Overrides API** (new `server/token_budgets.go`, routes in `admin_routes.go`):
 - `GET /api/v1/cognitive/budgets`: effective policy. Any authenticated user may read it; override provenance is shown to admins only.
 - `GET /api/v1/cognitive/budgets/usage?team_id|agent_id|run_id`: {used, limit, remaining, warn, period, usage_reported}.
@@ -75,6 +80,11 @@ CREATE INDEX IF NOT EXISTS idx_token_ledger_run ON token_usage_ledger(tenant_id,
 - Validation: integers in [1,024, 5,000,000]. There is no "unlimited" value, and `per_execution ≤ per_run ≤ per_team_day` is enforced after merging.
 - Storage: each change writes a new operator-scope `TokenBudgetPolicy` revision (source `api`) and activates it in one transaction, like the S6 override pattern. Audit is the activation history plus a governed mission event `token_budget_changed` {actor, level, ref, before, after}.
 - Budgets never change A2b tiers: cost > 5.0 still needs an approver, and a budget stop is not an approval request.
+- Review fixes (B1R-B):
+  - The raw `POST /api/v1/cognitive/infer` route is removed. It had no product caller, it took Correlation from the body, and it ran as uncapped `system` inference.
+  - Usage reads: a root admin with `cognitive:read` or `cognitive:write` can read any ref. Anyone else can read a team only if the team ownership binding plus an active group membership proves they belong to it; otherwise they get `403 token_budget_usage_forbidden`.
+  - Agent and run usage have no ownership record, so only admins can read them. This is a W2 dependency.
+  - `GET /budgets` shows provider and model IDs only to admins with those scopes.
 
 **D9. D2 mapping.** Remove `writeFileDraftMaxPerTurn`. The drafting pass runs under a `draft` meter charged to agent `admin`, and Correlation is now set.
 - Preflight: if n × provider `MaxOutputTokens` exceeds remaining, return the `token_budget_exhausted` blocker with copy "can draft K of N" and propose nothing.

@@ -20,7 +20,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	}
 
 	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
-	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
 	mux.HandleFunc("/api/v1/cognitive/config", s.HandleCognitiveConfig)
 	mux.HandleFunc("/api/v1/cognitive/matrix", s.HandleCognitiveConfig) // Alias: UI calls /matrix
 	mux.HandleFunc("GET /api/v1/cognitive/status", s.HandleCognitiveStatus)

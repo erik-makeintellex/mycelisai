@@ -141,13 +141,15 @@ func TestGetTokenBudgets_EffectivePolicyAndAdminOnlyProvenance(t *testing.T) {
 	if _, leaked := data["overrides"]; leaked || data["can_edit"] != false {
 		t.Fatalf("override provenance leaked to a non-admin: %v", data)
 	}
-	providers := data["providers"].([]any)
-	if len(providers) != 2 {
-		t.Fatalf("providers = %v", providers)
+	if _, leaked := data["providers"]; leaked {
+		t.Fatalf("provider identity leaked to a non-admin (B1R-B): %v", data)
 	}
 
 	admin := doAuthenticatedRequest(t, tokenBudgetMux(s), http.MethodGet, "/api/v1/cognitive/budgets", "")
 	adminData := tokenBudgetData(t, admin)
+	if providers, _ := adminData["providers"].([]any); len(providers) != 2 {
+		t.Fatalf("admin providers = %v", adminData["providers"])
+	}
 	overrides := adminData["overrides"].(map[string]any)
 	if overrides["team"].(map[string]any)["team-a"].(map[string]any)["per_execution"] != float64(2048) || adminData["can_edit"] != true {
 		t.Fatalf("admin view = %v", adminData)
@@ -166,7 +168,7 @@ func TestGetTokenBudgetUsage_ReportsSinceRestartWhenLedgerUnavailable(t *testing
 	if _, err := router.InferWithContract(ctx, cognitive.InferRequest{Profile: "chat", Prompt: "x", Correlation: correlation}); err != nil {
 		t.Fatal(err)
 	}
-	rr := doAuthenticatedRequestAs(t, tokenBudgetMux(s), http.MethodGet, "/api/v1/cognitive/budgets/usage?team_id=team-a", "", &RequestIdentity{UserID: "u-1", Role: "user"})
+	rr := doAuthenticatedRequestAs(t, tokenBudgetMux(s), http.MethodGet, "/api/v1/cognitive/budgets/usage?team_id=team-a", "", &RequestIdentity{UserID: "u-1", Role: "admin", Scopes: []string{cognitiveReadScope}})
 	assertStatus(t, rr, http.StatusOK)
 	data := tokenBudgetData(t, rr)
 	if data["scope"] != "team_day" || data["ref"] != "team-a" || data["used"] != float64(1500) || data["limit"] != float64(2000000) ||

@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
 )
@@ -30,6 +31,65 @@ type tokenBudgetOverrideBody struct {
 	WarnPct      *int `json:"warn_pct"`
 }
 
+// codeTokenBudgetUsageForbidden is the 403 for a usage read the caller cannot
+// prove they own (B1R-B).
+const codeTokenBudgetUsageForbidden = "token_budget_usage_forbidden"
+
+var tokenBudgetUsageForbiddenCopy = roleBlockerText{
+	User: blockerText{"You can only see token usage for teams you belong to.",
+		"Ask an admin, or someone on that team, for its usage."},
+	Admin: blockerText{Action: "Reading any team, agent or run usage needs cognitive:read or cognitive:write on your admin account."},
+}
+
+// tokenBudgetTeamMemberSQL proves team membership from persisted state only:
+// the team's active ownership binding (runtime_team_manifests owner account +
+// owner group, not revoked) and an active, unexpired org membership of the
+// caller in that group, with the user and account both active and the
+// account in the team's tenant.
+const tokenBudgetTeamMemberSQL = `SELECT EXISTS (SELECT 1 FROM runtime_team_manifests t
+	JOIN accounts a ON a.id = t.owner_account_id AND a.tenant_id = t.tenant_id AND a.status = 'active'
+	JOIN users u ON u.id = $2::uuid AND u.account_id = a.id AND u.status = 'active'
+	JOIN org_memberships m ON m.account_id = a.id AND m.user_id = u.id AND m.group_id = t.owner_group_id
+	WHERE t.team_id = $1 AND t.owner_group_id IS NOT NULL AND t.ownership_revoked_at IS NULL
+		AND m.status = 'active' AND (m.expires_at IS NULL OR m.expires_at > NOW()))`
+
+// tokenBudgetUsageAllowed writes the response and returns false unless the
+// caller may read this usage. A scoped root admin reads any ref; anyone else
+// reads only a team they are proven to belong to. Agent and run usage have no
+// ownership record, so only scoped root admins read them.
+func (s *AdminServer) tokenBudgetUsageAllowed(w http.ResponseWriter, r *http.Request, scope, ref string) bool {
+	if cognitiveFullView(r) {
+		return true
+	}
+	if scope == protocol.TokenBudgetScopeTeamDay {
+		member, err := s.tokenBudgetTeamMember(r, ref)
+		if err != nil {
+			log.Printf("token budget usage: team membership check failed: %v", err)
+			respondAPIError(w, "Team membership could not be checked; no usage was returned", http.StatusServiceUnavailable)
+			return false
+		}
+		if member {
+			return true
+		}
+	}
+	respondBlockerText(w, r, http.StatusForbidden, codeTokenBudgetUsageForbidden, tokenBudgetUsageForbiddenCopy,
+		"no ownership record proves this caller may read "+scope+" usage", map[string]string{"scope": scope})
+	return false
+}
+
+// tokenBudgetTeamMember fails closed: no database or a non-UUID principal
+// proves nothing.
+func (s *AdminServer) tokenBudgetTeamMember(r *http.Request, teamID string) (bool, error) {
+	db := s.getDB()
+	userID, err := uuid.Parse(IdentityFromContext(r.Context()).UserID)
+	if db == nil || err != nil {
+		return false, nil
+	}
+	var member bool
+	err = db.QueryRowContext(r.Context(), tokenBudgetTeamMemberSQL, teamID, userID.String()).Scan(&member)
+	return member, err
+}
+
 func (s *AdminServer) tokenBudgetGovernor(w http.ResponseWriter) (*cognitive.BudgetGovernor, bool) {
 	if s.Cognitive == nil || s.Cognitive.Budgets == nil {
 		respondAPIError(w, "Token budgets are unavailable: the cognitive engine is offline", http.StatusServiceUnavailable)
@@ -45,7 +105,8 @@ func (s *AdminServer) budgetClassForProfile(profile string) string {
 }
 
 // GET /api/v1/cognitive/budgets — the effective policy for any signed-in
-// user; override provenance is shown to admins only.
+// user; override provenance is shown to admins only, and provider/model
+// identity only to root admins with cognitive:read or cognitive:write.
 func (s *AdminServer) HandleGetTokenBudgets(w http.ResponseWriter, r *http.Request) {
 	identity := IdentityFromContext(r.Context())
 	if identity == nil {
@@ -57,8 +118,9 @@ func (s *AdminServer) HandleGetTokenBudgets(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	policy := governor.Policy()
+	fullView := cognitiveFullView(r)
 	providers := []tokenBudgetProvider{}
-	if config := s.Cognitive.ConfigSnapshot(); config != nil {
+	if config := s.Cognitive.ConfigSnapshot(); config != nil && fullView {
 		for id, cfg := range config.Providers {
 			source := "data_boundary"
 			if protocol.IsTokenBudgetClass(strings.TrimSpace(cfg.BudgetClass)) {
@@ -77,11 +139,13 @@ func (s *AdminServer) HandleGetTokenBudgets(w http.ResponseWriter, r *http.Reque
 		"class_order":   protocol.TokenBudgetClasses,
 		"global":        policy.Global,
 		"classes":       policy.Classes,
-		"providers":     providers,
 		"day_period":    period,
 		"min_limit":     protocol.TokenBudgetMinLimit,
 		"max_limit":     protocol.TokenBudgetMaxLimit,
 		"can_edit":      identity.Role == "admin" && hasScope(identity, cognitiveWriteScope),
+	}
+	if fullView {
+		data["providers"] = providers
 	}
 	if identity.Role == "admin" {
 		data["overrides"] = policy.Overrides
@@ -89,7 +153,8 @@ func (s *AdminServer) HandleGetTokenBudgets(w http.ResponseWriter, r *http.Reque
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(data))
 }
 
-// GET /api/v1/cognitive/budgets/usage?team_id=|agent_id=|run_id= — exactly one.
+// GET /api/v1/cognitive/budgets/usage?team_id=|agent_id=|run_id= — exactly one,
+// scoped by tokenBudgetUsageAllowed.
 func (s *AdminServer) HandleGetTokenBudgetUsage(w http.ResponseWriter, r *http.Request) {
 	if IdentityFromContext(r.Context()) == nil {
 		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
@@ -111,6 +176,9 @@ func (s *AdminServer) HandleGetTokenBudgetUsage(w http.ResponseWriter, r *http.R
 	}
 	if scope == "" || !protocol.ValidTokenBudgetRef(ref) {
 		respondAPIError(w, "Give exactly one valid team_id, agent_id or run_id", http.StatusBadRequest)
+		return
+	}
+	if !s.tokenBudgetUsageAllowed(w, r, scope, ref) {
 		return
 	}
 	subject := cognitive.BudgetSubject{Class: s.budgetClassForProfile(cognitive.DefaultExecutionProfileName)}
