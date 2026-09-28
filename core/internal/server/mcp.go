@@ -28,7 +28,7 @@ func (s *AdminServer) handleMCPList(w http.ResponseWriter, r *http.Request) {
 
 	servers, err := s.MCP.List(ctx)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"list servers failed: %s"}`, err.Error()), http.StatusInternalServerError)
+		respondAPIError(w, "list servers failed: "+redactedMCPErrorText(err), http.StatusInternalServerError)
 		return
 	}
 	if servers == nil {
@@ -91,7 +91,7 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 	idStr := r.PathValue("id")
 	serverID, err := uuid.Parse(idStr)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid server id: %s"}`, idStr), http.StatusBadRequest)
+		respondAPIError(w, "invalid server id: "+idStr, http.StatusBadRequest)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 
 	args, err := decodeMCPToolCallArguments(r.Body)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"invalid JSON body: %s"}`, err.Error()), http.StatusBadRequest)
+		respondAPIError(w, "invalid JSON body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -138,10 +138,11 @@ func (s *AdminServer) finishMCPToolCall(w http.ResponseWriter, r *http.Request, 
 	}
 	var exchangeItemID string
 	if s.Exchange != nil {
-		var retained any = result
-		if toolErr != nil {
-			// The raw result would repeat the unredacted error text.
-			retained = map[string]any{"is_error": true, "error": summary}
+		// The raw isError result would repeat the unredacted error text.
+		var retained any = map[string]any{"is_error": true, "error": summary}
+		if toolErr == nil {
+			// MCPS D7: the Exchange keeps a redacted copy; the caller gets the raw result.
+			retained = redactMCPToolResult(result)
 		}
 		input := attributeMCPToolCallExchange(r, mcpToolCallExchangeInput(serverID, serverName, toolName, summary, toolErr != nil, args, retained))
 		item, err := s.Exchange.PublishMCPResult(ctx, input)
@@ -313,7 +314,7 @@ func (s *AdminServer) handleMCPToolsList(w http.ResponseWriter, r *http.Request)
 
 	tools, err := s.MCP.ListAllTools(ctx)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"list tools failed: %s"}`, err.Error()), http.StatusInternalServerError)
+		respondAPIError(w, "list tools failed: "+redactedMCPErrorText(err), http.StatusInternalServerError)
 		return
 	}
 	if tools == nil {
