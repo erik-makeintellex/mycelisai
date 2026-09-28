@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -119,11 +118,15 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctx := r.Context()
-	serverName := serversNameOrFallback(s.MCP, ctx, serverID)
+	// MCPS: resolve, authorize and (for high risk) audit before anything runs.
+	r, call, ok := s.authorizeMCPToolCall(w, r, serverID, toolName, args)
+	if !ok {
+		return
+	}
+	serverName := call.ServerName
 	args = normalizeMCPToolCallArgumentsForServer(serverName, args)
 
-	result, err := s.MCPPool.CallTool(ctx, serverID, toolName, args)
+	result, err := s.MCPPool.CallTool(r.Context(), serverID, toolName, args)
 	if err != nil {
 		http.Error(w, fmt.Sprintf(`{"error":"tool call failed: %s"}`, err.Error()), http.StatusBadGateway)
 		return
@@ -150,7 +153,11 @@ func (s *AdminServer) finishMCPToolCall(w http.ResponseWriter, r *http.Request, 
 			// The raw result would repeat the unredacted error text.
 			retained = map[string]any{"is_error": true, "error": summary}
 		}
-		item, _ := s.Exchange.PublishMCPResult(ctx, mcpToolCallExchangeInput(serverID, serverName, toolName, summary, toolErr != nil, args, retained))
+		input := attributeMCPToolCallExchange(r, mcpToolCallExchangeInput(serverID, serverName, toolName, summary, toolErr != nil, args, retained))
+		item, err := s.Exchange.PublishMCPResult(ctx, input)
+		if err != nil {
+			log.Printf("MCP tool call %s/%s not retained: %v", serverName, toolName, err)
+		}
 		if item != nil {
 			exchangeItemID = item.ID.String()
 		}
@@ -178,7 +185,7 @@ func mcpToolCallExchangeInput(serverID uuid.UUID, serverName, toolName, summary 
 		ResultPreview:  summary,
 		TargetRole:     "soma",
 		Status:         status,
-		Result:         map[string]any{"arguments": args, "result": result},
+		Result:         map[string]any{"arguments": redactMCPToolArguments(args), "result": result},
 		RunClass:       string(protocol.ExecutionRunClassNoRun),
 		NoRunReason:    "Direct MCP tool call did not supply a run id.",
 		RetentionClass: string(protocol.ExecutionRetentionClassRetained),
@@ -267,17 +274,6 @@ func normalizeFilesystemMCPPath(raw string) string {
 		return root
 	}
 	return filepath.Join(root, filepath.FromSlash(rel))
-}
-
-func serversNameOrFallback(svc *mcp.Service, ctx context.Context, serverID uuid.UUID) string {
-	if svc == nil || svc.DB == nil {
-		return serverID.String()
-	}
-	server, err := svc.Get(ctx, serverID)
-	if err != nil || server == nil || strings.TrimSpace(server.Name) == "" {
-		return serverID.String()
-	}
-	return server.Name
 }
 
 func extractMCPResultSummary(result any) string {

@@ -82,3 +82,33 @@ func expectSecretFetchInstall(mock sqlmock.Sqlmock) {
 		WithArgs("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa").
 		WillReturnRows(sqlmock.NewRows(mcpToolColumns()))
 }
+
+// MCPS D7: nested keys, arrays and header-style keys are redacted in a copy.
+func TestMCPSRedactToolArgumentsDeepCopy(t *testing.T) {
+	args := map[string]any{
+		"path":     "notes.md",
+		"headers":  map[string]any{"Authorization": "Bearer abc", "X-Api-Key": "k1", "accept": "json"},
+		"items":    []any{"https://u:p@h/x", map[string]any{"client_secret": "s1"}, 7},
+		"Password": "pw", "credential": "c1", "refresh_token": "r1",
+	}
+	got := redactMCPToolArguments(args)
+	headers := got["headers"].(map[string]any)
+	items := got["items"].([]any)
+	if got["path"] != "notes.md" || headers["accept"] != "json" || items[2] != 7 {
+		t.Fatalf("non-secret values changed: %v", got)
+	}
+	for _, v := range []any{headers["Authorization"], headers["X-Api-Key"], items[1].(map[string]any)["client_secret"], got["Password"], got["credential"], got["refresh_token"]} {
+		if v != redactedMCPArgumentValue {
+			t.Fatalf("value %v not redacted: %v", v, got)
+		}
+	}
+	if strings.Contains(items[0].(string), "u:p@") {
+		t.Fatalf("URL userinfo kept: %v", items[0])
+	}
+	if args["Password"] != "pw" || args["headers"].(map[string]any)["X-Api-Key"] != "k1" {
+		t.Fatalf("redaction mutated the arguments the tool receives: %v", args)
+	}
+	if redactMCPToolArguments(nil) != nil {
+		t.Fatal("nil arguments must stay nil")
+	}
+}

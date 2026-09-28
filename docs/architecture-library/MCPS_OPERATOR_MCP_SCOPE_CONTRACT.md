@@ -2,7 +2,7 @@
 
 Owner: Core authority and MCP runtime. Product authority remains the [canonical PRD](MYCELIS_CANONICAL_PRD.md).
 
-> Draft contract for scoping the operator-direct MCP tool call route (architect draft 2026-09-27; owner answers pending). Slice id `MCPS`. Base `dev` @b9d1e172 (verified unchanged for every cited file at `dev` 9cdb84ac). Origin: S7b follow-up (`af56af15`), "The operator MCP call route is gated by route auth only, not by agent scope."
+> Frozen (owner defaults applied 2026-09-28). Contract for scoping the operator-direct MCP tool call route (architect draft 2026-09-27; Q1-Q3 answered with the recommended defaults). Slice id `MCPS`. Base `dev` @b9d1e172 (verified unchanged for every cited file at `dev` 9cdb84ac). Origin: S7b follow-up (`af56af15`), "The operator MCP call route is gated by route auth only, not by agent scope."
 
 ## Verified today (source facts)
 - **One direct route exists:** `POST /api/v1/mcp/servers/{id}/tools/{tool}/call` (server/admin_routes.go:188, handler server/mcp.go:97-132). There is no SSE, streaming, BFF `app/api` or second Core variant. `GET /api/v1/mcp/tools` (:189) and `GET /api/v1/mcp/servers` (:186) only list tools. Raw install is disabled (:181-185). All other `CallTool` callers are agent or approved-plan paths that are already scoped: swarm/tool_executor.go:169 and server/templates_execution.go:247 behind `newApprovedPlanToolGuard`.

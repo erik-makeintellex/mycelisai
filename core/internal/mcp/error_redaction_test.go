@@ -27,6 +27,21 @@ func TestCallToolResultErrorRedactsSecrets(t *testing.T) {
 	}
 }
 
+// MCPS D7: the exported pass redacts the same patterns but never caps, so
+// retained arguments keep their full non-secret content.
+func TestRedactToolTextRedactsWithoutCap(t *testing.T) {
+	long := strings.Repeat("a", maxToolErrorBytes*2)
+	if got := RedactToolText(long); got != long {
+		t.Fatalf("RedactToolText capped or altered plain text (len %d)", len(got))
+	}
+	got := RedactToolText("clone https://u:p@h/repo with token=abc and Bearer xyz.1")
+	for _, secret := range []string{"u:p@", "abc", "xyz.1"} {
+		if strings.Contains(got, secret) {
+			t.Fatalf("secret %q leaked: %s", secret, got)
+		}
+	}
+}
+
 func TestCallToolResultErrorCapsLength(t *testing.T) {
 	err := CallToolResultError("probe", mcplib.NewToolResultError(strings.Repeat("é", 5000)))
 	var toolErr *ToolResultError
