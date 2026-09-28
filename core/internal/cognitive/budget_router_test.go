@@ -36,7 +36,7 @@ type memoryLedger struct {
 	failing bool
 }
 
-func (l *memoryLedger) PeriodTotal(_ context.Context, scope, ref string, since time.Time) (int, bool, error) {
+func (l *memoryLedger) PeriodTotal(_ context.Context, tenant, scope, ref string, since time.Time) (int, bool, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.failing {
@@ -47,7 +47,7 @@ func (l *memoryLedger) PeriodTotal(_ context.Context, scope, ref string, since t
 		match := (scope == protocol.TokenBudgetScopeRun && e.RunID == ref) ||
 			(scope == protocol.TokenBudgetScopeTeamDay && e.TeamID == ref && !e.OccurredAt.Before(since)) ||
 			(scope == protocol.TokenBudgetScopeAgentDay && e.AgentID == ref && !e.OccurredAt.Before(since))
-		if match && e.Outcome == TokenLedgerOutcomeCharged && e.ExecutionKind != ExecutionKindSystem {
+		if match && BudgetTenant(e.TenantID) == BudgetTenant(tenant) && e.Outcome == TokenLedgerOutcomeCharged && e.ExecutionKind != ExecutionKindSystem {
 			total += e.TotalTokens
 			unreported = unreported || !e.UsageReported
 		}
@@ -206,7 +206,7 @@ func TestInferWithContract_MissingUsageChargesReservation(t *testing.T) {
 	if len(entries) != 1 || entries[0].UsageReported || entries[0].TotalTokens != 2048 || meter.Used() != 2048 {
 		t.Fatalf("ledger = %+v used=%d, want reservation 2048 with usage_reported=false", entries, meter.Used())
 	}
-	usage := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "team-a", protocol.TokenBudgetLimits{PerTeamDay: 100000, WarnPct: 80})
+	usage := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "team-a", protocol.TokenBudgetLimits{PerTeamDay: 100000, WarnPct: 80})
 	if usage.UsageReported || usage.Used != 2048 {
 		t.Fatalf("usage = %+v, want at-least usage with usage_reported=false", usage)
 	}
@@ -226,7 +226,7 @@ func TestInferWithContract_LedgerDownUsesSinceRestartCounters(t *testing.T) {
 	if !errors.As(err, &stop) || stop.Scope != protocol.TokenBudgetScopeTeamDay {
 		t.Fatalf("err = %v, want team_day stop on since-restart counters", err)
 	}
-	usage := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "team-a", protocol.TokenBudgetLimits{PerTeamDay: 2048, WarnPct: 80})
+	usage := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "team-a", protocol.TokenBudgetLimits{PerTeamDay: 2048, WarnPct: 80})
 	if usage.Period != protocol.TokenBudgetPeriodSinceRestart || usage.Used != 1800 || usage.Remaining != 248 || !usage.Warn {
 		t.Fatalf("usage = %+v, want since_restart 1800/2048", usage)
 	}
@@ -251,7 +251,7 @@ func TestInferWithContract_SystemCallWithoutMeterUsesOnlyPerExecution(t *testing
 	if _, err := r.InferWithContract(context.Background(), InferRequest{Profile: "chat", Prompt: "recall", Correlation: teamCorrelation()}); err != nil {
 		t.Fatal(err)
 	}
-	usage := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "team-a", protocol.TokenBudgetLimits{PerTeamDay: 100000, WarnPct: 80})
+	usage := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "team-a", protocol.TokenBudgetLimits{PerTeamDay: 100000, WarnPct: 80})
 	if usage.Used != 150 || usage.Period != protocol.TokenBudgetPeriodUTCDay {
 		t.Fatalf("usage = %+v, want 150 charged to team day", usage)
 	}

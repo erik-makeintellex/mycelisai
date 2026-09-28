@@ -15,6 +15,7 @@ const (
 
 // TokenLedgerEntry is one append-only token_usage_ledger row.
 type TokenLedgerEntry struct {
+	TenantID         string
 	OccurredAt       time.Time
 	ExecutionID      string
 	ExecutionKind    string
@@ -32,10 +33,11 @@ type TokenLedgerEntry struct {
 }
 
 // BudgetLedger is the durable period store. PeriodTotal sums charged,
-// non-system rows for one scope since the period start (run: all rows) and
-// reports whether any of them was an unreported-usage reservation.
+// non-system rows of one tenant for one scope since the period start (run:
+// all rows) and reports whether any of them was an unreported-usage
+// reservation. Append writes entry.TenantID.
 type BudgetLedger interface {
-	PeriodTotal(ctx context.Context, scope, ref string, since time.Time) (int, bool, error)
+	PeriodTotal(ctx context.Context, tenant, scope, ref string, since time.Time) (int, bool, error)
 	Append(ctx context.Context, entry TokenLedgerEntry) error
 }
 
@@ -67,16 +69,17 @@ type BudgetUsage struct {
 
 // periodCounter is one run or day scope. All fields are guarded by g.mu.
 type periodCounter struct {
-	used       int
-	reserved   int // output clamps of admitted, unsettled calls
-	unreported bool
-	source     string
-	warned     bool
-	loaded     bool      // durable total applied, or no ledger to load from
-	lastLoad   time.Time // last ledger read attempt (retry rate limit)
-	lastTouch  time.Time
-	day        string // UTC day for day scopes, "" for run scopes
-	pins       int    // in-flight calls holding this counter; pinned counters are never evicted
+	used        int
+	reserved    int // output clamps of admitted, unsettled calls
+	unpersisted int // charges counted in used whose ledger append failed
+	unreported  bool
+	source      string
+	warned      bool
+	loaded      bool      // durable total applied, or no ledger to load from
+	lastLoad    time.Time // last ledger read attempt (retry rate limit)
+	lastTouch   time.Time
+	day         string // UTC day for day scopes, "" for run scopes
+	pins        int    // in-flight calls holding this counter; pinned counters are never evicted
 }
 
 // BudgetGovernor resolves limits, reserves each admitted call's output clamp
@@ -154,11 +157,12 @@ func (g *BudgetGovernor) periodScopes(ctx context.Context, meter *ExecutionMeter
 		return nil
 	}
 	var scopes []budgetScope
+	tenant := BudgetTenant(correlation.TenantID)
 	add := func(scope, ref string, limit int) {
 		if ref == "" {
 			return
 		}
-		scopes = append(scopes, budgetScope{scope, ref, limit, g.counter(ctx, scope, ref)})
+		scopes = append(scopes, budgetScope{scope, ref, limit, g.counter(ctx, tenant, scope, ref)})
 	}
 	add(protocol.TokenBudgetScopeRun, correlation.RunID, limits.PerRun)
 	add(protocol.TokenBudgetScopeTeamDay, correlation.TeamID, limits.PerTeamDay)

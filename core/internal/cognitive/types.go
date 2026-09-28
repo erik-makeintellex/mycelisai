@@ -238,6 +238,8 @@ type InferenceCorrelation struct {
 	RunID   string
 	TeamID  string
 	AgentID string
+	// TenantID keys token-budget counters and ledger rows; "" means "default".
+	TenantID string
 }
 
 type InferResponse struct {

@@ -61,7 +61,7 @@ func TestB1rbRawInferRouteIsRemoved(t *testing.T) {
 				if provider.calls != 0 {
 					t.Fatalf("provider called %d times through the removed route", provider.calls)
 				}
-				used := router.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "victim-team",
+				used := router.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "victim-team",
 					router.Budgets.Limits(cognitive.BudgetSubject{TeamID: "victim-team"})).Used
 				if used != 0 {
 					t.Fatalf("spoofed team charged %d tokens", used)

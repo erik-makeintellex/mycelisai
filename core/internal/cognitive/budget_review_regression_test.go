@@ -57,7 +57,7 @@ type b1raLedger struct {
 	reads       int
 }
 
-func (l *b1raLedger) PeriodTotal(ctx context.Context, scope, ref string, since time.Time) (int, bool, error) {
+func (l *b1raLedger) PeriodTotal(ctx context.Context, tenant, scope, ref string, since time.Time) (int, bool, error) {
 	l.mu.Lock()
 	l.reads++
 	fail := l.failReads
@@ -65,7 +65,7 @@ func (l *b1raLedger) PeriodTotal(ctx context.Context, scope, ref string, since t
 	if fail {
 		return 0, false, errors.New("db down")
 	}
-	return l.mem.PeriodTotal(ctx, scope, ref, since)
+	return l.mem.PeriodTotal(ctx, tenant, scope, ref, since)
 }
 
 func (l *b1raLedger) Append(ctx context.Context, entry TokenLedgerEntry) error {
@@ -170,7 +170,7 @@ func TestB1RA_ConcurrentReservationNeverOverspendsPeriodScopes(t *testing.T) {
 					t.Fatalf("only %d refusals before timeout", i)
 				}
 			}
-			inflight := r.Budgets.Usage(context.Background(), tc.scope, tc.ref, limits)
+			inflight := r.Budgets.Usage(context.Background(), "", tc.scope, tc.ref, limits)
 			if calls, _ := adapter.snapshot(); calls != tc.admitted || inflight.Reserved != tc.limit || inflight.Remaining != 0 || inflight.Used != 0 {
 				t.Fatalf("in flight: calls=%d usage=%+v, want %d calls reserving the whole limit", calls, inflight, tc.admitted)
 			}
@@ -182,7 +182,7 @@ func TestB1RA_ConcurrentReservationNeverOverspendsPeriodScopes(t *testing.T) {
 					t.Fatalf("admitted call failed: %v", err)
 				}
 			}
-			after := r.Budgets.Usage(context.Background(), tc.scope, tc.ref, limits)
+			after := r.Budgets.Usage(context.Background(), "", tc.scope, tc.ref, limits)
 			if after.Used != tc.limit || after.Reserved != 0 || after.Remaining != 0 {
 				t.Fatalf("settled usage = %+v, want used=%d (never above the limit), reserved=0", after, tc.limit)
 			}
@@ -216,7 +216,7 @@ func TestB1RA_ReservationReleasedOnErrorAndPanic(t *testing.T) {
 		}()
 		_ = b1raInfer(r, corr)
 	}()
-	usage := r.Budgets.Usage(context.Background(), protocol.TokenBudgetScopeTeamDay, "t", limits)
+	usage := r.Budgets.Usage(context.Background(), "", protocol.TokenBudgetScopeTeamDay, "t", limits)
 	if usage.Reserved != 0 || usage.Used != 0 || usage.Remaining != 4096 {
 		t.Fatalf("usage after failures = %+v, want nothing reserved or charged", usage)
 	}
@@ -250,7 +250,7 @@ func TestB1RA_SettleChargesActualUsageNotReservation(t *testing.T) {
 	}
 	limits := r.Budgets.Limits(BudgetSubject{Class: protocol.TokenBudgetClassLocalLarge})
 	for _, s := range []struct{ scope, ref string }{{protocol.TokenBudgetScopeRun, "r"}, {protocol.TokenBudgetScopeTeamDay, "t"}, {protocol.TokenBudgetScopeAgentDay, "a"}} {
-		if u := r.Budgets.Usage(context.Background(), s.scope, s.ref, limits); u.Used != 100 || u.Reserved != 0 {
+		if u := r.Budgets.Usage(context.Background(), "", s.scope, s.ref, limits); u.Used != 100 || u.Reserved != 0 {
 			t.Fatalf("%s usage = %+v, want used=100 reserved=0", s.scope, u)
 		}
 	}

@@ -41,53 +41,57 @@ var tokenBudgetUsageForbiddenCopy = roleBlockerText{
 	Admin: blockerText{Action: "Reading any team, agent or run usage needs cognitive:read or cognitive:write on your admin account."},
 }
 
-// tokenBudgetTeamMemberSQL proves team membership from persisted state only:
-// the team's active ownership binding (runtime_team_manifests owner account +
-// owner group, not revoked) and an active, unexpired org membership of the
-// caller in that group, with the user and account both active and the
-// account in the team's tenant.
-const tokenBudgetTeamMemberSQL = `SELECT EXISTS (SELECT 1 FROM runtime_team_manifests t
+// tokenBudgetTeamTenantSQL proves team membership from persisted state only
+// and returns the tenant it was proven in ('' proves nothing): the team's
+// active ownership binding (runtime_team_manifests owner account + owner
+// group, not revoked) and an active, unexpired org membership of the caller in
+// that group, with the user and account both active and the account in the
+// team's tenant. A user has one account, so at most one tenant matches.
+const tokenBudgetTeamTenantSQL = `SELECT COALESCE((SELECT t.tenant_id FROM runtime_team_manifests t
 	JOIN accounts a ON a.id = t.owner_account_id AND a.tenant_id = t.tenant_id AND a.status = 'active'
 	JOIN users u ON u.id = $2::uuid AND u.account_id = a.id AND u.status = 'active'
 	JOIN org_memberships m ON m.account_id = a.id AND m.user_id = u.id AND m.group_id = t.owner_group_id
 	WHERE t.team_id = $1 AND t.owner_group_id IS NOT NULL AND t.ownership_revoked_at IS NULL
-		AND m.status = 'active' AND (m.expires_at IS NULL OR m.expires_at > NOW()))`
+		AND m.status = 'active' AND (m.expires_at IS NULL OR m.expires_at > NOW())
+	LIMIT 1), '')`
 
-// tokenBudgetUsageAllowed writes the response and returns false unless the
-// caller may read this usage. A scoped root admin reads any ref; anyone else
-// reads only a team they are proven to belong to. Agent and run usage have no
-// ownership record, so only scoped root admins read them.
-func (s *AdminServer) tokenBudgetUsageAllowed(w http.ResponseWriter, r *http.Request, scope, ref string) bool {
+// tokenBudgetUsageTenant writes the response and returns ok=false unless the
+// caller may read this usage, else the tenant to read it in (B1R-C). A scoped
+// root admin reads any ref in tenant "default" (identities carry no tenant
+// yet); anyone else reads only a team they are proven to belong to, in the
+// tenant of that membership. Agent and run usage have no ownership record, so
+// only scoped root admins read them.
+func (s *AdminServer) tokenBudgetUsageTenant(w http.ResponseWriter, r *http.Request, scope, ref string) (string, bool) {
 	if cognitiveFullView(r) {
-		return true
+		return cognitive.DefaultBudgetTenant, true
 	}
 	if scope == protocol.TokenBudgetScopeTeamDay {
-		member, err := s.tokenBudgetTeamMember(r, ref)
+		tenant, err := s.tokenBudgetTeamTenant(r, ref)
 		if err != nil {
 			log.Printf("token budget usage: team membership check failed: %v", err)
 			respondAPIError(w, "Team membership could not be checked; no usage was returned", http.StatusServiceUnavailable)
-			return false
+			return "", false
 		}
-		if member {
-			return true
+		if tenant != "" {
+			return tenant, true
 		}
 	}
 	respondBlockerText(w, r, http.StatusForbidden, codeTokenBudgetUsageForbidden, tokenBudgetUsageForbiddenCopy,
 		"no ownership record proves this caller may read "+scope+" usage", map[string]string{"scope": scope})
-	return false
+	return "", false
 }
 
-// tokenBudgetTeamMember fails closed: no database or a non-UUID principal
-// proves nothing.
-func (s *AdminServer) tokenBudgetTeamMember(r *http.Request, teamID string) (bool, error) {
+// tokenBudgetTeamTenant fails closed: no database or a non-UUID principal
+// proves nothing ("").
+func (s *AdminServer) tokenBudgetTeamTenant(r *http.Request, teamID string) (string, error) {
 	db := s.getDB()
 	userID, err := uuid.Parse(IdentityFromContext(r.Context()).UserID)
 	if db == nil || err != nil {
-		return false, nil
+		return "", nil
 	}
-	var member bool
-	err = db.QueryRowContext(r.Context(), tokenBudgetTeamMemberSQL, teamID, userID.String()).Scan(&member)
-	return member, err
+	var tenant string
+	err = db.QueryRowContext(r.Context(), tokenBudgetTeamTenantSQL, teamID, userID.String()).Scan(&tenant)
+	return strings.TrimSpace(tenant), err
 }
 
 func (s *AdminServer) tokenBudgetGovernor(w http.ResponseWriter) (*cognitive.BudgetGovernor, bool) {
@@ -154,7 +158,7 @@ func (s *AdminServer) HandleGetTokenBudgets(w http.ResponseWriter, r *http.Reque
 }
 
 // GET /api/v1/cognitive/budgets/usage?team_id=|agent_id=|run_id= — exactly one,
-// scoped by tokenBudgetUsageAllowed.
+// scoped and tenant-keyed by tokenBudgetUsageTenant.
 func (s *AdminServer) HandleGetTokenBudgetUsage(w http.ResponseWriter, r *http.Request) {
 	if IdentityFromContext(r.Context()) == nil {
 		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
@@ -178,7 +182,8 @@ func (s *AdminServer) HandleGetTokenBudgetUsage(w http.ResponseWriter, r *http.R
 		respondAPIError(w, "Give exactly one valid team_id, agent_id or run_id", http.StatusBadRequest)
 		return
 	}
-	if !s.tokenBudgetUsageAllowed(w, r, scope, ref) {
+	tenant, allowed := s.tokenBudgetUsageTenant(w, r, scope, ref)
+	if !allowed {
 		return
 	}
 	subject := cognitive.BudgetSubject{Class: s.budgetClassForProfile(cognitive.DefaultExecutionProfileName)}
@@ -188,7 +193,7 @@ func (s *AdminServer) HandleGetTokenBudgetUsage(w http.ResponseWriter, r *http.R
 	case protocol.TokenBudgetScopeAgentDay:
 		subject.AgentID = ref
 	}
-	usage := governor.Usage(r.Context(), scope, ref, governor.Limits(subject))
+	usage := governor.Usage(r.Context(), tenant, scope, ref, governor.Limits(subject))
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(usage))
 }
 
