@@ -91,4 +91,3 @@ func (s *AdminServer) HandleTempMemory(w http.ResponseWriter, r *http.Request) {
 
 	respondAPIError(w, "Method not allowed", http.StatusMethodNotAllowed)
 }
-

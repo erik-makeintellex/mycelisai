@@ -16,7 +16,7 @@ import (
 
 // ProfileSubscription defines a NATS topic pattern a profile watches.
 type ProfileSubscription struct {
-	Topic     string `json:"topic"`              // e.g. "swarm.team.research-team.*"
+	Topic     string `json:"topic"`               // e.g. "swarm.team.research-team.*"
 	Condition string `json:"condition,omitempty"` // optional filter (reserved for future use)
 }
 
@@ -28,8 +28,8 @@ type ReactHandler func(profileID, topic string, msg []byte)
 // Engine manages reactive NATS subscriptions for all active mission profiles.
 type Engine struct {
 	nc      *nats.Conn
-	db      *sql.DB                          // optional — used for ReactivateFromDB
-	subs    map[string][]*nats.Subscription  // profileID → subscriptions
+	db      *sql.DB                         // optional — used for ReactivateFromDB
+	subs    map[string][]*nats.Subscription // profileID → subscriptions
 	handler ReactHandler
 	mu      sync.Mutex
 }

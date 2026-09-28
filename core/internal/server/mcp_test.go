@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -46,10 +48,21 @@ func TestHandleMCPToolCall_InvalidUUID(t *testing.T) {
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
+// MCPS: the registry says connected but the live pool has no client, so an
+// authorized read reaches the pool and fails with the helpful 502.
 func TestHandleMCPToolCall_UnavailableServerReturnsHelpfulError(t *testing.T) {
-	s := newTestServer(withMCPStubs())
+	opt, mock := withMCPDB(t)
+	s := newTestServer(opt)
+	now, id := time.Now(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+	mock.ExpectQuery("SELECT .+ FROM mcp_servers").WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
+		AddRow(id, "filesystem", "stdio", "npx", `[]`, `{}`, "", `{}`, "connected", nil, now, now))
+	mock.ExpectQuery("SELECT .+ FROM mcp_tools").WillReturnRows(sqlmock.NewRows(mcpToolColumns()).
+		AddRow(uuid.NewString(), id, "read_text_file", "", []byte(`{}`)))
 	mux := setupMux(t, "POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
-	rr := doRequest(t, mux, "POST", "/api/v1/mcp/servers/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/tools/read_text_file/call", `{"arguments":{"path":"README.md"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/servers/"+id+"/tools/read_text_file/call", strings.NewReader(`{"arguments":{"path":"README.md"}}`))
+	req = req.WithContext(context.WithValue(req.Context(), ctxKeyIdentity, standardUserIdentity()))
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
 	assertStatus(t, rr, http.StatusBadGateway)
 	if body := rr.Body.String(); !strings.Contains(body, "tool call failed") || !strings.Contains(body, "not found in pool") {
 		t.Fatalf("error body = %q, want helpful tool call pool failure", body)

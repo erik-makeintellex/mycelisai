@@ -99,7 +99,8 @@ FORMAT (JSON):
 	// F22: a parse failure is a real failure, not a summary. Never store the raw
 	// model text as though it were the structured sitrep summary.
 	if err := json.Unmarshal([]byte(cleanText), &sitrep); err != nil {
-		log.Printf("Archivist: Failed to parse SitRep JSON: %v. Raw: %s", err, resp.Text)
+		// Log the size only: the model output is derived from team conversation.
+		log.Printf("Archivist: Failed to parse SitRep JSON: %v (%d bytes of model output discarded)", err, len(resp.Text))
 		return fmt.Errorf("failed to parse sitrep JSON: %w", err)
 	}
 

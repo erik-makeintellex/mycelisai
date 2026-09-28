@@ -15,10 +15,10 @@ type MissionBlueprint struct {
 // ResourceRequirement captures an external dependency the mission needs:
 // MCP servers to install, API keys to configure, env vars to set.
 type ResourceRequirement struct {
-	Type        string `json:"type"`               // "mcp_server", "api_key", "env_var", "credential"
-	Name        string `json:"name"`               // e.g. "github", "OPENAI_API_KEY", "SLACK_BOT_TOKEN"
-	Description string `json:"description"`        // why it's needed
-	Required    bool   `json:"required"`           // false = nice-to-have, true = mission will fail without
+	Type        string `json:"type"`                // "mcp_server", "api_key", "env_var", "credential"
+	Name        string `json:"name"`                // e.g. "github", "OPENAI_API_KEY", "SLACK_BOT_TOKEN"
+	Description string `json:"description"`         // why it's needed
+	Required    bool   `json:"required"`            // false = nice-to-have, true = mission will fail without
 	Installed   bool   `json:"installed,omitempty"` // set by system: already available
 }
 

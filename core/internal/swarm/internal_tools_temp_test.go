@@ -36,4 +36,3 @@ func TestBuildContext_LeadIncludesTempMemoryContract(t *testing.T) {
 		t.Fatalf("expected lead context to include stability rules")
 	}
 }
-

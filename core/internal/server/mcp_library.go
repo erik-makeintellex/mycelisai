@@ -54,6 +54,9 @@ func (s *AdminServer) handleMCPLibraryInspect(w http.ResponseWriter, r *http.Req
 // handleMCPLibraryInstall installs an MCP server from the curated library by name.
 // POST /api/v1/mcp/library/install
 func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireMCPConfigWrite(w, r); !ok {
+		return
+	}
 	if s.MCP == nil || s.MCPPool == nil {
 		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
 		return
@@ -64,7 +67,7 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 	}
 
 	prepared, ok := s.prepareMCPLibraryRequest(w, r)
-	if !ok {
+	if !ok || !requireDeclaredMCPEnv(w, r, prepared.Entry, prepared.Request.Env) {
 		return
 	}
 
@@ -92,6 +95,9 @@ func (s *AdminServer) handleMCPLibraryInstall(w http.ResponseWriter, r *http.Req
 // handleMCPLibraryApply runs the curated MCP inspect+install flow as a single API call.
 // POST /api/v1/mcp/library/apply
 func (s *AdminServer) handleMCPLibraryApply(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireMCPConfigWrite(w, r); !ok {
+		return
+	}
 	if s.MCP == nil || s.MCPPool == nil {
 		http.Error(w, `{"error":"MCP subsystem not initialized"}`, http.StatusServiceUnavailable)
 		return
@@ -102,7 +108,7 @@ func (s *AdminServer) handleMCPLibraryApply(w http.ResponseWriter, r *http.Reque
 	}
 
 	prepared, ok := s.prepareMCPLibraryRequest(w, r)
-	if !ok {
+	if !ok || !requireDeclaredMCPEnv(w, r, prepared.Entry, prepared.Request.Env) {
 		return
 	}
 

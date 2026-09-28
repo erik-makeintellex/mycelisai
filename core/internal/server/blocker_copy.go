@@ -22,6 +22,13 @@ const codeAdminRequired = "admin_required"
 // nothing was changed (UX1).
 const codeServiceUnavailable = "service_unavailable"
 
+// MCPS direct MCP tool calls: 404 when {tool} is not a discovered tool of a
+// registered server, 403 when a read tool's caller lacks outputs:read.
+const (
+	codeMCPToolNotFound  = "mcp_tool_not_found"
+	codeMCPCallForbidden = "mcp_call_forbidden"
+)
+
 // codeTeamServiceOffline marks the agent runtime (Soma's team service) as
 // down; it reuses the existing chat transport code.
 const codeTeamServiceOffline = "transport_unavailable"
@@ -104,6 +111,17 @@ var blockerCopies = map[string]roleBlockerText{
 			"Try again in a moment. If it keeps happening, ask an admin to restore the activity log."},
 		Admin: blockerText{Action: "Restore the audit store (the Core database) so changes can be recorded, then try again. Nothing was changed."},
 	},
+	codeMCPToolNotFound: {
+		User: blockerText{"That tool isn't available on this connection. Nothing ran.",
+			"Refresh the tool list and pick one of the tools it shows."},
+		Admin: blockerText{"This MCP server is not registered, or it does not list a tool with this exact name. Nothing ran.",
+			"Check the server's discovered tools in Resources and use the exact, case-sensitive tool name."},
+	},
+	codeMCPCallForbidden: {
+		User: blockerText{"Your account can't use this tool directly. Nothing ran.",
+			"Ask Soma to do it for you, or ask an admin for access."},
+		Admin: blockerText{Action: "Direct read tools need outputs:read on the caller's account. Nothing ran."},
+	},
 	governancePolicyUnavailableCode: {
 		// GET /governance/policy is admin-only; the user variant exists so a
 		// future non-admin surface cannot leak the admin text.
@@ -142,6 +160,23 @@ var missingTeamPlanApproval = roleBlockerText{
 	User: blockerText{"This team plan needs Soma's proposal before it can launch.",
 		"Ask Soma to propose the plan, then approve it. Nothing launched."},
 	Admin: blockerText{Action: "Ask Soma to propose the plan, then launch it with the confirm_token from that proposal. Nothing launched."},
+}
+
+// mcpDirectCallNeedsApprover is the 403 admin_required on a high-risk direct
+// MCP tool call (MCPS D4): only approvers call these tools directly.
+var mcpDirectCallNeedsApprover = roleBlockerText{
+	User: blockerText{"Only an admin can use this tool directly. Nothing ran.",
+		"Ask Soma to propose it. An admin approves the proposal before it runs."},
+	Admin: blockerText{"Your admin account is missing a permission this tool needs. Nothing ran.",
+		"Ask Soma to propose it, or ask a root admin to grant the permission named in required_scope to your account."},
+}
+
+// mcpServerOfflineCopy is the 503 service_unavailable when the MCP server,
+// its tool list or the connection pool can't be reached (MCPS D2).
+var mcpServerOfflineCopy = roleBlockerText{
+	User: blockerText{"That tool's connection is offline right now. Nothing ran.",
+		"Try again in a moment. If it keeps happening, ask an admin to reconnect it."},
+	Admin: blockerText{Action: "Reconnect the MCP server from Resources, or check the Core database, then try again. Nothing ran."},
 }
 
 // approverRequiredCopy explains a tier-2 block by its approverTier reason.

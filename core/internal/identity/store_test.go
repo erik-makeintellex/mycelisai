@@ -246,7 +246,9 @@ func TestRecordAuditEventDefaultsSource(t *testing.T) {
 	assertExpectations(t, mock)
 }
 
-func accountColumns() []string { return []string{"id", "tenant_id", "slug", "name", "status", "settings", "created_at", "updated_at"} }
+func accountColumns() []string {
+	return []string{"id", "tenant_id", "slug", "name", "status", "settings", "created_at", "updated_at"}
+}
 
 func userColumns() []string {
 	return []string{
