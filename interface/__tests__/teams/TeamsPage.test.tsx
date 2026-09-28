@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { mockFetch } from "../setup";
 import type { CatalogueAgent, TeamDetail } from "@/store/cortexStoreTypesPlanning";
@@ -29,13 +29,8 @@ import { useCortexStore } from "@/store/useCortexStore";
 import { mockTeamWorkFetch, mockTeams, mockTemplates } from "./TeamsPage.fixtures";
 
 describe("TeamsPage", () => {
-  const originalSetInterval = global.setInterval;
-  const originalClearInterval = global.clearInterval;
-
   beforeEach(() => {
     window.history.pushState({}, "", "/teams");
-    global.setInterval = vi.fn(() => 1) as unknown as typeof global.setInterval;
-    global.clearInterval = vi.fn() as unknown as typeof global.clearInterval;
     useCortexStore.setState({
       teamsDetail: [],
       isFetchingTeamsDetail: false,
@@ -50,11 +45,6 @@ describe("TeamsPage", () => {
       updateCatalogueAgent: vi.fn(),
     });
     mockTeamWorkFetch(mockFetch);
-  });
-
-  afterEach(() => {
-    global.setInterval = originalSetInterval;
-    global.clearInterval = originalClearInterval;
   });
 
   it("renders the team roster plus durable active-work controls", async () => {
@@ -152,14 +142,22 @@ describe("TeamsPage", () => {
         }),
       );
     });
+    // The pause action bumps activeWorkRefreshVersion, which re-runs
+    // useDurableTeamWork's fetch effect. That refetch is a real async
+    // round trip (state update -> effect -> fetch -> state update), so it
+    // needs its own generous wait budget distinct from, and smaller than,
+    // the test's own timeout below -- otherwise this inner waitFor's
+    // 5000ms budget races the outer test timeout and loses under load
+    // (see TPF-002 measurement: 6/8 timeouts before this fix, 4/30 with
+    // only the setInterval-polling fix below, 0/30 with both).
     await waitFor(() => {
       expect(
         mockFetch.mock.calls.filter(([url]) =>
           String(url).includes("/api/v1/teams/team-bravo/work?limit=8&include_archived=false"),
         ).length,
       ).toBeGreaterThan(1);
-    }, { timeout: 5000 });
-  });
+    }, { timeout: 8000 });
+  }, 12000);
 
   it("posts recover and steer actions as durable team-work evidence", async () => {
     useCortexStore.setState({
