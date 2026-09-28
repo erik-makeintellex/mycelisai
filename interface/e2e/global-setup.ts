@@ -20,7 +20,7 @@ export default async function globalSetup(config: FullConfig) {
     await page.getByLabel(/Local admin username/i).fill(process.env.MYCELIS_LOCAL_ADMIN_USERNAME || 'admin');
     const password = process.env.MYCELIS_LOCAL_ADMIN_PASSWORD;
     if (!password) {
-        throw new Error('Set MYCELIS_LOCAL_ADMIN_PASSWORD for Playwright; MYCELIS_API_KEY is not a login password.');
+        throw new Error('MYCELIS_LOCAL_ADMIN_PASSWORD is empty in .env and the shell; run `uv run inv auth.dev-key --admin-password=generate` (or =<password>), then `uv run inv compose.up`. MYCELIS_API_KEY is not a login password.');
     }
     await page.getByLabel(/Local admin password/i).fill(password);
     // The login URL itself (`/login?next=/dashboard`) ends in "/dashboard", and
@@ -34,7 +34,7 @@ export default async function globalSetup(config: FullConfig) {
     );
     const landed = new URL(page.url());
     if (landed.pathname !== '/dashboard') {
-        throw new Error(`Local admin sign-in failed (error=${landed.searchParams.get('error') ?? 'unknown'}); check MYCELIS_LOCAL_ADMIN_USERNAME and MYCELIS_LOCAL_ADMIN_PASSWORD.`);
+        throw new Error(`Local admin sign-in failed (error=${landed.searchParams.get('error') ?? 'unknown'}); the password does not match MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256 the Interface uses. Run \`uv run inv auth.posture\`, then \`uv run inv auth.dev-key --admin-password=sync|generate|<password>\` and \`uv run inv compose.up\`.`);
     }
     const cookies = await context.cookies();
     if (!cookies.some((cookie) => cookie.name === WEB_SESSION_COOKIE)) {

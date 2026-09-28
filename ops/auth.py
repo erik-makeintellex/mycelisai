@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import secrets
 import string
 from pathlib import Path
@@ -183,7 +184,14 @@ def _auth_posture_warnings(posture: dict[str, str]) -> list[str]:
         posture[name].strip() for name in (KEY_NAME, BREAK_GLASS_KEY_NAME, *WEB_SECRET_NAMES) if posture[name].strip()
     }:
         warnings.append(f"{LOCAL_PASSWORD_NAME} must not reuse an API key or web secret")
+    plain, digest = posture[LOCAL_PASSWORD_NAME].strip(), posture[LOCAL_PASSWORD_SHA256_NAME].strip().lower()
+    if plain and digest and _sha256_hex(plain) != digest:
+        warnings.append(f"{LOCAL_PASSWORD_NAME} does not match {LOCAL_PASSWORD_SHA256_NAME}; sign-in uses the hash. Run uv run inv auth.dev-key --admin-password=sync")
     return warnings
+
+
+def _sha256_hex(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def _ensure_web_secrets(path: Path) -> list[tuple[str, str]]:
@@ -217,9 +225,10 @@ def _print_auth_posture(path: Path, label: str) -> None:
         "rotate": "Rotate and replace the key in .env even if one already exists.",
         "show": "Print the full key value (default is masked).",
         "value": "Use an explicit key value instead of generating one.",
+        "admin_password": "Local admin for e2e-from-.env: sync | generate | <password> (generate/<password> change your sign-in).",
     }
 )
-def dev_key(_c, rotate=False, show=False, value=""):
+def dev_key(_c, rotate=False, show=False, value="", admin_password=""):
     """
     Ensure MYCELIS_API_KEY and distinct web session/forward secrets exist in .env.
     """
@@ -257,6 +266,8 @@ def dev_key(_c, rotate=False, show=False, value=""):
     posture = _inspect_auth_posture(ENV_PATH)
     if not posture[LOCAL_PASSWORD_NAME].strip() and not posture[LOCAL_PASSWORD_SHA256_NAME].strip():
         print(f"Local sign-in stays disabled until {LOCAL_PASSWORD_SHA256_NAME} (preferred) or {LOCAL_PASSWORD_NAME} is set in .env.")
+    if admin_password.strip():
+        _ensure_local_admin(admin_password.strip(), show)
     print("Next: restart services to apply auth key changes:")
     print("  uv run inv lifecycle.restart")
 
@@ -313,6 +324,27 @@ def posture(_c, compose=False):
     if not path.exists():
         raise SystemExit(f"Missing {label}. Copy the matching example file first.")
     _print_auth_posture(path, label)
+
+
+def _ensure_local_admin(mode: str, show: bool) -> None:
+    """Keep the local admin plaintext and its SHA-256 consistent in .env so e2e signs in from
+    .env. mode: "sync" (re-derive the hash from an existing plaintext), "generate" (new
+    password), or an explicit password. generate/explicit change the owner's sign-in."""
+    posture = _inspect_auth_posture(ENV_PATH)
+    reserved = {posture[n].strip() for n in (KEY_NAME, BREAK_GLASS_KEY_NAME, *WEB_SECRET_NAMES) if posture[n].strip()}
+    changing = mode not in ("", "sync")
+    plain = (_generate_dev_key(prefix="mycelis-admin-") if mode == "generate" else mode) if changing else posture[LOCAL_PASSWORD_NAME].strip()
+    if not plain:
+        print(f"{LOCAL_PASSWORD_NAME} is empty ({LOCAL_PASSWORD_SHA256_NAME} is {'set' if posture[LOCAL_PASSWORD_SHA256_NAME].strip() else 'missing'}); "
+              "e2e cannot sign in from .env. Use --admin-password=generate or --admin-password=<password>. Local admin unchanged.")
+        return
+    if plain in reserved:
+        raise SystemExit(f"{LOCAL_PASSWORD_NAME} must not reuse an API key or web secret.")
+    action = "set" if changing else ("kept" if _sha256_hex(plain) == posture[LOCAL_PASSWORD_SHA256_NAME].strip().lower() else "hash re-derived from plaintext")
+    _upsert_env_value(ENV_PATH, LOCAL_PASSWORD_NAME, plain)
+    _upsert_env_value(ENV_PATH, LOCAL_PASSWORD_SHA256_NAME, _sha256_hex(plain))
+    print(f"{LOCAL_PASSWORD_NAME}: {plain if show else '(hidden; --show to print)'}  action: {action}")
+    print("Then: uv run inv compose.up (applies the hash); uv run inv interface.e2e reads the password from .env.")
 
 
 ns = Collection("auth")
