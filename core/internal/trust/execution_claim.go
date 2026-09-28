@@ -1,0 +1,87 @@
+package trust
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/google/uuid"
+)
+
+// ExecutionClaim is the correlation a team trigger presents to ask for
+// execution posture (F16b). Every field comes from the untrusted trigger except
+// TeamID, which the receiving agent sets to its own team.
+type ExecutionClaim struct {
+	IntentProofID string
+	ContractID    string
+	RunID         string
+	WorkItemID    string
+	TeamID        string
+}
+
+// ErrExecutionClaimRejected means the claim does not name a confirmed,
+// dispatched proof for this team; the caller must stay planning-only.
+var ErrExecutionClaimRejected = errors.New("trust: execution claim not backed by a confirmed proof")
+
+// QueryRower is the read seam VerifyExecutionClaim needs (*sql.DB, *sql.Tx).
+type QueryRower interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+// verifyExecutionClaimSQL admits a claim only when the confirm-action
+// transaction committed all of: the intent proof in status 'confirmed'; the
+// execution contract for that proof and run; the confirmed-action dispatch
+// outbox row for the same proof, contract and run; and, in the proof's
+// correlated scope, a planned call whose context names this team, this proof
+// and this work item.
+const verifyExecutionClaimSQL = `
+SELECT EXISTS (
+	SELECT 1
+	FROM intent_proofs ip
+	JOIN execution_contracts ec ON ec.intent_proof_id = ip.id
+	JOIN execution_dispatch_outbox o ON o.intent_proof_id = ip.id
+	WHERE ip.id = $1::uuid
+	  AND ip.status = 'confirmed'
+	  AND ec.id = $2::uuid
+	  AND ec.run_id = $3::uuid
+	  AND o.dispatch_kind = 'confirmed_action_team_plan' -- server.confirmedActionDispatchKind
+	  AND o.contract_id = ec.id
+	  AND o.run_id = ec.run_id::text
+	  AND EXISTS (
+		SELECT 1
+		FROM jsonb_array_elements(COALESCE(ip.scope_validation->'planned_tool_calls', '[]'::jsonb)) AS planned
+		WHERE planned->'arguments'->'context'->>'team_id' = $4
+		  AND planned->'arguments'->'context'->>'intent_proof_id' = ip.id::text
+		  AND planned->'arguments'->'context'->>'work_item_id' = $5
+	  )
+)`
+
+// VerifyExecutionClaim checks claim against the proof store. It returns nil
+// only for a fully bound claim; a malformed claim, a missing store, a query
+// error or no matching record all return an error (fail closed).
+func VerifyExecutionClaim(ctx context.Context, db QueryRower, claim ExecutionClaim) error {
+	for label, value := range map[string]string{"intent_proof_id": claim.IntentProofID, "contract_id": claim.ContractID, "run_id": claim.RunID} {
+		if _, err := uuid.Parse(strings.TrimSpace(value)); err != nil {
+			return fmt.Errorf("%w: %s is not a UUID", ErrExecutionClaimRejected, label)
+		}
+	}
+	if strings.TrimSpace(claim.TeamID) == "" || strings.TrimSpace(claim.WorkItemID) == "" {
+		return fmt.Errorf("%w: team_id and work_item_id are required", ErrExecutionClaimRejected)
+	}
+	if db == nil {
+		return fmt.Errorf("%w: proof store unavailable", ErrExecutionClaimRejected)
+	}
+	var ok bool
+	err := db.QueryRowContext(ctx, verifyExecutionClaimSQL,
+		strings.TrimSpace(claim.IntentProofID), strings.TrimSpace(claim.ContractID), strings.TrimSpace(claim.RunID),
+		strings.TrimSpace(claim.TeamID), strings.TrimSpace(claim.WorkItemID)).Scan(&ok)
+	if err != nil {
+		return fmt.Errorf("%w: proof lookup failed: %v", ErrExecutionClaimRejected, err)
+	}
+	if !ok {
+		return ErrExecutionClaimRejected
+	}
+	return nil
+}

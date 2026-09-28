@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -17,6 +18,8 @@ func TestAgentTriggerRequestReplyReturnsDegradedTruthInsteadOfModelProse(t *test
 	provider := &resultContractProvider{responses: []string{"The requested package is complete."}}
 	agent := resultContractTestAgent(provider, nil)
 	agent.nc = nc
+	// F16b: execution posture needs a claim the proof store confirms.
+	f16bExpectLookup(f16bAttachProofStore(t, agent), "delivery-team").WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 	subject := "test.team.agent.result-contract"
 	if _, err := nc.Subscribe(subject, agent.handleTrigger); err != nil {
 		t.Fatal(err)
@@ -27,7 +30,7 @@ func TestAgentTriggerRequestReplyReturnsDegradedTruthInsteadOfModelProse(t *test
 	raw, err := json.Marshal(protocol.TeamAsk{
 		Goal: "Create retained work.",
 		Context: map[string]any{
-			"run_id": "run-1", "contract_id": "contract-1", "intent_proof_id": "proof-1",
+			"run_id": f16bRun, "contract_id": f16bContract, "intent_proof_id": f16bProof, "work_item_id": f16bWorkItem,
 			"result_contract": map[string]any{"kind": "project_package", "entrypoint_required": true},
 		},
 	})

@@ -33,6 +33,11 @@ func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[strin
 	if len(teams) == 0 {
 		return "No active teams to broadcast to.", nil
 	}
+	// F16b: model-written text reaches teams as broadcast text, never as a TeamAsk.
+	data, err := broadcastTriggerPayload(protocol.SourceKindInternalTool, "internal_tool.broadcast", message)
+	if err != nil {
+		return "", fmt.Errorf("broadcast payload could not be wrapped: %w", err)
+	}
 
 	type reply struct {
 		teamID  string
@@ -42,7 +47,7 @@ func (r *InternalToolRegistry) handleBroadcast(_ context.Context, args map[strin
 	ch := make(chan reply, len(teams))
 	for _, t := range teams {
 		go func(teamID string) {
-			msg, err := r.nc.Request(fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID), []byte(message), 60*time.Second)
+			msg, err := r.nc.Request(fmt.Sprintf(protocol.TopicTeamInternalTrigger, teamID), data, 60*time.Second)
 			if err != nil {
 				ch <- reply{teamID: teamID, err: err}
 				return

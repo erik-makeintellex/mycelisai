@@ -197,7 +197,7 @@ Frontend API traffic primarily originates from:
 
 | Endpoint | Ownership note |
 | --- | --- |
-| `POST /api/v1/swarm/broadcast` | wired directly in `core/cmd/server/main.go` via `soma.HandleBroadcast` |
+| `POST /api/v1/swarm/broadcast` | registered by `AdminServer.RegisterRoutes` (`HandleSwarmBroadcast`, root admin + `swarm:broadcast`), which delegates to `soma.HandleBroadcast`; non-admins get `403 admin_required` |
 | `POST /api/v1/mcp/install` | intentionally returns `403`; the shipped UI now routes installs through the curated library flow at `/api/v1/mcp/library/install` |
 
 ---

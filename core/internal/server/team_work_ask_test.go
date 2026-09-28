@@ -40,7 +40,7 @@ func TestHandleTeamWorkAsk_RecordsOutputReadyResponse(t *testing.T) {
 	}
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
 		"message":"Validate the browser package.",
 		"timeout_seconds":2,
 		"expected_outputs":["validation note"]
@@ -133,7 +133,7 @@ func TestHandleTeamWorkAsk_RollsBackInitialLifecycleWhenInteractionInsertFails(t
 	mock.ExpectRollback()
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{"message":"Ship the report."}`)
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{"message":"Ship the report."}`)
 
 	assertStatus(t, rr, http.StatusInternalServerError)
 	if !strings.Contains(rr.Body.String(), "Failed to create team work ask") {
@@ -172,7 +172,7 @@ func TestHandleTeamWorkAsk_RecordsDegradedForUnreadableTeamResponse(t *testing.T
 	}
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
 		"message":"Validate the browser package.",
 		"timeout_seconds":2
 	}`)
@@ -211,7 +211,7 @@ func TestHandleTeamWorkAsk_RecordsDegradedWhenNATSOffline(t *testing.T) {
 	mock.ExpectCommit()
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{"message":"Ship the report."}`)
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{"message":"Ship the report."}`)
 
 	assertStatus(t, rr, http.StatusAccepted)
 	var resp map[string]any

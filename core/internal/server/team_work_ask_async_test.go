@@ -41,7 +41,7 @@ func TestHandleTeamWorkAsk_AsyncPublishesCommandAndReturnsQueued(t *testing.T) {
 	}
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
 		"message":"Create the next validation note.",
 		"async":true,
 		"expected_outputs":["validation note"],
@@ -129,7 +129,7 @@ func TestHandleTeamWorkAsk_AsyncDoesNotPublishWhenDispatchPersistenceFails(t *te
 	}
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
 		"message":"Create the next validation note.",
 		"async":true
 	}`)
@@ -163,7 +163,7 @@ func TestHandleTeamWorkAsk_AsyncRecordsDegradedWhenNATSOffline(t *testing.T) {
 	mock.ExpectCommit()
 
 	mux := setupMux(t, "POST /api/v1/teams/{id}/work/ask", s.HandleTeamWorkAsk)
-	rr := doRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
+	rr := doAuthenticatedRequest(t, mux, http.MethodPost, "/api/v1/teams/qa-team/work/ask", `{
 		"message":"Create the next validation note.",
 		"async":true
 	}`)

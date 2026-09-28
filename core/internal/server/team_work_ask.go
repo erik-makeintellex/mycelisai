@@ -53,7 +53,19 @@ type teamWorkPublisher interface {
 
 // HandleTeamWorkAsk submits one bounded request to a team and records either
 // output or degradation as durable Active Work state.
+// F16b: the caller needs soma:work (every web user holds it; admins via "*"),
+// and the ask context Core sends is always built here, never from the body.
 func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) {
+	identity := IdentityFromContext(r.Context())
+	if identity == nil {
+		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+	if !hasScope(identity, scopeSomaWork) {
+		respondBlockerText(w, r, http.StatusForbidden, codeTeamAskForbidden, teamAskForbiddenCopy, "Missing required scope: "+scopeSomaWork,
+			map[string]string{"required_scope": scopeSomaWork})
+		return
+	}
 	teamID := strings.TrimSpace(r.PathValue("id"))
 	if teamID == "" {
 		respondAPIError(w, "team_id is required", http.StatusBadRequest)
@@ -78,7 +90,7 @@ func (s *AdminServer) HandleTeamWorkAsk(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	raw, err := teamWorkAskPayload(req)
+	raw, err := teamWorkAskTriggerPayload(item, req)
 	if err != nil {
 		respondAPIError(w, "Failed to serialize team ask: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -164,15 +176,37 @@ func (req teamWorkAskRequest) AskValue() protocol.TeamAsk {
 	return req.Ask.Normalize()
 }
 
-func teamWorkAskPayload(req teamWorkAskRequest) ([]byte, error) {
-	if req.Ask != nil && !req.Ask.IsZero() {
-		ask := req.Ask.Normalize()
-		if strings.TrimSpace(req.Message) != "" && strings.TrimSpace(ask.Message) == "" {
-			ask.Message = req.Message
-		}
-		return json.Marshal(ask)
+// teamWorkAskTriggerPayload is the synchronous ask for internal.trigger: always
+// a TeamAsk whose Context is Core-built (teamWorkAskServerContext), so a
+// body-supplied context or a JSON-shaped message cannot carry posture or
+// correlation fields to the agents (F16b).
+func teamWorkAskTriggerPayload(item protocol.TeamWorkItem, req teamWorkAskRequest) ([]byte, error) {
+	ask := req.AskValue()
+	if ask.IsZero() {
+		ask = protocol.TeamAsk{Message: req.Message}
 	}
-	return []byte(req.Message), nil
+	ask = ask.Normalize()
+	if strings.TrimSpace(req.Message) != "" && strings.TrimSpace(ask.Message) == "" {
+		ask.Message = req.Message
+	}
+	ask.Context = teamWorkAskServerContext(item, req)
+	return json.Marshal(ask)
+}
+
+func teamWorkAskServerContext(item protocol.TeamWorkItem, req teamWorkAskRequest) map[string]any {
+	return map[string]any{
+		"work_item_id":             item.WorkItemID,
+		"team_id":                  item.TeamID,
+		"details":                  req.Payload,
+		"expected_outputs":         item.ExpectedOutputs,
+		"expected_proof":           item.ExpectedProof,
+		"capability_requirements":  item.CapabilityRequirements,
+		"governance_posture":       item.GovernancePosture,
+		"execution_mode":           item.ExecutionMode,
+		"work_intent":              item.WorkIntent,
+		"source_active_work_state": item.State,
+		"source_channel":           teamWorkAskSourceChannel,
+	}
 }
 
 func (s *AdminServer) dispatchTeamWorkAsk(item protocol.TeamWorkItem, req teamWorkAskRequest, subject string) (string, error) {
@@ -205,19 +239,7 @@ func teamWorkAskCommandEnvelope(item protocol.TeamWorkItem, req teamWorkAskReque
 		ask = protocol.TeamAsk{Message: req.Message}
 	}
 	ask = ask.Normalize()
-	ask.Context = map[string]any{
-		"work_item_id":             item.WorkItemID,
-		"team_id":                  item.TeamID,
-		"details":                  req.Payload,
-		"expected_outputs":         item.ExpectedOutputs,
-		"expected_proof":           item.ExpectedProof,
-		"capability_requirements":  item.CapabilityRequirements,
-		"governance_posture":       item.GovernancePosture,
-		"execution_mode":           item.ExecutionMode,
-		"work_intent":              item.WorkIntent,
-		"source_active_work_state": item.State,
-		"source_channel":           teamWorkAskSourceChannel,
-	}
+	ask.Context = teamWorkAskServerContext(item, req)
 	raw, err := json.Marshal(ask)
 	if err != nil {
 		return nil, err
