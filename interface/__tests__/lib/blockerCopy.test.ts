@@ -21,6 +21,9 @@ const DECK_CODES = [
     'connector_deployment_unavailable',
     'token_budget_exhausted',
     'token_budget_usage_forbidden',
+    'mcp_tool_not_found',
+    'mcp_call_forbidden',
+    'mcp_env_rejected',
 ];
 
 describe('blockerCopy', () => {
@@ -96,6 +99,48 @@ describe('blockerCopy', () => {
         const copy = blockerCopy({ code: 'service_unavailable', httpStatus: 503, viewerIsAdmin: false });
         expect(copy.whatHappened).toContain('activity log is unavailable');
         expect(copy.adminVariant?.whatHappened).toContain('Restore it');
+    });
+
+    it('maps admin_required with reason=mcp_call to a Soma-proposal next step, not the generic default', () => {
+        const copy = blockerCopy({ code: 'admin_required', httpStatus: 403, viewerIsAdmin: false, reason: 'mcp_call' });
+        expect(copy.code).toBe('admin_required');
+        expect(copy.title).not.toBe('This area is for admins');
+        expect(copy.whatHappened).toMatch(/use this tool directly/i);
+        expect(copy.nextAction.label).toMatch(/ask soma/i);
+        const admin = resolveBlockerCopy(copy, true);
+        expect(admin.whatHappened).toMatch(/missing a permission/i);
+    });
+
+    it('maps service_unavailable with reason=mcp_call to the MCP connection copy, not the activity-log copy', () => {
+        const copy = blockerCopy({ code: 'service_unavailable', httpStatus: 503, viewerIsAdmin: false, reason: 'mcp_call' });
+        expect(copy.code).toBe('service_unavailable');
+        expect(copy.whatHappened).toMatch(/connection is offline/i);
+        expect(copy.whatHappened).not.toContain('activity log is unavailable');
+        const admin = resolveBlockerCopy(copy, true);
+        expect(admin.nextAction.href).toBe('/resources?tab=tools');
+    });
+
+    it('maps mcp_tool_not_found to a plain-language copy with a retry and an admin detail', () => {
+        const copy = blockerCopy({ code: 'mcp_tool_not_found', httpStatus: 404, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/isn't available/i);
+        expect(copy.nextAction.intent).toBe('retry');
+        const admin = resolveBlockerCopy(copy, true);
+        expect(admin.whatHappened).toMatch(/exact name/i);
+    });
+
+    it('maps mcp_call_forbidden to a plain-language copy naming Soma or an admin', () => {
+        const copy = blockerCopy({ code: 'mcp_call_forbidden', httpStatus: 403, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/can't use this tool directly/i);
+        expect(copy.whoCanHelp).toMatch(/admin/i);
+        const admin = resolveBlockerCopy(copy, true);
+        expect(admin.whatHappened).toMatch(/outputs:read/i);
+    });
+
+    it('maps mcp_env_rejected to a plain-language copy naming the settings problem', () => {
+        const copy = blockerCopy({ code: 'mcp_env_rejected', httpStatus: 400, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/can't be set up with those settings/i);
+        const admin = resolveBlockerCopy(copy, true);
+        expect(admin.whatHappened).toMatch(/environment variables/i);
     });
 
     it.each(['provider_timeout', 'empty_provider_output'])(

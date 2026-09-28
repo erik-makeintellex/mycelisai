@@ -341,8 +341,10 @@ New-user proof should verify both sides of this boundary:
 Supported operator actions:
 - browse directories (`list_directory`)
 - read files (`read_text_file`)
-- create directories (`create_directory`)
-- write files (`write_file`)
+- create directories (`create_directory`) — admin (approver) only
+- write files (`write_file`) — admin (approver) only
+
+Any signed-in user can browse and read directly. Direct create/write is a high-risk MCP call (see `Capabilities` above), so only an admin who also holds `approvals:decide` sees the **Create** controls and can use them; everyone else sees "Only an admin can use this tool directly" and should ask Soma to propose the change instead, which an admin then approves. This is a UI hint only — Core still enforces the rule, so an admin without `approvals:decide` sees the same honest blocker if a write is attempted.
 
 Operational behavior:
 - if `filesystem` is not installed or not connected, explorer shows actionable recovery controls
