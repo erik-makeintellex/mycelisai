@@ -85,10 +85,10 @@ func TestTrustClassificationDoesNotTreatExternalAsInternal(t *testing.T) {
 func TestEnrichPublishInputAddsAuditSecurityMetadata(t *testing.T) {
 	channel := SeedChannels[3]
 	input := PublishInput{
-		SchemaID:     "ToolResult",
-		ChannelName:  channel.Name,
-		CreatedBy:    "mcp:fetch",
-		AddressedTo:  "soma",
+		SchemaID:    "ToolResult",
+		ChannelName: channel.Name,
+		CreatedBy:   "mcp:fetch",
+		AddressedTo: "soma",
 		Payload: map[string]any{
 			"summary":     "Fetched competitive notes.",
 			"status":      "completed",

@@ -84,14 +84,14 @@ func (r *InternalToolRegistry) handleCreateExchangeThread(ctx context.Context, a
 	}
 	ctx = exchange.WithActor(ctx, exchangeActorForInvocation(ctx, args))
 	thread, err := r.exchange.CreateThread(ctx, exchange.CreateThreadInput{
-		ChannelName:   channel,
-		ThreadType:    threadType,
-		Title:         title,
-		Participants:  participants,
+		ChannelName:      channel,
+		ThreadType:       threadType,
+		Title:            title,
+		Participants:     participants,
 		AllowedReviewers: stringSlice(args["allowed_reviewers"]),
 		EscalationRights: stringSlice(args["escalation_rights"]),
-		ContinuityKey: stringValue(args["continuity_key"]),
-		CreatedBy:     createdBy,
+		ContinuityKey:    stringValue(args["continuity_key"]),
+		CreatedBy:        createdBy,
 	})
 	if err != nil {
 		return "", err
@@ -122,24 +122,24 @@ func (r *InternalToolRegistry) handlePublishExchangeItem(ctx context.Context, ar
 		threadID = &parsed
 	}
 	item, err := r.exchange.Publish(ctx, exchange.PublishInput{
-		ChannelName: channel,
-		SchemaID:    schemaID,
-		Payload:     payload,
-		CreatedBy:   createdBy,
-		AddressedTo: stringValue(args["addressed_to"]),
-		ThreadID:    threadID,
-		Visibility:  stringValue(args["visibility"]),
+		ChannelName:      channel,
+		SchemaID:         schemaID,
+		Payload:          payload,
+		CreatedBy:        createdBy,
+		AddressedTo:      stringValue(args["addressed_to"]),
+		ThreadID:         threadID,
+		Visibility:       stringValue(args["visibility"]),
 		SensitivityClass: stringValue(args["sensitivity_class"]),
 		// Source role and team are provenance: identity only, never args.
-		SourceRole:  actor.Role,
-		SourceTeam:  actor.Team,
-		TargetRole:  stringValue(args["target_role"]),
-		TargetTeam:  stringValue(args["target_team"]),
+		SourceRole:       actor.Role,
+		SourceTeam:       actor.Team,
+		TargetRole:       stringValue(args["target_role"]),
+		TargetTeam:       stringValue(args["target_team"]),
 		AllowedConsumers: stringSlice(args["allowed_consumers"]),
-		CapabilityID: stringValue(args["capability_id"]),
-		TrustClass:  stringValue(args["trust_class"]),
-		ReviewRequired: boolValue(args["review_required"]),
-		Summary:     stringValue(args["summary"]),
+		CapabilityID:     stringValue(args["capability_id"]),
+		TrustClass:       stringValue(args["trust_class"]),
+		ReviewRequired:   boolValue(args["review_required"]),
+		Summary:          stringValue(args["summary"]),
 	})
 	if err != nil {
 		return "", err
