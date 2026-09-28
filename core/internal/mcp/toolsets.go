@@ -35,7 +35,10 @@ func NewToolSetService(db *sql.DB) *ToolSetService {
 	return &ToolSetService{DB: db}
 }
 
-func normalizeToolSetScope(kind, ref string) (string, string, error) {
+// NormalizeToolSetScope is the stored form of a tool set scope: kind trimmed
+// and lower-cased, empty kind is "all", "all" drops its ref, and group/host
+// need a ref. Any other kind is an error.
+func NormalizeToolSetScope(kind, ref string) (string, string, error) {
 	kind = strings.ToLower(strings.TrimSpace(kind))
 	ref = strings.TrimSpace(ref)
 	if kind == "" {
@@ -55,7 +58,7 @@ func normalizeToolSetScope(kind, ref string) (string, string, error) {
 }
 
 func (ts *ToolSet) normalizeScope() error {
-	kind, ref, err := normalizeToolSetScope(ts.ScopeKind, ts.ScopeRef)
+	kind, ref, err := NormalizeToolSetScope(ts.ScopeKind, ts.ScopeRef)
 	if err != nil {
 		return err
 	}
@@ -209,7 +212,7 @@ func (s *ToolSetService) FindByNameForScope(ctx context.Context, name, scopeKind
 	if s.DB == nil {
 		return nil, fmt.Errorf("database not available")
 	}
-	scopeKind, scopeRef, err := normalizeToolSetScope(scopeKind, scopeRef)
+	scopeKind, scopeRef, err := NormalizeToolSetScope(scopeKind, scopeRef)
 	if err != nil {
 		return nil, err
 	}

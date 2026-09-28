@@ -98,12 +98,15 @@ func TestNormalizeMCPToolCallArgumentsForFilesystem_RebasesWorkspaceAlias(t *tes
 	workspace := t.TempDir()
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
 
-	args := normalizeMCPToolCallArgumentsForServer("filesystem", map[string]any{
+	args, err := normalizeMCPToolCallArgumentsForServer("filesystem", map[string]any{
 		"path":        "workspace/logs/proof.md",
 		"source":      "workspace/input.md",
 		"destination": "/workspace/output.md",
 		"paths":       []any{"workspace/a.md", "README.md"},
 	})
+	if err != nil {
+		t.Fatalf("normalize: %v", err)
+	}
 
 	if args["path"] != filepath.Join(workspace, "logs", "proof.md") {
 		t.Fatalf("path = %#v", args["path"])
@@ -115,14 +118,15 @@ func TestNormalizeMCPToolCallArgumentsForFilesystem_RebasesWorkspaceAlias(t *tes
 		t.Fatalf("destination = %#v", args["destination"])
 	}
 	paths := args["paths"].([]any)
-	if paths[0] != filepath.Join(workspace, "a.md") || paths[1] != "README.md" {
+	// MCPL: relative paths resolve against the workspace root too.
+	if paths[0] != filepath.Join(workspace, "a.md") || paths[1] != filepath.Join(workspace, "README.md") {
 		t.Fatalf("paths = %#v", paths)
 	}
 }
 
 func TestNormalizeMCPToolCallArgumentsForNonFilesystem_LeavesPathsAlone(t *testing.T) {
-	args := normalizeMCPToolCallArgumentsForServer("fetch", map[string]any{"path": "workspace/proof.md"})
-	if args["path"] != "workspace/proof.md" {
+	args, err := normalizeMCPToolCallArgumentsForServer("fetch", map[string]any{"path": "workspace/proof.md"})
+	if err != nil || args["path"] != "workspace/proof.md" {
 		t.Fatalf("path = %#v", args["path"])
 	}
 }

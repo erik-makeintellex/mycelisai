@@ -15,15 +15,19 @@ const defaultAssistantName = "Soma"
 
 // User represents the logged-in user
 type User struct {
-	ID            string          `json:"id"`
-	Username      string          `json:"username"`
-	Role          string          `json:"role"`
-	EffectiveRole string          `json:"effective_role,omitempty"`
-	PrincipalType string          `json:"principal_type,omitempty"`
-	AuthSource    string          `json:"auth_source,omitempty"`
-	BreakGlass    bool            `json:"break_glass,omitempty"`
-	Settings      json.RawMessage `json:"settings"`
-	CreatedAt     time.Time       `json:"created_at"`
+	ID            string `json:"id"`
+	Username      string `json:"username"`
+	Role          string `json:"role"`
+	EffectiveRole string `json:"effective_role,omitempty"`
+	PrincipalType string `json:"principal_type,omitempty"`
+	AuthSource    string `json:"auth_source,omitempty"`
+	BreakGlass    bool   `json:"break_glass,omitempty"`
+	// Scopes and IsApprover (MCPL) are interface hints only; Core re-checks
+	// authority on every request.
+	Scopes     []string        `json:"scopes"`
+	IsApprover bool            `json:"is_approver"`
+	Settings   json.RawMessage `json:"settings"`
+	CreatedAt  time.Time       `json:"created_at"`
 }
 
 // Team represents a team context
@@ -51,6 +55,8 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 		PrincipalType: identity.PrincipalType,
 		AuthSource:    identity.AuthSource,
 		BreakGlass:    identity.BreakGlass,
+		Scopes:        append([]string{}, identity.Scopes...),
+		IsApprover:    isApprover(identity),
 		Settings:      mustJSON(loadUserSettings()),
 		CreatedAt:     time.Now(),
 	}
