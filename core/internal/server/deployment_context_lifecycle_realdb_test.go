@@ -129,10 +129,11 @@ func TestDeploymentContextLifecycleRealDB_AuthorityNegatives(t *testing.T) {
 	org := saveAs(t, h, adaOwner, adaOrgBody)
 
 	for _, action := range []string{"archive", "restore", "delete"} {
+		// Not readable, so answered like an unknown id (MEM-LIST).
 		for _, who := range []*RequestIdentity{bobOther, adminWithWrite} {
 			rr := lifecycleCall(t, h, who, action, private)
-			assertStatus(t, rr, http.StatusForbidden)
-			if code := lifecycleBlockerCode(t, rr); code != codeMemoryEntryNotOwned {
+			assertStatus(t, rr, http.StatusNotFound)
+			if code := lifecycleBlockerCode(t, rr); code != codeMemoryEntryNotFound {
 				t.Fatalf("%s by %s on a private entry: code %q", action, who.Username, code)
 			}
 		}

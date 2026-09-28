@@ -130,6 +130,8 @@ The user-facing distinction:
 - Deployment Context is durable governed source material for future reasoning
 - Memory is where already-retained facts, SitReps, artifacts, and continuity are inspected
 
+Who sees a saved Deployment Context entry: everyone sees org-wide entries (company knowledge, Soma operating context, and anything saved with global visibility). Private entries are visible only to the person who saved them, admins included. Team entries are visible to the person who saved them and to members of that team. Memory search follows the same rule. Only the saver can change their private or team entries; org-wide entries need an admin with `memory:write`. An entry you cannot see answers "This saved item no longer exists."
+
 Manual memory creation may appear through admin/runtime tooling where enabled, but it is not the default path for larger source documents. Stored facts or context are available to agents only within their allowed memory scope and trust boundary.
 
 General exploratory planning and routine conversation checkpoints are no longer promoted into semantic memory automatically. They stay in temporary continuity unless an agent deliberately promotes them.

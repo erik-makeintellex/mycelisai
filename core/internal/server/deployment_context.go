@@ -21,7 +21,8 @@ func (s *AdminServer) deploymentContextService() *deploymentcontext.Service {
 // durable context for Soma and downstream teams: keyword-searchable on save,
 // semantically searchable once an embedding engine embeds it.
 // This store is intentionally separate from Soma's ordinary remembered facts.
-// GET  /api/v1/memory/deployment-context[?include_archived=true]
+// GET  /api/v1/memory/deployment-context[?include_archived=true] lists only
+// entries the caller may read (deployment_context_read.go).
 // POST /api/v1/memory/deployment-context
 func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Request) {
 	svc := s.deploymentContextService()
@@ -41,7 +42,14 @@ func (s *AdminServer) HandleDeploymentContext(w http.ResponseWriter, r *http.Req
 		}
 
 		includeArchived := r.URL.Query().Get("include_archived") == "true"
-		entries, err := svc.ListEntries(r.Context(), limit, includeArchived)
+		// Only entries the caller may read, filtered in SQL (MEM-LIST).
+		reader, err := s.memoryReader(r)
+		if err != nil {
+			log.Printf("deployment context list: %v", err)
+			respondError(w, "Saved memory access could not be checked, so nothing was listed.", http.StatusServiceUnavailable)
+			return
+		}
+		entries, err := svc.ListEntries(r.Context(), limit, includeArchived, reader)
 		if err != nil {
 			respondError(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -108,10 +108,11 @@ func TestMemEditRealDB_AuthorityMatchesLifecycleRule(t *testing.T) {
 	org := saveAs(t, h, adaOwner, adaOrgBody)
 	patch := `{"title":"hijacked","content":"attacker text"}`
 
+	// Not readable, so answered like an unknown id (MEM-LIST).
 	for _, who := range []*RequestIdentity{bobOther, adminWithWrite} {
 		rr := memEditCall(t, h, who, private, patch)
-		assertStatus(t, rr, http.StatusForbidden)
-		if code := lifecycleBlockerCode(t, rr); code != codeMemoryEntryNotOwned {
+		assertStatus(t, rr, http.StatusNotFound)
+		if code := lifecycleBlockerCode(t, rr); code != codeMemoryEntryNotFound {
 			t.Fatalf("%s editing a private entry: code %q", who.Username, code)
 		}
 	}

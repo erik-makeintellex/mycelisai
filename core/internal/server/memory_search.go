@@ -50,6 +50,13 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	// Governed saved memory is filtered by the caller's read authority
+	// (MEM-LIST); team_id, agent_id and visibility only narrow a search.
+	reader, err := s.memoryReader(r)
+	if err != nil {
+		http.Error(w, `{"error":"memory access could not be checked"}`, http.StatusServiceUnavailable)
+		return
+	}
 	// Semantic when an embedding engine works, PostgreSQL keyword ranking otherwise.
 	results, mode, err := s.Mem.RecallGoverned(r.Context(), s.Cognitive, query, memory.SemanticSearchOptions{
 		Limit:               limit,
@@ -61,6 +68,7 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 		Types:               searchTypes,
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: teamID == "" && agentID == "",
+		Reader:              &reader,
 	})
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")

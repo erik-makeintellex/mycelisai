@@ -89,6 +89,11 @@ func recallScopeClauses(opts SemanticSearchOptions, args []any, nextArg int) ([]
 	}
 	clauses, args, nextArg = appendTextSearchTypes(clauses, args, nextArg, opts.Types)
 	clauses, args, nextArg = appendTextSearchScope(clauses, args, nextArg, opts)
+	if opts.Reader != nil {
+		var read string
+		read, args, nextArg = governedRecallClause(opts.Reader, args, nextArg)
+		clauses = append(clauses, read)
+	}
 	return appendGovernedScope(clauses, args, nextArg, opts)
 }
 

@@ -7,22 +7,28 @@ import (
 	"fmt"
 	"time"
 	"unicode/utf8"
+
+	"github.com/mycelis/core/internal/memory"
 )
 
+// List lists the active entries a viewer with no identity may read: org-wide
+// entries only.
 func (s *Service) List(ctx context.Context, limit int) ([]Entry, error) {
-	return s.ListEntries(ctx, limit, false)
+	return s.ListEntries(ctx, limit, false, memory.GovernedReader{})
 }
 
-// ListEntries lists governed entries, newest first. Archived entries are
-// included only when includeArchived is set; deleted entries no longer exist.
-func (s *Service) ListEntries(ctx context.Context, limit int, includeArchived bool) ([]Entry, error) {
+// ListEntries lists the governed entries reader may read, newest first
+// (MEM-LIST). The read rule is applied in SQL, so limit counts readable rows.
+// Archived entries are included only when includeArchived is set; deleted
+// entries no longer exist.
+func (s *Service) ListEntries(ctx context.Context, limit int, includeArchived bool, reader memory.GovernedReader) ([]Entry, error) {
 	if s == nil || s.Artifacts == nil || s.Artifacts.DB == nil {
 		return nil, fmt.Errorf("deployment context store unavailable")
 	}
 	if limit <= 0 {
 		limit = 20
 	}
-
+	read, args, _ := memory.GovernedReadClause("a.metadata", reader, []any{limit, includeArchived}, 3)
 	rows, err := s.Artifacts.DB.QueryContext(ctx, `
 		SELECT a.id::text,
 		       a.title,
@@ -38,9 +44,10 @@ func (s *Service) ListEntries(ctx context.Context, limit int, includeArchived bo
 		) c ON true
 		WHERE COALESCE(a.metadata->>'knowledge_store', '') = 'governed_context_store'
 		  AND ($2 OR COALESCE(a.metadata->>'lifecycle_state', 'active') = 'active')
+		  AND `+read+`
 		ORDER BY a.created_at DESC
 		LIMIT $1
-	`, limit, includeArchived)
+	`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list deployment context entries: %w", err)
 	}
@@ -123,4 +130,32 @@ func entryEmbeddingStatus(saved string, chunks, embedded int) string {
 	default:
 		return EmbeddingStatusPending
 	}
+}
+
+// TeamRef names a team that owns team-visibility entries.
+type TeamRef struct{ TenantID, TeamID string }
+
+// TeamRefs lists the teams that own team-visibility entries, so the caller
+// can prove the viewer's membership of each before listing (MEM-LIST).
+func (s *Service) TeamRefs(ctx context.Context) ([]TeamRef, error) {
+	db, err := s.store()
+	if err != nil {
+		return nil, err
+	}
+	rows, err := db.QueryContext(ctx, `SELECT DISTINCT COALESCE(NULLIF(btrim(metadata->>'tenant_id'), ''), 'default'), btrim(metadata->>'team_id')
+		FROM artifacts WHERE metadata->>'knowledge_store' = 'governed_context_store'
+		  AND NULLIF(btrim(metadata->>'visibility'), '') = 'team' AND NULLIF(btrim(metadata->>'team_id'), '') IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("list deployment context teams: %w", err)
+	}
+	defer rows.Close()
+	refs := []TeamRef{}
+	for rows.Next() {
+		var ref TeamRef
+		if err := rows.Scan(&ref.TenantID, &ref.TeamID); err != nil {
+			return nil, fmt.Errorf("scan deployment context team: %w", err)
+		}
+		refs = append(refs, ref)
+	}
+	return refs, rows.Err()
 }
