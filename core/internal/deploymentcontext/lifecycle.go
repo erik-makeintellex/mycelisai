@@ -68,6 +68,12 @@ func (s *Service) Lookup(ctx context.Context, artifactID string) (*EntryRecord, 
 	}
 	var meta map[string]any
 	_ = json.Unmarshal(raw, &meta)
+	fillRecordMeta(&record, meta)
+	return &record, nil
+}
+
+// fillRecordMeta derives the authority and lifecycle fields from metadata.
+func fillRecordMeta(record *EntryRecord, meta map[string]any) {
 	record.KnowledgeClass = stringMeta(meta, "knowledge_class", KnowledgeClassCustomerContext)
 	record.Visibility = stringMeta(meta, "visibility", "global")
 	record.TeamID = stringMeta(meta, "team_id", "")
@@ -75,7 +81,6 @@ func (s *Service) Lookup(ctx context.Context, artifactID string) (*EntryRecord, 
 	record.OwnerUserID = stringMeta(meta, "owner_user_id", "")
 	record.LifecycleState = stringMeta(meta, "lifecycle_state", LifecycleActive)
 	record.ContentLength = intMeta(meta, "content_length", 0)
-	return &record, nil
 }
 
 // Archive hides an entry from recall and the default list. Reversible.
@@ -131,6 +136,13 @@ func (s *Service) Delete(ctx context.Context, artifactID string) (DeleteResult, 
 		return DeleteResult{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	// Lock the artifact first, the same order as Edit and setLifecycle, so a
+	// concurrent edit and delete serialize instead of deadlocking.
+	if err := tx.QueryRowContext(ctx, `SELECT id::text FROM artifacts WHERE `+governedArtifact+` FOR UPDATE`, artifactID).Scan(new(string)); errors.Is(err, sql.ErrNoRows) {
+		return DeleteResult{}, ErrEntryNotFound
+	} else if err != nil {
+		return DeleteResult{}, fmt.Errorf("lock deployment context entry: %w", err)
+	}
 	chunks, err := tx.ExecContext(ctx, `DELETE FROM context_vectors WHERE `+governedChunks, artifactID)
 	if err != nil {
 		return DeleteResult{}, fmt.Errorf("delete deployment context chunks: %w", err)
