@@ -133,8 +133,9 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 
 // requestMarker ends every header Core's chat handler wraps around the latest
 // turn: the governance profile, then the route header (server cognitive.go,
-// action_governance_profile.go).
-const requestMarker = "\nOriginal request:"
+// action_governance_profile.go). It is the shared protocol constant so all
+// three wrap sites and this unwrap site cannot drift apart.
+const requestMarker = protocol.ChatOriginalRequestMarker
 
 // recallQuery is the text recall ranks on: the operator's own request. A turn
 // that starts with a bracketed header is unwrapped past each header's

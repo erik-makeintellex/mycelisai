@@ -12,6 +12,18 @@ const (
 	ContinuationIntentInspect  ContinuationIntentKind = "inspect"
 )
 
+// ChatOriginalRequestMarker ends every header Core's chat handler wraps
+// around the latest user turn before it reaches a model: the route header
+// (internal/server/cognitive.go, normalizeChatRequestMessages and
+// applyDirectAnswerRetryInstruction) and the governance profile header
+// (internal/server/action_governance_profile.go,
+// applyGovernanceProfileToLatestMessage). Ambient recall
+// (internal/swarm/internal_tools_memory_context.go, recallQuery) strips
+// leading bracketed headers past this marker so it ranks on the operator's
+// own request instead of wrapper boilerplate. Keep this the single source of
+// truth: a wording change here must not be duplicated by hand anywhere else.
+const ChatOriginalRequestMarker = "\nOriginal request:"
+
 type ChatContinuationIntent struct {
 	Kind             ContinuationIntentKind `json:"kind"`
 	ContextKind      string                 `json:"context_kind,omitempty"`

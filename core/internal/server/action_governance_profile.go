@@ -208,6 +208,6 @@ func applyGovernanceProfileToLatestMessage(messages []chatRequestMessage, profil
 	normalized := make([]chatRequestMessage, len(messages))
 	copy(normalized, messages)
 	latest := strings.TrimSpace(normalized[idx].Content)
-	normalized[idx].Content = governanceProfileDirective(profile) + "\nOriginal request:\n" + latest
+	normalized[idx].Content = governanceProfileDirective(profile) + protocol.ChatOriginalRequestMarker + "\n" + latest
 	return normalized
 }
