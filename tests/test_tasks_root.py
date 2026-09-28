@@ -13,6 +13,16 @@ import tasks
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _area_agents_files() -> set[Path]:
+    """Every area AGENTS.md below the root, skipping vendored trees."""
+    found = set()
+    for pattern in ("*/AGENTS.md", "*/*/AGENTS.md", "*/*/*/AGENTS.md"):
+        for path in ROOT.glob(pattern):
+            if not {"node_modules", ".claude", ".git"} & set(path.parts):
+                found.add(path)
+    return found
+
+
 @dataclass
 class FakeResult:
     exited: int = 0
@@ -53,7 +63,6 @@ def test_root_collection_registers_expected_namespaces():
         "logging",
         "proto",
         "quality",
-        "relay",
         "team",
         "test",
         "wsl",
@@ -72,7 +81,6 @@ def test_root_collection_exports_expected_task_surface():
         "cache.status",
         "ci.baseline",
         "ci.build",
-        "ci.check",
         "ci.entrypoint-check",
         "ci.lint",
         "ci.release-preflight",
@@ -101,7 +109,6 @@ def test_root_collection_exports_expected_task_surface():
         "compose.up",
         "compose.warm-cognitive",
         "core.build",
-        "core.clean",
         "core.compile",
         "core.package",
         "core.restart",
@@ -125,7 +132,6 @@ def test_root_collection_exports_expected_task_surface():
         "interface.restart",
         "interface.stop",
         "interface.test",
-        "interface.test-coverage",
         "interface.typecheck",
         "k8s.bridge",
         "k8s.deploy",
@@ -146,8 +152,6 @@ def test_root_collection_exports_expected_task_surface():
         "logging.check-topics",
         "proto.generate",
         "quality.max-lines",
-        "relay.demo",
-        "relay.test",
         "team.architecture-sync",
         "team.worktree-triage",
         "test.coverage",
@@ -160,7 +164,7 @@ def test_root_collection_exports_expected_task_surface():
 
 
 def test_root_task_surface_stays_within_operator_budget():
-    assert len(tasks.ns.task_names) <= 94
+    assert len(tasks.ns.task_names) <= 89
 
 
 def test_documented_invoke_commands_are_registered():
@@ -170,6 +174,7 @@ def test_documented_invoke_commands_are_registered():
         ROOT / "ops" / "README.md",
         *sorted((ROOT / "docs").rglob("*.md")),
         *sorted((ROOT / "architecture").rglob("*.md")),
+        *_area_agents_files(),
     }
     command_pattern = re.compile(r"uv run inv ([a-z][a-z0-9]*(?:[.-][a-z0-9]+)*)(?![a-z0-9.*-])")
     documented_tasks = {

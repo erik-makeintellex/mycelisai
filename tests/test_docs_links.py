@@ -31,6 +31,17 @@ def _assert_links_resolve(path: Path) -> None:
     assert not missing, f"{path.relative_to(ROOT)} contains broken local links: {missing}"
 
 
+
+def _area_agents_files() -> set[Path]:
+    """Every area AGENTS.md below the root, skipping vendored trees."""
+    found = set()
+    for pattern in ("*/AGENTS.md", "*/*/AGENTS.md", "*/*/*/AGENTS.md"):
+        for path in ROOT.glob(pattern):
+            if not {"node_modules", ".claude", ".git"} & set(path.parts):
+                found.add(path)
+    return found
+
+
 def test_readme_docs_home_and_architecture_links_resolve():
     for path in (README, DOCS_HOME, CANONICAL_PRD, ROOT / "architecture" / "README.md"):
         _assert_links_resolve(path)
@@ -46,6 +57,7 @@ def test_all_active_documentation_links_resolve():
         ROOT / "core" / "internal" / "registry" / "README.md",
         *sorted((ROOT / "docs").rglob("*.md")),
         *sorted((ROOT / "architecture").rglob("*.md")),
+        *_area_agents_files(),
     }
 
     for path in sorted(documentation):

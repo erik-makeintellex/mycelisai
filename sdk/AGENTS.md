@@ -4,7 +4,7 @@
 
 ## Owns / does not own
 - `sdk/python/src/relay/**` (the relay client and persistence helpers) and `sdk/python/tests/test_relay_client.py` -> `mycelis-platform-ops` (lead decision 2026-09-28: it is Python, run only through `ops` tasks, and has no Core authority surface). Coordinate with `mycelis-core-execution` whenever the regenerated `.proto` output changes (see `proto/AGENTS.md`).
-- It is exercised by `uv run inv relay.test` and `relay.demo` (`ops/proto_relay.py`, which runs `agents/reference_worker.py`); `ops/config.py`, `ops/quality.py` and `ops/misc*.py` only reference its path, they don't consume its API.
+- It is exercised directly by `uv run pytest -q sdk/python/tests/test_relay_client.py` (the `relay.test` and `relay.demo` tasks were removed in TASKS pass 2); `ops/config.py`, `ops/quality.py` and `ops/misc*.py` only reference its path, they don't consume its API.
 - Generated protobuf modules under `sdk/python/src/relay/proto/**` and `sdk/python/src/scip/proto/**` are regenerated from `proto/**` (see [`proto/AGENTS.md`](../proto/AGENTS.md)); never hand-edit a `_pb2.py` file.
 
 ## Contracts
@@ -12,7 +12,7 @@
 - Python only through `uv`: any local run/test of this SDK uses `uv run pytest`/`uv run python`, never bare `python3`/`pip`.
 
 ## Gates
-- `uv run pytest -q sdk/python/tests/test_relay_client.py`, or `uv run inv relay.test` as the equivalent task-runner form.
+- `uv run pytest -q sdk/python/tests/test_relay_client.py` (it has no dedicated task-runner wrapper).
 - `uv run inv quality.max-lines` covers `sdk/python/src/**` (generated `_pb2.py` files are excluded, see `proto/AGENTS.md` gotchas).
 
 ## Gotchas

@@ -5,7 +5,6 @@ Usage:
     uv run inv ci.lint
     uv run inv ci.test
     uv run inv ci.build
-    uv run inv ci.check
 """
 
 import ipaddress
@@ -215,12 +214,6 @@ def build(c):
     ci_pipeline.run_build(c, cache_tasks=cache_tasks, core_tasks=core_tasks, interface_tasks=interface_tasks)
 
 
-@task
-def check(c):
-    """Full local CI pipeline: lint -> test -> build."""
-    ci_pipeline.run_check(c, lint_task=lint, test_task=test, build_task=build)
-
-
 @task(help={"e2e": "Include Playwright E2E run (default: True)."})
 def baseline(c, e2e=True):
     """Strict baseline validation for delivery readiness."""
@@ -286,7 +279,6 @@ ns = Collection("ci")
 ns.add_task(lint)
 ns.add_task(test)
 ns.add_task(build)
-ns.add_task(check)
 ns.add_task(baseline)
 ns.add_task(service_check, name="service-check")
 ns.add_task(toolchain_check, name="toolchain-check")

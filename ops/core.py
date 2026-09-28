@@ -199,16 +199,6 @@ def package(c, target_os="", target_arch="amd64", version_tag=""):
     )
     print(f"Packaged release archive: {archive_path}")
 
-@task
-def clean(c):
-    """Remove Go build artifacts (core/bin, go clean caches). Use before core.build/core.compile when a stale binary or cache is suspected."""
-    print("Cleaning Core...")
-    with c.cd(str(CORE_DIR)):
-        c.run("go clean", env=_task_env())
-        if (CORE_DIR / "bin").exists():
-           import shutil
-           shutil.rmtree(str(CORE_DIR / "bin"))
-
 from .version import get_version
 
 @task
@@ -296,7 +286,6 @@ ns = Collection("core")
 ns.add_task(test)
 ns.add_task(compile)
 ns.add_task(package)
-ns.add_task(clean)
 ns.add_task(build)
 ns.add_task(run)
 ns.add_task(stop)

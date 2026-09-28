@@ -73,14 +73,20 @@ Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.
 - Source: `../VERSION` file.
 - Git: `git rev-parse --short HEAD`.
 
+### `proto_relay.py` (Protobuf Stubs)
+- **Generate**: `uv run inv proto.generate` — regenerate the Go (`core/pkg/pb/swarm`, `core/pkg/scip`) and Python (`sdk/python/src/relay/proto`) stubs from `proto/*.proto`. Use after editing a `.proto` file, before building Core or the Python relay SDK; requires Docker (Go generation runs in a pinned toolchain container).
+
 ### `k8s.py` (Deployment)
 Handles standards-first Kubernetes/Helm deployment automation, with Rancher Desktop K3s supported for Windows local validation, `k3d` preferred for WSL/Linux local cluster validation, and Kind retained only as an older fallback.
 - **Init**: `uv run inv k8s.init` (Infra).
+- **Up**: `uv run inv k8s.up` — canonical cluster bring-up sequence (init -> deploy -> wait). Use as the one-command path instead of the three manual steps.
+- **Wait**: `uv run inv k8s.wait` — wait for in-cluster dependency order to become healthy. Used by `k8s.up`; also useful standalone for CI-style waits after a manual `k8s.deploy`.
 - **Deploy**: `uv run inv k8s.deploy` (Core).
 - **Standards**: `uv run inv k8s.standards` verifies the static open-standard chart contract; add `--helm --values-file=<path>` to run offline Helm lint/template checks with vendored chart dependencies.
 - **Status**: `uv run inv k8s.status` (Health).
 - **Bridge**: `uv run inv k8s.bridge` now verifies the local PostgreSQL/NATS/Core port-forwards actually bind before reporting success. Core forwards from in-cluster `:8080` to the repo-local API port, `MYCELIS_API_PORT` or `8081` by default.
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
+- **Reset**: `uv run inv k8s.reset` — destructive teardown + canonical bring-up, for the supported local Kubernetes backends only. Do not use it as Rancher Desktop/Docker Desktop/WSL/VM repair; fix the host tool first, then rerun `k8s.status`/`k8s.wait`.
 - **Backend selection**: local Kubernetes supports `MYCELIS_K8S_BACKEND=rancher` for Rancher Desktop K3s, prefers `k3d` on WSL/Linux when available, and accepts `MYCELIS_K8S_BACKEND=kind` for the older Kind workflow. Rancher mode requires an existing reachable Rancher Desktop cluster and skips image import because Rancher K3s shares the local Docker engine.
 - **Windows CLI path loading**: repo task startup prepends standard local tool bins, including Rancher Desktop's `resources/resources/win32/bin` and Chocolatey, so `uv run inv k8s.*` and Core image builds can find `docker`, `kubectl`, and related CLIs from fresh shells.
 - **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT`, optional `MYCELIS_K8S_TEXT_MODEL_ID`, and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
@@ -103,7 +109,7 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - **Health**: `uv run inv compose.health`
 - **Existing vLLM**: configure the explicit provider/profile settings in `.env.compose.example`; `MYCELIS_COMPOSE_OLLAMA_ENABLED=false` skips Ollama relay preparation. See [Operations](../docs/architecture/OPERATIONS.md#compose-tasks-opscomposepy). No new engine is started.
 - **Status**: `uv run inv compose.status`
-- **Logs**: `uv run inv compose.logs`
+- **Logs**: `uv run inv compose.logs` — tail compose logs for the whole stack, or `--service=<name>` for one container. Use when `compose.status`/`compose.health` show a service unhealthy and you need the actual error output.
 - Compose uses `.env.compose` so host/container assumptions stay separate from the local-Kubernetes `.env` path.
 - Compose launch and readiness share `MYCELIS_COMPOSE_POSTGRES_PORT`, `MYCELIS_COMPOSE_NATS_PORT`, `MYCELIS_COMPOSE_CORE_PORT`, and `MYCELIS_COMPOSE_INTERFACE_PORT`. PostgreSQL publishes `15432` by default for local Core and host clients; Compose Core uses `postgres:5432`.
 - Docker `pgvector/pgvector:pg16` is the sole development PostgreSQL server. Relational rows and vectors share its `postgres-data` volume. A host `psql` binary is client-only; native host PostgreSQL is unsupported.
@@ -131,15 +137,26 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 `lifecycle.up` uses `MYCELIS_DEV_INFRA_MODE=compose`: PostgreSQL and NATS run in Docker while Core and Interface run locally from source. It invokes only `compose.infra-up`, never full `compose.up` or an app-image build. Native host PostgreSQL/NATS bootstrap tasks are not exposed. A host `psql` binary remains a client for the Dockerized database. Shared NATS hosts still use `NATS_URL` and `MYCELIS_NATS_SERVICE_ID`; `lifecycle.down` drains local Mycelis app clients while leaving reusable data services running.
 
 ### `core.py` (Compilation)
-Handles Go compilation and Docker image building.
+Handles Go compilation, Docker image building, and running Core natively (source-mode, the default first-lane posture; see [Operations](../docs/architecture/OPERATIONS.md)).
 - **Compile**: `uv run inv core.compile` (repo-local binary only).
 - **Package**: `uv run inv core.package` (versioned cross-target binary archive under `dist/`, plus manifest/checksum sidecars).
-- **Build**: `uv run inv core.build` (Returns immutable image tag; no `latest` aliasing).
+- **Build**: `uv run inv core.build` (Returns immutable image tag; no `latest` aliasing). Used by `k8s.deploy`; recommended by `team.worktree-triage` for Python-automation-area changes.
+- **Run**: `uv run inv core.run` — start the compiled Core binary natively against the configured PostgreSQL/NATS. Use when developing Core source directly instead of through `lifecycle.up`; `lifecycle.up`'s own failure guidance points here.
+- **Stop**: `uv run inv core.stop` — kill the natively running Core process.
+- **Restart**: `uv run inv core.restart` — stop then run; use after a Go source change to pick it up without a full `core.build`.
+- **Smoke**: `uv run inv core.smoke` — fast Go governance smoke suite; use as a quick authority/permission sanity check before the full `core.test`.
+
+### `db.py` (Database Tasks)
+Native/bridged `cortex` PostgreSQL lifecycle; see [Operations](../docs/architecture/OPERATIONS.md#database-tasks-opsdbpy) for the full install/upgrade contract. Compose-hosted PostgreSQL uses `compose.migrate`/`compose.health`/`compose.storage-health` instead.
+- **Create**: `uv run inv db.create` — create the `cortex` database if it does not exist. `db.migrate` already ensures this; use standalone when you only need the database to exist, not the schema installed.
+- **Migrate**: `uv run inv db.migrate` — install the current schema into an empty `cortex` database.
+- **Reset**: `uv run inv db.reset` — drop and recreate `cortex`, then install the current schema. Destructive; local/disposable databases only.
+- **Status**: `uv run inv db.status` — list tables and row counts against the bridged database. Use to check what a native/bridged `cortex` actually has, as distinct from `compose.health`'s Compose-hosted probe.
 
 ### `auth.py` (Local Operator Auth)
 Keeps local API-key development access aligned.
 - **Dev Key**: `uv run inv auth.dev-key` — ensures `MYCELIS_API_KEY` and generates any missing/short/reused `MYCELIS_WEB_SESSION_SECRET` and `MYCELIS_WEB_IDENTITY_FORWARD_SECRET` values in `.env`; existing valid secrets are kept unchanged.
-- **Break-Glass Key**: `uv run inv auth.break-glass-key`
+- **Break-Glass Key**: `uv run inv auth.break-glass-key` — ensure `MYCELIS_BREAK_GLASS_API_KEY` (plus its username/user-id) exists in `.env`, distinct from `MYCELIS_API_KEY`. Use when setting up or rotating (`--rotate`) the explicit local recovery credential; `auth.posture` reports whether it is missing or collides with the primary key.
 - **Posture**: `uv run inv auth.posture` — also warns when a web secret is missing, short, or reused, when local sign-in has no password/hash set, and when the local admin plaintext and its SHA-256 disagree.
 - **Local admin (e2e from `.env`)**: `uv run inv auth.dev-key --admin-password=sync|generate|<password>` — keeps `MYCELIS_LOCAL_ADMIN_PASSWORD` and `MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256` consistent so `interface.e2e` signs in from `.env`. `sync` only re-derives the hash from an existing plaintext (it changes nothing when `.env` holds just the hash); `generate` and an explicit password change your sign-in. Values print only with `--show`; apply with `uv run inv compose.up`. Without `--admin-password`, dev-key never touches the local admin.
 
@@ -159,7 +176,7 @@ Keeps project and user-level tool caches off the system drive hot path and easy 
 - Project-owned backstops: root `.npmrc` keeps direct npm/npx cache local to `workspace/tool-cache`, pytest cache metadata lives in `workspace/tool-cache/pytest`, and task-managed browser runs export `PLAYWRIGHT_BROWSERS_PATH`
 - Managed subprocesses also receive the effective `MYCELIS_CACHE_MIN_FREE_GB`, `MYCELIS_CACHE_MAX_GB`, and `MYCELIS_PLAYWRIGHT_CACHE_MAX_GB` decisions. Defaults scale from the cache filesystem's total/free space; Interface install and Playwright E2E enforce the aggregate and browser-specific budgets before cache churn.
 - Suggested platform posture: on Windows, stamp the user-level cache env vars early if `C:` is the small drive; on Linux/macOS, move project/user cache roots only when the default workspace or home volume is the wrong place for repeated build churn
-- Broader checkout cleanup uses `uv run inv clean.disk-status` and `uv run inv clean.generated`; its explicit target list includes build metadata, reports, `core/workspace/tool-cache`, `interface/workspace/tool-cache`, and source-tree `__pycache__`, while excluding secrets, runtime logs, whole runtime workspaces, Compose data, Docker volumes, and the active Python environment.
+- Broader checkout cleanup uses `uv run inv clean.disk-status` and `uv run inv clean.generated`; its explicit target list includes build metadata, reports, `core/workspace/tool-cache`, `interface/workspace/tool-cache`, and source-tree `__pycache__`, while excluding secrets, runtime logs, whole runtime workspaces, Compose data, Docker volumes, and the active Python environment. `uv run inv clean.reports` removes only `interface/test-results`, `interface/playwright-report`, and `.pytest_cache` — use it for a fast, safe wipe of test/report noise between runs without clearing `.venv`/`node_modules`/tool caches the way `clean.generated` does. `uv run inv clean.wsl-handoff` resets the narrower `.venv`/`node_modules`/`.next` set before handing a checkout from Windows to WSL.
 - Heavy repo-managed build/test paths run a disk-and-cache preflight before large local churn; where `/var/lib/docker` is locally visible, its filesystem joins the reserve check while Docker objects remain owned by Docker cleanup commands.
 
 ### `logging.py` (Logging Gates)
@@ -178,6 +195,7 @@ Provides PID/session leases under `workspace/runtime/instance-locks`. `interface
 ### `lifecycle.py` (Local Stack Control)
 Owns deterministic local bring-up, teardown, and deep health checks.
 - **Up**: `uv run inv lifecycle.up --frontend`
+- **Restart**: `uv run inv lifecycle.restart` — down -> (optional `--build`) -> up. Use for a full stack refresh instead of the two manual steps.
 - **Down local app**: `uv run inv lifecycle.down` (retains Compose PostgreSQL/NATS)
 - **Down local app + data plane**: `uv run inv lifecycle.down --include-data-plane` (preserves named volumes)
 - **Health**: `uv run inv lifecycle.health`
@@ -198,8 +216,13 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 ### `interface.py` + `interface_runtime.py` (Frontend Build And Browser Tasks)
 - **Install**: `uv run inv interface.install`
 - `interface.install` now provisions npm dependencies plus the managed Playwright Chromium binary used by `interface.e2e`
+- **Dev**: `uv run inv interface.dev` — start Next.js in dev mode (stops any existing instance first). The primary manual developer-loop entrypoint.
+- **Lint**: `uv run inv interface.lint` (eslint). Use before `interface.build`/`ci.lint` to catch style/type issues fast; `ci.lint` calls this.
 - **Type Check**: `uv run inv interface.typecheck`
 - **Build**: `uv run inv interface.build`
+- **Clean**: `uv run inv interface.clean` — clear the Next.js build cache (`.next`). Use when HMR gets stuck or stale chunks cause ghost errors; `interface.build` and `ci.baseline` both call this before building.
+- **Stop**: `uv run inv interface.stop` — stop repo-local Interface processes without touching foreign listeners. Called by `interface.e2e`, `ci.baseline`, and `lifecycle.down`.
+- **Restart**: `uv run inv interface.restart` — full stop -> clear cache -> build -> start dev -> check. Use when the UI shows stale errors or HMR is broken and a targeted `interface.clean` isn't enough.
 - **Test**: `uv run inv interface.test` (Vitest runs test files sequentially for deterministic full-suite proof)
 - **E2E**: `uv run inv interface.e2e`
 - **Broad managed UI certification**: `uv run inv interface.e2e --server-mode=start --project=chromium --workers=1`
@@ -213,7 +236,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - A linked git worktree also has no `workspace/tool-cache` of its own. When `MYCELIS_PROJECT_CACHE_ROOT` is unset, `ops/config.py`'s `default_project_cache_root` reuses the main checkout's `workspace/tool-cache` (found the same way, via `main_checkout_root`) so `uv run inv core.test` does not fail on missing Playwright browsers in a fresh worktree; an explicit `MYCELIS_PROJECT_CACHE_ROOT` always wins, nothing is ever copied, and a checkout with no shared cache to find keeps its own per-checkout default. The uv/pip/npm/Go build-and-module/Playwright caches this reuses are all content-addressed or read-mostly; per-checkout state such as `workspace/` data, logs, and reports is never shared this way.
 
 ### `test.py` (Cross-Stack Coverage)
-- **Coverage**: `uv run inv test.coverage`
+- **Coverage**: `uv run inv test.coverage` — run Core (`go test -coverprofile`) and Interface (`vitest --coverage`) together with coverage reports, one command instead of running each suite separately. Use for a combined coverage snapshot; use `ci.test` instead when you just need pass/fail, not coverage.
 - **Probe**: `uv run inv test.probe` runs `ops/live_journey_probe.py` against an already-running stack (`lifecycle.up`/`compose.up` first); it is the outcomes-not-labels delivery metric recorded in `.state/V8_DEV_STATE.md`, so add a journey whenever a slice adds a user outcome.
 - Use `uv run inv ci.test` for the combined Core, Framework Runs service, and Interface unit gate and `uv run inv interface.e2e` for browser proof; duplicate aliases are intentionally not registered.
 
@@ -223,7 +246,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - **Media**: `uv run inv cognitive.media`
 - **Media Gateway**: `uv run inv cognitive.media-gateway`
 - **Up**: `uv run inv cognitive.up`
-- **Stop**: `uv run inv cognitive.stop`
+- **Stop**: `uv run inv cognitive.stop` — kill the locally started vLLM/Diffusers processes (`cognitive.llm`/`cognitive.media`/`cognitive.up`). Use before switching engines or freeing the GPU; does not touch Compose/K8s-hosted or externally managed providers.
 - **Status**: `uv run inv cognitive.status`
 - **External model-gateway preflight**: `uv run inv cognitive.status --litellm --litellm-endpoint=https://gateway.example.com/v1 --litellm-api-key-env=LITELLM_PROXY_API_KEY --litellm-model=mycelis-default`
 - These are optional local helpers for vLLM/Diffusers experimentation, not part of the supported default Core + Interface runtime contract.
@@ -264,6 +287,9 @@ Stopping containers alone is not enough. The cleanup pass must also inspect and 
 
 ### `ci.py` (Delivery Gates)
 Delivery-focused validation, runner checks, and release preflight.
+- **Lint**: `uv run inv ci.lint` (go vet + Next.js lint). Use before `ci.test`/committing to catch style/type issues fast; `ci.release-preflight` always runs this first.
+- **Build**: `uv run inv ci.build` (Go binary + Next.js production build, no Docker). Use for a fast combined build check; recommended by `team.worktree-triage` for Python-automation-area changes.
+- **Toolchain Check**: `uv run inv ci.toolchain-check [--strict]` — reports local Go/Node/uv versions; `--strict` fails on a Go lock mismatch. Called by `ci.release-preflight --strict-toolchain`.
 - **Test**: `uv run inv ci.test` (Core and Framework Runs Go tests + blocking Vitest run)
 - **Entrypoint Check**: `uv run inv ci.entrypoint-check`
 - **Baseline**: `uv run inv ci.baseline` (uses the managed build lifecycle to stop repo-owned Interface servers and Playwright listeners and clear `.next`, then includes the repo-provisioned Chromium project with one worker by default; use `--no-e2e` only for intentionally narrower local debugging, and provision other engines explicitly for a separate cross-engine matrix)
@@ -280,7 +306,7 @@ Delivery-focused validation, runner checks, and release preflight.
 ### `misc.py` (Team Coordination)
 Central architect sync path and utility task surfaces.
 - **Architecture Sync**: `uv run inv team.architecture-sync` sends the standing architecture, development, and AGUI teams the current Workspace/Outcome execution-to-deliverable gate and collects concise proof priorities; it does not authorize implementation by itself.
-- **Worktree Triage**: `uv run inv team.worktree-triage`
+- **Worktree Triage**: `uv run inv team.worktree-triage` — summarize a dirty git worktree's changed-file scope, whether a fresh install is needed, and which evidence commands to run next. Use before starting or handing off work in a linked delivery-target worktree, per `AGENTS.md`'s worktree-safety contract.
 
 ## Directives
 - `uv run inv interface.build` retries once after stale repo-local Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output before failing so Windows cleanup residue and generated-output races do not masquerade as product regressions.

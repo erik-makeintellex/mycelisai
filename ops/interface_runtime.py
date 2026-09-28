@@ -579,12 +579,6 @@ def typecheck(c):
     _run_one_shot_interface_task(["npx", "tsc", "--noEmit"])
 
 
-@task
-def test_coverage(c):
-    """Run Interface unit tests with V8 coverage report."""
-    print("Running Interface Tests with Coverage...")
-    _run_one_shot_interface_task(["npx", "vitest", "run", "--coverage"])
-
 @task(
     help={
         "headed": "Open a visible browser window.",
@@ -763,7 +757,6 @@ ns.add_task(build)
 ns.add_task(lint)
 ns.add_task(test)
 ns.add_task(typecheck)
-ns.add_task(test_coverage, name="test-coverage")
 ns.add_task(e2e)
 ns.add_task(stop)
 ns.add_task(clean)
