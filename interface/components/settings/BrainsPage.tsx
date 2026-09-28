@@ -8,6 +8,7 @@ import {
 import RemoteEnableModal from "./RemoteEnableModal";
 import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
 import ProviderForm from "@/components/settings/BrainsPageProviderForm";
+import TokenBudgetsPanel from "@/components/settings/TokenBudgetsPanel";
 import { blankForm, Modal, TOKEN_BUDGET_PRESETS, type BrainEntry, type ProviderFormData } from "@/components/settings/BrainsPageFormShared";
 
 
@@ -55,8 +56,6 @@ export default function BrainsPage() {
     }, []);
 
     useEffect(() => { fetchBrains(); }, [fetchBrains]);
-
-    // ── Toggle (existing) ───────────────────────────────────────────────────
 
     const toggleBrain = async (brain: BrainEntry) => {
         if (!brain.enabled && brain.location === "remote") {
@@ -114,8 +113,6 @@ export default function BrainsPage() {
         }
     };
 
-    // ── Add provider ────────────────────────────────────────────────────────
-
     const openAdd = () => {
         setAddForm(blankForm());
         setAddError(null);
@@ -144,8 +141,6 @@ export default function BrainsPage() {
             setAddSaving(false);
         }
     };
-
-    // ── Edit provider ───────────────────────────────────────────────────────
 
     const openEdit = (b: BrainEntry) => {
         setEditTarget(b);
@@ -207,8 +202,6 @@ export default function BrainsPage() {
         }
     };
 
-    // ── Row probe ───────────────────────────────────────────────────────────
-
     const probeRow = async (id: string) => {
         setRowProbing(id);
         try {
@@ -221,8 +214,6 @@ export default function BrainsPage() {
             setRowProbing(null);
         }
     };
-
-    // ── Delete provider ─────────────────────────────────────────────────────
 
     const confirmDelete = async () => {
         if (!deleteTarget) return;
@@ -239,8 +230,6 @@ export default function BrainsPage() {
         setDeleteTarget(null);
         setDeleting(false);
     };
-
-    // ── Render helpers ──────────────────────────────────────────────────────
 
     const statusIcon = (status: string) => {
         if (status === "online") return <CheckCircle className="w-3.5 h-3.5 text-cortex-success" />;
@@ -552,6 +541,12 @@ export default function BrainsPage() {
                     </div>
                 </Modal>
             )}
+
+            {/* Advanced: B1 token budgets (effective policy, overrides for admins) */}
+            <div className="pt-2 space-y-3">
+                <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Advanced</h3>
+                <TokenBudgetsPanel />
+            </div>
         </div>
     );
 }

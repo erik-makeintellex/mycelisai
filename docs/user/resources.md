@@ -78,6 +78,12 @@ Standard users (and admins without cognitive-read/cognitive-write) still see eng
 
 If the engine assigned to a role is turned off or can't be reached, Mycelis does not quietly switch that role to a different engine. The request fails with a plain "AI engine unavailable" message instead of continuing on an engine you didn't choose. To fix it, turn the assigned engine back on, point it at a working server, or route that role to a different engine yourself in AI Engines. An administrator can also set up an approved backup engine for a role ahead of time; that backup is only ever used when explicitly set up this way, and it never sends local-only work to a cloud engine.
 
+### Token Budgets
+
+Every turn, team run, and drafting pass has a token budget so one runaway request can't consume unbounded AI usage. AI Engines shows an Advanced panel with the effective per-execution, per-run, per-team-per-day, and per-agent-per-day limits for each engine class, plus the shared global default. Anyone signed in can see these effective numbers; a root admin with the cognitive:write scope can also add or remove an override for a specific team, agent, profile, or engine class, and the panel validates the same bounds and ordering the server enforces before saving.
+
+If work stops because it hit its budget, Soma says so plainly: "This work stopped because it reached its token budget." Nothing already produced is lost, and nothing runs twice. An admin sees the same message plus a direct link to the override controls. Team pages show a compact running total such as "This team used 12k of 64k tokens this run · 180k of 2M today." When a Core restart means the day's ledger can't be read yet, that total is labelled "since restart" instead of quietly understating the day. If a provider doesn't report exact usage, the total is prefixed "at least" rather than shown as a precise number it can't back up. Reading another team's usage requires being a member of that team, or being an admin; anyone else is told they can't see it rather than being shown a stale or guessed count.
+
 ---
 
 ## Capabilities
