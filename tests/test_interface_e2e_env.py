@@ -56,6 +56,30 @@ def test_interface_subprocess_env_includes_password_loaded_from_dotenv(isolated_
     assert "PORT" not in process_env
 
 
+def test_empty_dotenv_value_never_blanks_a_value_set_in_the_shell(isolated_env, monkeypatch, tmp_path):
+    """Owner repro (2026-09-28): the local admin is configured by
+    MYCELIS_LOCAL_ADMIN_PASSWORD_SHA256, so `.env` carries an empty
+    `MYCELIS_LOCAL_ADMIN_PASSWORD=` line. `load_dotenv(override=True)` then
+    replaced the password exported for the e2e run with "", and Playwright
+    global-setup refused to start. An empty `.env` value must not blank a
+    non-empty shell value; a non-empty `.env` value still wins."""
+    main_checkout_env = tmp_path / "main-checkout" / ".env"
+    main_checkout_env.parent.mkdir(parents=True)
+    _write_env_file(main_checkout_env, MYCELIS_LOCAL_ADMIN_PASSWORD="", MYCELIS_E2EENV_FIXTURE_OVERRIDE="from-dotenv")
+    monkeypatch.setenv("MYCELIS_LOCAL_ADMIN_PASSWORD", FAKE_PASSWORD)
+    monkeypatch.setenv("MYCELIS_E2EENV_FIXTURE_OVERRIDE", "from-shell")
+    monkeypatch.setattr(
+        interface_env,
+        "resolve_env_file",
+        lambda name, checkout_root=None: main_checkout_env if name == ".env" else None,
+    )
+
+    env = interface_env._task_env(None)
+
+    assert env.get("MYCELIS_LOCAL_ADMIN_PASSWORD") == FAKE_PASSWORD
+    assert env.get("MYCELIS_E2EENV_FIXTURE_OVERRIDE") == "from-dotenv"
+
+
 def test_playwright_subprocess_env_includes_password_from_linked_worktree_fallback(isolated_env, monkeypatch, tmp_path):
     """The exact E2EENV repro: a linked worktree has no local `.env`, so the
     e2e task must fall back to the main checkout's `.env` and forward the
