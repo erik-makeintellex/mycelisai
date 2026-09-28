@@ -12,4 +12,5 @@ This library holds the single canonical product/architecture authority plus a sm
 
 Live implementation truth is tracked separately in [`.state/V8_DEV_STATE.md`](../../.state/V8_DEV_STATE.md), not in this library.
 - [B1 Token Budgets Contract](B1_TOKEN_BUDGETS_CONTRACT.md) — per-execution token budgets keyed to model defaults (local 14B: 64k per execution, 256k per run, 2M per team per day), admin overrides, hard stops with `token_budget_exhausted`, and the usage ledger.
+- [MCPA MCP Configuration Authority Contract](MCPA_MCP_CONFIGURATION_AUTHORITY_CONTRACT.md) — who may install, apply or delete MCP servers and edit toolsets, the env-key allowlist, and fail-closed audit (draft; hotfix MCPA-H in flight).
 - [MCPS Operator MCP Scope Contract](MCPS_OPERATOR_MCP_SCOPE_CONTRACT.md) — authority, resolution, audit and argument redaction for the operator-direct MCP tool call route (draft; owner answers pending).
