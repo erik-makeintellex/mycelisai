@@ -49,7 +49,8 @@ func (s *AdminServer) handleCreateToolSet(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	record := mcpToolSetAuditRecord("", req.Name, req.ScopeKind, req.ScopeRef, nil, req.ToolRefs)
+	kind, ref := req.storedScope()
+	record := mcpToolSetAuditRecord("", req.Name, kind, ref, nil, req.ToolRefs)
 	auditID, ok := s.auditMCPConfigChange(w, r, "mcp_toolset_created", req.Name, record)
 	if !ok {
 		return
@@ -86,7 +87,8 @@ func (s *AdminServer) handleUpdateToolSet(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	record := mcpToolSetAuditRecord(id.String(), req.Name, req.ScopeKind, req.ScopeRef, existing.ToolRefs, req.ToolRefs)
+	kind, ref := req.storedScope()
+	record := mcpToolSetAuditRecord(id.String(), req.Name, kind, ref, existing.ToolRefs, req.ToolRefs)
 	record["previous_name"] = existing.Name
 	auditID, ok := s.auditMCPConfigChange(w, r, "mcp_toolset_updated", req.Name, record)
 	if !ok {
@@ -175,6 +177,23 @@ func (s *AdminServer) decodeToolSetWrite(w http.ResponseWriter, r *http.Request)
 		req.ToolRefs = []string{}
 	}
 	return req, true
+}
+
+// storedScope is the scope the tool set store will keep for this request, so
+// the audit records what is stored rather than the caller's raw input. It
+// mirrors mcp.normalizeToolSetScope (trim, lower-case kind, empty kind is
+// "all", "all" drops its ref); the store still validates and refuses bad
+// kinds, and for those the trimmed caller value is recorded.
+func (req mcpToolSetRequest) storedScope() (string, string) {
+	kind := strings.ToLower(strings.TrimSpace(req.ScopeKind))
+	ref := strings.TrimSpace(req.ScopeRef)
+	if kind == "" {
+		kind = "all"
+	}
+	if kind == "all" {
+		ref = ""
+	}
+	return kind, ref
 }
 
 func (req mcpToolSetRequest) toolSet() mcp.ToolSet {

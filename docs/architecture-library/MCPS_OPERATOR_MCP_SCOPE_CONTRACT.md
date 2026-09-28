@@ -63,8 +63,10 @@ Other threats:
   - A high-call refusal writes a best-effort `mcp_tool_call_refused` audit record: non-blocking, with keys only.
 - **D7. Retention hygiene.**
   - Publish with `exchangeContext(r)` so the item carries the human actor.
-  - Before retention, replace `Result.arguments` with a redacted copy. Sensitive keys (`api_key, authorization, credential, password, access_token, refresh_token, secret, token`, and any key ending `_key/_token/_secret`) become `[REDACTED]`. String values go through the credential patterns in `redactToolErrorText`, exported as `mcp.RedactToolText`.
+  - Before retention, replace `Result.arguments` with a redacted copy. Sensitive keys (`api_key, authorization, credential(s), password, passwd, access_token, refresh_token, secret, token`, and any key ending `_key/_token/_secret`) become `[REDACTED]`; keys are compared in snake_case form, so camelCase (`apiKey`, `clientSecret`) and kebab-case (`x-api-key`) match too. String values, nested in maps and arrays, go through the credential patterns in `redactToolErrorText`, exported as `mcp.RedactToolText`.
+  - `Result.result` is retained as a redacted copy by the same rules (slice RED); the caller's `200` response keeps the raw result. An `isError` result is retained only as its redacted, capped error text.
   - The tool still receives the raw arguments. Responses never echo arguments.
+  - Redaction is best-effort and pattern-based, not a secret scanner. It covers Bearer/Basic and `Authorization`/`*-Key` headers, `key=value` and JSON `"key": "value"` forms, URL userinfo, and the `ghp_`/`gho_`/`github_pat_`, `sk-`/`sk-proj-`, `xoxb-`/`xoxp-`, `AKIA` and JWT shapes. A credential in any other shape can be retained; do not describe retained items as secret-free.
 - **D8. Declared scope is rejected as the direct-call model.** Operators are not agents. A standard user who can create a team could declare `mcp:x/*` and so grant themselves the call, which is the escalation S7b closed for plans. Per-server allowlisting (D3) plus the approver tier (D4) is the single rule.
 - **D9. Interface.**
   - `WorkspaceExplorer` shows create/write controls only when `/api/v1/user/me` reports an approver, and renders blocker copy otherwise.
