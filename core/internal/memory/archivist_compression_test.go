@@ -35,7 +35,7 @@ func TestArchivistCompression(t *testing.T) {
 			"architect": "mock-llm",
 		},
 	}
-	cog.Adapters["mock-llm"] = &cognitive.MockAdapter{
+	cog.Adapters["mock-llm"] = &pheMockLLMAdapter{
 		FixedResponse: `{"summary": "20 events processed. Agent scanned 15 papers and summarized 5. No blockers.", "key_events": ["scan-start", "scan-complete", "summary-generated"], "strategies": "Continue monitoring throughput."}`,
 	}
 

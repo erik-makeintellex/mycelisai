@@ -127,6 +127,30 @@ s, d, p = chat("Search the web for the current population of Austin, Texas and c
 t = p.get("text") or ""
 record("J5 web search is real or honestly blocked", s in (200, 422, 503) and (bool(re.search(r"https?://", t)) or "search" in json.dumps(d).lower()), f"http={s} text={t[:140]!r}")
 
+# J8: token budget stop is honest (B1 contract "J6"). Soma's turns run as agent `admin`. A 1,024-token
+# override on that agent is spent by one turn; the next turn must stop with token_budget_exhausted
+# and claim no completion. The override is always deleted, and chat must work again afterwards.
+OVR = "/api/v1/cognitive/budgets/overrides/agent/admin"
+lim = {"per_execution": 1024, "per_run": 1024, "per_team_day": 1024, "per_agent_day": 1024}
+s0, _, raw0 = call("PUT", OVR, lim)
+if s0 != 200:
+    record("J8 budget stop is honest", False, f"override PUT http={s0} body={raw0[:160]!r}")
+else:
+    try:
+        chat("Say hello in one short sentence.")
+        s1, d1, p1 = chat("Say hello again in one short sentence.")
+        blob = json.dumps(d1).lower()
+        stopped = s1 == 429 or "token_budget_exhausted" in blob
+        claims_done = "result verified" in blob or (p1.get("execution_state") or "") in ("completed", "verified")
+        su, _, rawu = call("GET", "/api/v1/cognitive/budgets/usage?agent_id=admin")
+        u = (js(rawu).get("data") or {})
+        record("J8a over-budget turn stops honestly", stopped and not claims_done, f"http={s1} stopped={stopped} claims_done={claims_done} body={blob[:120]!r}")
+        record("J8b usage shows the cap reached", su == 200 and u.get("limit") == 1024 and (u.get("used") or 0) >= 1024, f"http={su} used={u.get('used')} limit={u.get('limit')} period={u.get('period')}")
+    finally:
+        s2, _, _ = call("DELETE", OVR)
+    s3, _, p3 = chat("Say hello in one short sentence.")
+    record("J8c override removed, chat works again", s2 == 200 and s3 == 200 and len((p3.get("text") or "").strip()) > 0, f"delete http={s2} chat http={s3}")
+
 w = max(len(r[0]) for r in results)
 for n, st, det in results: print(f"{st:4}  {n:<{w}}  {det}")
 print(f"\n{sum(r[1]=='PASS' for r in results)}/{len(results)} passed")

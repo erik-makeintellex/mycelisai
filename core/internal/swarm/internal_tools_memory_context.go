@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/pkg/protocol"
@@ -15,10 +16,10 @@ func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID,
 		return
 	}
 
-	// Embed the current input (truncated) for semantic search.
-	query := currentInput
-	if len(query) > 200 {
-		query = query[:200]
+	// Embed the operator's request (bounded) for semantic search.
+	query := recallQuery(currentInput, 200)
+	if query == "" {
+		return
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -90,9 +91,9 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 	if r.mem == nil || strings.TrimSpace(currentInput) == "" {
 		return nil
 	}
-	query := currentInput
-	if len(query) > 240 {
-		query = query[:240]
+	query := recallQuery(currentInput, 240)
+	if query == "" {
+		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -128,6 +129,39 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 	}
 	sb.WriteString("When your reply uses one of these sources, cite it as [source: <title>]. Do not claim a source you did not use.\n\n")
 	return sources
+}
+
+// requestMarker ends every header Core's chat handler wraps around the latest
+// turn: the governance profile, then the route header (server cognitive.go,
+// action_governance_profile.go).
+const requestMarker = "\nOriginal request:"
+
+// recallQuery is the text recall ranks on: the operator's own request. A turn
+// that starts with a bracketed header is unwrapped past each header's
+// "Original request:" marker, so boilerplate never fills the bounded query.
+// Only the ranking text changes; the caller's scope clauses are untouched.
+// The result is capped at max bytes on a rune boundary.
+func recallQuery(input string, max int) string {
+	query := strings.TrimSpace(input)
+	for strings.HasPrefix(query, "[") {
+		idx := strings.Index(query, requestMarker)
+		if idx < 0 {
+			break
+		}
+		rest := query[idx+len(requestMarker):]
+		if rest != "" && rest[0] != '\n' {
+			break
+		}
+		query = strings.TrimSpace(rest)
+	}
+	if len(query) > max {
+		cut := max
+		for cut > 0 && !utf8.RuneStart(query[cut]) {
+			cut--
+		}
+		query = query[:cut]
+	}
+	return query
 }
 
 func knownGovernedClass(class string) bool {

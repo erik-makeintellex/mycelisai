@@ -12,8 +12,26 @@ COPY proto ./proto
 # go.mod points to github.com/mycelis/core
 # We assume the build context is the repo root.
 
-# Download deps
-RUN go mod download
+# Download deps. proxy.golang.org intermittently resets parallel module
+# fetches ("read tcp ...: connection reset by peer"); a BuildKit cache mount
+# keeps already-fetched modules on disk between attempts and across builds,
+# a bounded retry loop with backoff re-requests only what is still missing,
+# and GOMAXPROCS=2 lowers fetch parallelism (`go mod download` sizes its fetch
+# pool from GOMAXPROCS; the -p build flag does not apply to it), which reduces
+# how often the proxy resets connections. A real, non-transient failure still
+# exits non-zero.
+RUN --mount=type=cache,target=/go/pkg/mod \
+    export GOMAXPROCS=2; \
+    attempt=1; max_attempts=5; \
+    until go mod download; do \
+      if [ "$attempt" -ge "$max_attempts" ]; then \
+        echo "go mod download failed after $max_attempts attempts" >&2; \
+        exit 1; \
+      fi; \
+      echo "go mod download attempt $attempt failed, retrying in $((attempt * 5))s..." >&2; \
+      sleep $((attempt * 5)); \
+      attempt=$((attempt + 1)); \
+    done
 
 # Copy source
 COPY core/ ./core/
@@ -22,7 +40,8 @@ COPY core/ ./core/
 # CGO_ENABLED=0 for static binary
 # We switch to core directory to build within the module context
 WORKDIR /app/core
-RUN CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
+RUN --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=linux go build -o /server ./cmd/server
 
 # Run Stage
 # Curated stdio MCP servers are launched through npm/npx, so the self-hosted

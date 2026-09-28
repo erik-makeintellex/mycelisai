@@ -24,6 +24,12 @@ func TestHandleUpdateOrganizationAIEngine_StoresCuratedProfile(t *testing.T) {
 			AIEngineSettingsSummary: "Starter defaults included",
 			Status:                  "ready",
 		},
+		// F18: DepartmentCount alone no longer fabricates a department record, so
+		// the event-driven review loop (which needs a real department to own it)
+		// needs an explicit department here, same as testReviewLoopHome().
+		Departments: []OrganizationDepartmentSummary{
+			{ID: "platform", Name: "Platform Department", SpecialistCount: 2},
+		},
 	})
 
 	mux := http.NewServeMux()

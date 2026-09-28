@@ -31,6 +31,10 @@ func TestSoma_Integration(t *testing.T) {
 	}
 	defer soma.Shutdown()
 
+	// Axon only routes to a team that is actually registered and running (F17: no
+	// silent default to a nonexistent "genesis" team), so register one here.
+	soma.teams["genesis"] = NewTeam(&TeamManifest{ID: "genesis", Name: "Genesis", Type: TeamTypeAction}, nc, nil, nil)
+
 	// 5. Test Global Input -> Axon Routing
 	done := make(chan bool)
 
