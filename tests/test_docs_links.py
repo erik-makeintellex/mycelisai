@@ -197,6 +197,7 @@ def test_product_architecture_library_has_one_prd_and_scoped_supporting_docs():
         "B1_TOKEN_BUDGETS_CONTRACT.md",
         "G4_E10_DURABLE_INVOCATION.md",
         "MARKET_POSITION_AND_WORKFLOW_TARGETS.md",
+        "MCPS_OPERATOR_MCP_SCOPE_CONTRACT.md",
         "MYCELIS_CANONICAL_PRD.md",
         "POST_G4_DELIVERY_AND_GUI_PLAN.md",
         "README.md",
