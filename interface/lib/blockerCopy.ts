@@ -77,6 +77,36 @@ const ADMIN_REQUIRED_BY_REASON: Record<string, CopyTemplate> = {
         nextAction: { label: 'Back to Soma', href: '/dashboard', intent: 'back' },
         whoCanHelp: 'Who can help: an admin.',
     },
+    // MCPS D9: a direct MCP tool call is high-risk; only an approver may
+    // run it directly (mirrors mcpDirectCallNeedsApprover, blocker_copy.go).
+    mcp_call: {
+        title: 'Only an admin can do this directly',
+        whatHappened: 'Only an admin can use this tool directly. Nothing ran.',
+        nextAction: { label: 'Ask Soma to propose it', href: '/dashboard', intent: 'open' },
+        whoCanHelp: 'An admin approves the proposal before it runs.',
+        adminVariant: {
+            title: "Your account can't call this tool directly",
+            whatHappened: 'Your admin account is missing a permission this tool needs. Nothing ran.',
+            nextAction: { label: 'Ask Soma to propose it', href: '/dashboard', intent: 'open' },
+        },
+    },
+};
+
+// MCPS D9: MCP server/pool unreachable (mirrors mcpServerOfflineCopy,
+// blocker_copy.go). Selected by reason like admin_required above; no
+// reason keeps the generic activity-log copy in CODE_COPY.
+const SERVICE_UNAVAILABLE_BY_REASON: Record<string, CopyTemplate> = {
+    mcp_call: {
+        title: 'Tool connection is offline',
+        whatHappened: "That tool's connection is offline right now. Nothing ran.",
+        nextAction: { label: 'Try again', intent: 'retry' },
+        whoCanHelp: 'An admin can reconnect it.',
+        adminVariant: {
+            title: 'MCP server unreachable',
+            whatHappened: 'Reconnect the MCP server from Resources, or check the Core database, then try again. Nothing ran.',
+            nextAction: { label: 'Open Resources', href: '/resources?tab=tools', intent: 'open' },
+        },
+    },
 };
 
 const CODE_COPY: Record<string, CopyTemplate> = {
@@ -224,6 +254,45 @@ const CODE_COPY: Record<string, CopyTemplate> = {
             nextAction: { label: 'Open token budget overrides', href: '/settings?tab=engines', intent: 'open' },
         },
     },
+    // MCPS: {tool} isn't a discovered tool of a registered/connected server
+    // (mirrors codeMCPToolNotFound, blocker_copy.go).
+    mcp_tool_not_found: {
+        title: "That tool isn't available",
+        whatHappened: "That tool isn't available on this connection. Nothing ran.",
+        nextAction: { label: 'Refresh tools', intent: 'retry' },
+        whoCanHelp: 'An admin can check the connection.',
+        adminVariant: {
+            title: 'Tool not found on this server',
+            whatHappened: 'This MCP server is not registered, or it does not list a tool with this exact name. Nothing ran.',
+            nextAction: { label: 'Check discovered tools', href: '/resources?tab=tools', intent: 'open' },
+        },
+    },
+    // MCPS: a low-risk read call whose caller lacks outputs:read
+    // (mirrors codeMCPCallForbidden, blocker_copy.go).
+    mcp_call_forbidden: {
+        title: "You can't use this tool directly",
+        whatHappened: "Your account can't use this tool directly. Nothing ran.",
+        nextAction: { label: 'Ask Soma to do it', href: '/dashboard', intent: 'open' },
+        whoCanHelp: 'An admin can give you access.',
+        adminVariant: {
+            title: 'Missing scope for this tool',
+            whatHappened: "Direct read tools need outputs:read on the caller's account. Nothing ran.",
+            nextAction: { label: 'OK', intent: 'dismiss' },
+        },
+    },
+    // MCPA-H: install/apply set an env key the library entry doesn't
+    // declare (mirrors mcpEnvRejectedCopy, mcp_config_authority.go).
+    mcp_env_rejected: {
+        title: "Those settings aren't supported",
+        whatHappened: "This tool can't be set up with those settings. Nothing was installed.",
+        nextAction: { label: 'Edit settings', intent: 'retry' },
+        whoCanHelp: 'An admin can check which settings this tool allows.',
+        adminVariant: {
+            title: 'Undeclared environment keys',
+            whatHappened: 'This install sets environment variables the library entry does not declare. Nothing was installed or started.',
+            nextAction: { label: 'Review allowed keys', intent: 'retry' },
+        },
+    },
     // B1R-B: a usage read the caller could not prove membership for (403).
     token_budget_usage_forbidden: {
         title: "You can't see this team's usage",
@@ -281,6 +350,10 @@ export function blockerCopy(input: BlockerInput): BlockerCopy {
     if (code === 'admin_required') {
         const template = ADMIN_REQUIRED_BY_REASON[reason ?? 'default'] ?? ADMIN_REQUIRED_BY_REASON.default;
         return toBlockerCopy(code, template);
+    }
+
+    if (code === 'service_unavailable' && reason && SERVICE_UNAVAILABLE_BY_REASON[reason]) {
+        return toBlockerCopy(code, SERVICE_UNAVAILABLE_BY_REASON[reason]);
     }
 
     const template = CODE_COPY[code];

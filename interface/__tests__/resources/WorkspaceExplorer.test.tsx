@@ -39,11 +39,16 @@ vi.mock("@/store/useCortexStore", () => ({
         }),
 }));
 
-function mockToolFetch() {
+let mockSessionRole = "admin";
+
+function mockToolFetch(options: { forbidWrites?: boolean } = {}) {
     const calls: Array<{ tool: string; body: ToolCallBody }> = [];
     const revealCalls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
+        if (url === "/auth/session") {
+            return Response.json({ ok: true, data: { user: { role: mockSessionRole } } });
+        }
         if (url === "/api/v1/groups") {
             return Response.json({
                 data: [
@@ -131,6 +136,12 @@ function mockToolFetch() {
             return Response.json({ content: [{ type: "text", text: "# Proof\nReadable through filesystem MCP." }] });
         }
         if (tool === "create_directory" || tool === "write_file") {
+            if (options.forbidWrites) {
+                return Response.json(
+                    { ok: false, error: "Your admin account is missing a permission this needs.", data: { code: "admin_required", required_scope: "approvals:decide" } },
+                    { status: 403 },
+                );
+            }
             return Response.json({ content: [{ type: "text", text: "ok" }] });
         }
         return Response.json({ error: `unexpected tool ${tool}` }, { status: 500 });
@@ -145,6 +156,7 @@ describe("WorkspaceExplorer", () => {
         sessionStorage.clear();
         mockFetchMCPServers.mockReset();
         mockMCPServers = [connectedFilesystemServer];
+        mockSessionRole = "admin";
     });
 
     it("uses current filesystem MCP tool names with the arguments envelope", async () => {
@@ -300,5 +312,40 @@ describe("WorkspaceExplorer", () => {
         expect(screen.getByText("error")).toBeDefined();
         expect(screen.getByRole("link", { name: /View storage roots/i })).toBeDefined();
         expect(screen.getByText(/find generated output while the MCP server is recovering/i)).toBeDefined();
+    });
+
+    it("blocks a standard user from the Create pane with honest blocker copy and makes no write call", async () => {
+        mockSessionRole = "standard";
+        const { calls } = mockToolFetch();
+
+        render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
+        await screen.findByText("proof.md");
+
+        fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
+        await waitFor(() => {
+            expect(screen.getByText(/Only an admin can use this tool directly/i)).toBeDefined();
+        });
+        expect(screen.queryByRole("tabpanel", { name: /Create/i })).toBeNull();
+        expect(calls.some((call) => call.tool === "create_directory" || call.tool === "write_file")).toBe(false);
+    });
+
+    it("shows the admin blocker variant when a real 403 comes back from a write for an admin viewer", async () => {
+        mockSessionRole = "admin";
+        const { calls } = mockToolFetch({ forbidWrites: true });
+
+        render(<WorkspaceExplorer onOpenToolsTab={vi.fn()} />);
+        await screen.findByText("proof.md");
+
+        fireEvent.click(screen.getByRole("tab", { name: /Create/i }));
+        await screen.findByPlaceholderText("new directory name");
+        fireEvent.change(screen.getByPlaceholderText("new directory name"), { target: { value: "generated" } });
+        fireEvent.click(screen.getByRole("button", { name: /Create Dir/i }));
+
+        await waitFor(() => {
+            expect(calls.some((call) => call.tool === "create_directory")).toBe(true);
+        });
+        await waitFor(() => {
+            expect(screen.getByText(/missing a permission this tool needs/i)).toBeDefined();
+        });
     });
 });

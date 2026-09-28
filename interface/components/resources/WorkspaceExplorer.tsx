@@ -6,6 +6,8 @@ import type { Artifact } from "@/store/cortexStoreTypesPlanning";
 import { extractApiError, formatMCPToolResult, type ResourceCallRequest } from "@/lib/apiContracts";
 import { workspaceBrowserPath } from "@/lib/outputPackageModel";
 import { requestSomaOutputContinuation } from "@/components/soma/outputContinuation";
+import { useIsAdmin } from "@/lib/useIsAdmin";
+import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
 import WorkspaceFolderAccessCard from "./WorkspaceFolderAccessCard";
 import WorkspaceGroupOutputSelector, {
     artifactBrowsePath,
@@ -22,6 +24,13 @@ import { joinPath, parseListOutput } from "./WorkspaceExplorerUtils";
 export type WorkspaceEntry = { name: string; path: string; type: "file" | "dir" };
 export type WorkspacePane = "browse" | "preview" | "create";
 
+// MCPS D9: direct create/write calls are approver-only (D4); Core is the
+// authority, this is just a UI hint (`role === "admin"`) to avoid a doomed
+// request. Any of these codes coming back from the API still renders honest
+// blocker copy rather than a raw error string.
+type ToolCallError = Error & { blockerCode?: string; httpStatus?: number };
+const MCP_BLOCKER_CODES = new Set(["admin_required", "mcp_call_forbidden", "mcp_tool_not_found", "service_unavailable"]);
+
 export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { initialPath?: string | null; onOpenToolsTab: () => void }) {
     const mcpServers = useCortexStore((s) => s.mcpServers);
     const isFetchingMCPServers = useCortexStore((s) => s.isFetchingMCPServers);
@@ -37,6 +46,8 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
     const [newFile, setNewFile] = useState("");
     const [newFileContent, setNewFileContent] = useState("");
     const [activePane, setActivePane] = useState<WorkspacePane>("browse");
+    const [blocker, setBlocker] = useState<{ code: string; httpStatus: number } | null>(null);
+    const { isAdmin } = useIsAdmin();
     useEffect(() => {
         fetchMCPServers();
     }, [fetchMCPServers]);
@@ -74,12 +85,36 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
             const payload = await res.json().catch(async () => ({ error: await res.text() }));
             if (!res.ok) {
                 const err = extractApiError(payload) ?? (typeof (payload as { error?: unknown }).error === "string" ? (payload as { error?: string }).error : undefined);
-                throw new Error(err || "tool call failed");
+                const code = (payload as { data?: { code?: unknown } })?.data?.code;
+                const toolError: ToolCallError = new Error(err || "tool call failed");
+                toolError.httpStatus = res.status;
+                toolError.blockerCode = typeof code === "string" ? code : undefined;
+                throw toolError;
             }
             return formatMCPToolResult(payload);
         },
         [filesystemServer]
     );
+
+    // Surfaces a real backend blocker as honest copy instead of a raw status
+    // string; anything else keeps the existing plain-text status behavior.
+    const reportToolFailure = useCallback((err: unknown, fallback: string) => {
+        const code = err instanceof Error ? (err as ToolCallError).blockerCode : undefined;
+        if (code && MCP_BLOCKER_CODES.has(code)) {
+            setBlocker({ code, httpStatus: (err as ToolCallError).httpStatus ?? 0 });
+            return;
+        }
+        setStatus(err instanceof Error ? err.message : fallback);
+    }, []);
+
+    const changeActivePane = (pane: WorkspacePane) => {
+        if (pane === "create" && !isAdmin) {
+            setBlocker({ code: "admin_required", httpStatus: 403 });
+            return;
+        }
+        setBlocker(null);
+        setActivePane(pane);
+    };
 
     const refreshList = useCallback(async () => {
         if (!canBrowse) return;
@@ -95,12 +130,12 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
             setEntries(parsed);
             setStatus(`Loaded ${parsed.length} entries`);
         } catch (err) {
-            setStatus(err instanceof Error ? err.message : "List failed");
+            reportToolFailure(err, "List failed");
             setEntries([]);
         } finally {
             setBusy(false);
         }
-    }, [canBrowse, currentPath, callTool]);
+    }, [canBrowse, currentPath, callTool, reportToolFailure]);
 
     useEffect(() => {
         if (canBrowse) {
@@ -118,7 +153,7 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
             setActivePane("preview");
             setStatus(`Opened ${path}`);
         } catch (err) {
-            setStatus(err instanceof Error ? err.message : "Read failed");
+            reportToolFailure(err, "Read failed");
         } finally {
             setBusy(false);
         }
@@ -200,15 +235,20 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
 
     const createDirectory = async () => {
         if (!newDir.trim()) return;
+        if (!isAdmin) {
+            setBlocker({ code: "admin_required", httpStatus: 403 });
+            return;
+        }
         setBusy(true);
         try {
             const path = joinPath(currentPath, newDir.trim());
             await callTool("create_directory", { path });
             setNewDir("");
+            setBlocker(null);
             setStatus(`Created directory ${path}`);
             refreshList();
         } catch (err) {
-            setStatus(err instanceof Error ? err.message : "Create directory failed");
+            reportToolFailure(err, "Create directory failed");
         } finally {
             setBusy(false);
         }
@@ -216,16 +256,21 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
 
     const createFile = async () => {
         if (!newFile.trim()) return;
+        if (!isAdmin) {
+            setBlocker({ code: "admin_required", httpStatus: 403 });
+            return;
+        }
         setBusy(true);
         try {
             const path = joinPath(currentPath, newFile.trim());
             await callTool("write_file", { path, content: newFileContent });
+            setBlocker(null);
             setStatus(`Created file ${path}`);
             setNewFile("");
             setNewFileContent("");
             refreshList();
         } catch (err) {
-            setStatus(err instanceof Error ? err.message : "Create file failed");
+            reportToolFailure(err, "Create file failed");
         } finally {
             setBusy(false);
         }
@@ -265,6 +310,16 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
                 />
 
                 <WorkspaceFolderAccessCard currentPath={currentPath} onStatus={setStatus} />
+
+                {blocker ? (
+                    <InlineBlockerNotice
+                        code={blocker.code}
+                        httpStatus={blocker.httpStatus}
+                        viewerIsAdmin={isAdmin}
+                        reason="mcp_call"
+                        onDismiss={() => setBlocker(null)}
+                    />
+                ) : null}
             </div>
 
             <div className="min-h-[24rem] flex-1">
@@ -280,7 +335,7 @@ export default function WorkspaceExplorer({ initialPath, onOpenToolsTab }: { ini
                     preview={preview}
                     selectedFile={selectedFile}
                     status={status}
-                    onActivePaneChange={setActivePane}
+                    onActivePaneChange={changeActivePane}
                     onCreateDirectory={createDirectory}
                     onCreateFile={createFile}
                     onCurrentPathChange={setCurrentPath}
