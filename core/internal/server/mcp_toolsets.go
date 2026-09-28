@@ -180,20 +180,14 @@ func (s *AdminServer) decodeToolSetWrite(w http.ResponseWriter, r *http.Request)
 }
 
 // storedScope is the scope the tool set store will keep for this request, so
-// the audit records what is stored rather than the caller's raw input. It
-// mirrors mcp.normalizeToolSetScope (trim, lower-case kind, empty kind is
-// "all", "all" drops its ref); the store still validates and refuses bad
-// kinds, and for those the trimmed caller value is recorded.
+// the audit records what is stored rather than the caller's raw input. It is
+// the store's own mcp.NormalizeToolSetScope (MCPL); the store refuses an
+// invalid scope, and for those the trimmed caller value is recorded.
 func (req mcpToolSetRequest) storedScope() (string, string) {
-	kind := strings.ToLower(strings.TrimSpace(req.ScopeKind))
-	ref := strings.TrimSpace(req.ScopeRef)
-	if kind == "" {
-		kind = "all"
+	if kind, ref, err := mcp.NormalizeToolSetScope(req.ScopeKind, req.ScopeRef); err == nil {
+		return kind, ref
 	}
-	if kind == "all" {
-		ref = ""
-	}
-	return kind, ref
+	return strings.ToLower(strings.TrimSpace(req.ScopeKind)), strings.TrimSpace(req.ScopeRef)
 }
 
 func (req mcpToolSetRequest) toolSet() mcp.ToolSet {
