@@ -126,8 +126,8 @@ def _run_playwright_command_streaming(
     with suppress(FileNotFoundError):
         last_run_path.unlink()
 
-    process_env = os.environ.copy()
-    process_env.update(_task_env(extra_env))
+    # `_task_env` returns the full resolved-.env-plus-os.environ env; don't re-copy os.environ ahead of it (ops/interface_env.py).
+    process_env = _task_env(extra_env)
     runner = list(command)
     executable = runner[0]
     if is_windows():
