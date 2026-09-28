@@ -62,12 +62,18 @@ func (a *Axon) handleTeamEvent(msg *nats.Msg) {
 
 // ProcessSignal analyzes a raw signal from Soma and dispatches it to the appropriate Team(s).
 // There is no ask-routing/intent classifier yet to pick the "best team" for a signal. This
-// legacy lane (POST /api/swarm/command -> TopicGlobalInputUser) targets a runtime team with
-// the literal ID "genesis"; the shipped Genesis team is "genesis-core"
+// lane (Soma subscribes TopicGlobalInputUser -> handleGlobalInput -> ProcessSignal) targets
+// a runtime team with the literal ID "genesis"; the shipped Genesis team is "genesis-core"
 // (core/config/teams/genesis.yaml), so in a default deployment this lane reaches no team.
-// ProcessSignal never silently publishes to a team topic with no team behind it: when
-// "genesis" is not running it returns an honest error. Deleting this lane or routing it to
-// a real team is a tracked follow-up (PH-E).
+// The owner deleted the legacy POST /api/swarm/command HTTP entry point into this subject
+// (2026-09-27, packet LEG), but the subject itself still has a live producer:
+// HandleCommsInbound (core/internal/server/comms.go) publishes to
+// fmt.Sprintf(TopicGlobalInputFmt, provider), and a caller posting to
+// /api/v1/comms/inbound/user resolves to the identical literal subject
+// "swarm.global.input.user". So this subscribe/route/ProcessSignal path stays live and is
+// NOT deleted. ProcessSignal never silently publishes to a team topic with no team behind
+// it: when "genesis" is not running it returns an honest error. Routing this lane to a real
+// team, or renaming genesis-core, remains a tracked follow-up (PH-E).
 func (a *Axon) ProcessSignal(msg *nats.Msg) error {
 	// 1. Optimize Signal (e.g., compress, format, enrich)
 	// For now, pass through.
