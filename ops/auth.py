@@ -317,7 +317,7 @@ def break_glass_key(_c, rotate=False, show=False, value=""):
 @task(help={"compose": "Inspect .env.compose instead of .env."})
 def posture(_c, compose=False):
     """
-    Print the current local-admin and break-glass auth posture.
+    Print the current local-admin and break-glass auth posture. Use before auth.dev-key/auth.break-glass-key to check what is already set.
     """
     path = ENV_COMPOSE_EXAMPLE_PATH.parent / ".env.compose" if compose else ENV_PATH
     label = ".env.compose" if compose else ".env"

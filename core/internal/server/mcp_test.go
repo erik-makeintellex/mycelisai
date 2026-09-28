@@ -55,7 +55,7 @@ func TestHandleMCPToolCall_UnavailableServerReturnsHelpfulError(t *testing.T) {
 	s := newTestServer(opt)
 	now, id := time.Now(), "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 	mock.ExpectQuery("SELECT .+ FROM mcp_servers").WillReturnRows(sqlmock.NewRows(mcpServerColumns()).
-		AddRow(id, "filesystem", "stdio", "npx", `[]`, `{}`, "", `{}`, "connected", nil, now, now))
+		AddRow(id, "filesystem", "stdio", "npx", `["-y","@modelcontextprotocol/server-filesystem"]`, `{}`, "", `{}`, "connected", nil, now, now))
 	mock.ExpectQuery("SELECT .+ FROM mcp_tools").WillReturnRows(sqlmock.NewRows(mcpToolColumns()).
 		AddRow(uuid.NewString(), id, "read_text_file", "", []byte(`{}`)))
 	mux := setupMux(t, "POST /api/v1/mcp/servers/{id}/tools/{tool}/call", s.handleMCPToolCall)
@@ -98,7 +98,7 @@ func TestNormalizeMCPToolCallArgumentsForFilesystem_RebasesWorkspaceAlias(t *tes
 	workspace := t.TempDir()
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
 
-	args, err := normalizeMCPToolCallArgumentsForServer("filesystem", map[string]any{
+	args, err := normalizeMCPToolCallArgumentsForServer(true, nil, map[string]any{
 		"path":        "workspace/logs/proof.md",
 		"source":      "workspace/input.md",
 		"destination": "/workspace/output.md",
@@ -125,7 +125,7 @@ func TestNormalizeMCPToolCallArgumentsForFilesystem_RebasesWorkspaceAlias(t *tes
 }
 
 func TestNormalizeMCPToolCallArgumentsForNonFilesystem_LeavesPathsAlone(t *testing.T) {
-	args, err := normalizeMCPToolCallArgumentsForServer("fetch", map[string]any{"path": "workspace/proof.md"})
+	args, err := normalizeMCPToolCallArgumentsForServer(false, nil, map[string]any{"path": "workspace/proof.md"})
 	if err != nil || args["path"] != "workspace/proof.md" {
 		t.Fatalf("path = %#v", args["path"])
 	}

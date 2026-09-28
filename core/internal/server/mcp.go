@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 
 	"github.com/google/uuid"
@@ -214,64 +213,6 @@ func decodeMCPToolCallArguments(reader io.Reader) (map[string]any, error) {
 		return args, nil
 	}
 	return body, nil
-}
-
-// normalizeMCPToolCallArgumentsForServer confines a filesystem MCP call
-// (MCPL): every path argument ("path", "source", "destination", each of
-// "paths") becomes an absolute path under the MYCELIS_WORKSPACE root, or the
-// call is refused with an *mcpPathError. The workspace/ and /workspace/
-// aliases and relative paths resolve against the root; the upstream server
-// never sees a relative path. Other servers' arguments pass unchanged.
-func normalizeMCPToolCallArgumentsForServer(serverName string, args map[string]any) (map[string]any, error) {
-	if !strings.EqualFold(strings.TrimSpace(serverName), "filesystem") || len(args) == 0 {
-		return args, nil
-	}
-	root, err := resolveMCPWorkspaceRoot()
-	if err != nil {
-		return nil, err
-	}
-	out := make(map[string]any, len(args))
-	for key, value := range args {
-		out[key] = value
-	}
-	for _, key := range []string{"path", "source", "destination"} {
-		if raw, present := args[key]; present {
-			if out[key], err = root.confine(key, raw); err != nil {
-				return nil, err
-			}
-		}
-	}
-	if raw, present := args["paths"]; present {
-		list, ok := raw.([]any)
-		if !ok {
-			return nil, &mcpPathError{Key: "paths", Reason: "is not a list of paths"}
-		}
-		paths := make([]any, len(list))
-		for i, item := range list {
-			if paths[i], err = root.confine("paths", item); err != nil {
-				return nil, err
-			}
-		}
-		out["paths"] = paths
-	}
-	return out, nil
-}
-
-// lexical maps a caller path onto an absolute, cleaned path: the workspace
-// aliases and relative paths join the root; absolute paths stay absolute.
-func (ws mcpWorkspaceRoot) lexical(raw string) string {
-	p := strings.TrimPrefix(strings.ReplaceAll(strings.TrimSpace(raw), "\\", "/"), "./")
-	switch {
-	case p == "" || p == "." || p == "workspace" || p == "/workspace":
-		return ws.abs
-	case strings.HasPrefix(p, "workspace/"):
-		p = strings.TrimPrefix(p, "workspace/")
-	case strings.HasPrefix(p, "/workspace/"):
-		p = strings.TrimPrefix(p, "/workspace/")
-	case filepath.IsAbs(filepath.FromSlash(p)):
-		return filepath.Clean(filepath.FromSlash(p))
-	}
-	return filepath.Join(ws.abs, filepath.FromSlash(p))
 }
 
 func extractMCPResultSummary(result any) string {

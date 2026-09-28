@@ -80,7 +80,7 @@ def _relative_targets(root_dir: Path, relative_targets: tuple[str, ...]) -> tupl
 
 @task(name="generated")
 def clean_generated(c):
-    """Remove repo-local generated artifacts that should not persist across host boundaries."""
+    """Remove repo-local generated artifacts that should not persist across host boundaries. Use from either the Windows edit checkout or the WSL proof checkout."""
     targets, skipped = filter_active_runtime_targets(_generated_artifact_targets(ROOT_DIR), ROOT_DIR)
     removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
     print("=== CLEAN GENERATED ===")
@@ -90,6 +90,9 @@ def clean_generated(c):
     print("  - workspace/docker-compose/data is intentionally untouched.")
     print("Workflow note:")
     print("  - keep heavy build/test artifacts in the WSL checkout; keep the Windows repo source-only.")
+    if is_windows():
+        print("Windows source-only reminder:")
+        print("  - edit and commit here if needed, but run install/build/test/compose from the WSL checkout.")
 
 
 @task(name="reports")
@@ -112,22 +115,6 @@ def clean_wsl_handoff(c):
     print_active_runtime_skip(skipped)
     print("Next step:")
     print("  - use a WSL-native checkout for uv/npm/build/test/compose work.")
-
-
-@task(name="windows-dev-residue")
-def clean_windows_dev_residue(c):
-    """Remove heavy repo-local artifacts from the Windows editing checkout."""
-    if not is_windows():
-        raise SystemExit(
-            "clean.windows-dev-residue is Windows-only. Use clean.generated from the WSL checkout instead."
-        )
-    targets, skipped = filter_active_runtime_targets(_generated_artifact_targets(ROOT_DIR), ROOT_DIR)
-    removed, missing = remove_repo_targets(tuple(targets), ROOT_DIR)
-    print("=== CLEAN WINDOWS DEV RESIDUE ===")
-    print_cleanup_summary(removed, missing)
-    print_active_runtime_skip(skipped)
-    print("Windows source-only reminder:")
-    print("  - edit and commit here if needed, but run install/build/test/compose from the WSL checkout.")
 
 
 @task(name="disk-status")
@@ -153,7 +140,6 @@ ns_clean = Collection("clean")
 ns_clean.add_task(clean_generated)
 ns_clean.add_task(clean_reports)
 ns_clean.add_task(clean_wsl_handoff)
-ns_clean.add_task(clean_windows_dev_residue)
 ns_clean.add_task(clean_disk_status)
 
 

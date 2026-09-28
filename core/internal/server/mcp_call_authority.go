@@ -3,20 +3,15 @@ package server
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
-	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/mycelis/core/internal/exchange"
-	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 )
@@ -33,21 +28,20 @@ const (
 	mcpServerStatusConnected = "connected"
 )
 
-// directMCPReadTools is the one code-owned direct-call read allowlist (D3),
-// keyed by exact server name and exact tool name. Every other MCP tool is
-// classified by capabilityRiskForTool, which rates every mcp:* name high.
-var directMCPReadTools = map[string]map[string]bool{
-	"filesystem": {
-		"list_directory": true, "list_directory_with_sizes": true, "directory_tree": true,
-		"read_text_file": true, "read_file": true, "read_media_file": true, "read_multiple_files": true,
-		"get_file_info": true, "search_files": true, "list_allowed_directories": true,
-	},
+// directMCPFilesystemReadTools is the one code-owned direct-call read
+// allowlist (D3): exact tool names of a filesystem server, which MCPL2
+// identifies by its configured command and package, not by its name. Every
+// other MCP tool is classified by capabilityRiskForTool (high for mcp:*).
+var directMCPFilesystemReadTools = map[string]bool{
+	"list_directory": true, "list_directory_with_sizes": true, "directory_tree": true,
+	"read_text_file": true, "read_file": true, "read_media_file": true, "read_multiple_files": true,
+	"get_file_info": true, "search_files": true, "list_allowed_directories": true,
 }
 
 // directMCPToolRisk is "low" only for an allowlisted read; anything else is
 // the fail-closed classifier's answer ("high" for every mcp:* name).
-func directMCPToolRisk(serverName, toolName string, args map[string]any) string {
-	if directMCPReadTools[serverName][toolName] {
+func directMCPToolRisk(filesystem bool, serverName, toolName string, args map[string]any) string {
+	if filesystem && directMCPFilesystemReadTools[toolName] {
 		return "low"
 	}
 	return capabilityRiskForTool("mcp:"+serverName+"/"+toolName, args)
@@ -59,7 +53,9 @@ type mcpDirectCall struct {
 	ServerName   string
 	Risk         string
 	AuditEventID string
-	Args         map[string]any // confined arguments the pool call receives (MCPL)
+	Args         map[string]any  // confined arguments the pool call receives (MCPL)
+	Filesystem   bool            // the server runs the filesystem package (MCPL2)
+	ToolSchema   json.RawMessage // the cached input schema of the tool
 }
 
 type mcpDirectCallKey struct{}
@@ -72,11 +68,11 @@ func (s *AdminServer) authorizeMCPToolCall(w http.ResponseWriter, r *http.Reques
 		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
 		return r, mcpDirectCall{}, false
 	}
-	serverName, ok := s.resolveDirectMCPTool(w, r, serverID, toolName)
+	call, ok := s.resolveDirectMCPTool(w, r, serverID, toolName)
 	if !ok {
 		return r, mcpDirectCall{}, false
 	}
-	call := mcpDirectCall{ServerName: serverName, Risk: directMCPToolRisk(serverName, toolName, args)}
+	call.Risk = directMCPToolRisk(call.Filesystem, call.ServerName, toolName, args)
 	if call.Risk == "low" {
 		if !hasScope(identity, mcpDirectReadScope) {
 			respondBlocker(w, r, http.StatusForbidden, codeMCPCallForbidden, "Missing required scope: "+mcpDirectReadScope, nil)
@@ -111,15 +107,16 @@ func (s *AdminServer) authorizeMCPToolCall(w http.ResponseWriter, r *http.Reques
 
 // resolveDirectMCPTool resolves before authorizing (D2): the server must be
 // registered and connected, and toolName must equal a discovered tool name
-// exactly (case-sensitive, untrimmed).
-func (s *AdminServer) resolveDirectMCPTool(w http.ResponseWriter, r *http.Request, serverID uuid.UUID, toolName string) (string, bool) {
-	notFound := func() (string, bool) {
+// exactly (case-sensitive, untrimmed). It also records whether the server
+// is a filesystem server (from its config) and the tool's cached schema.
+func (s *AdminServer) resolveDirectMCPTool(w http.ResponseWriter, r *http.Request, serverID uuid.UUID, toolName string) (mcpDirectCall, bool) {
+	notFound := func() (mcpDirectCall, bool) {
 		respondBlocker(w, r, http.StatusNotFound, codeMCPToolNotFound, "", nil)
-		return "", false
+		return mcpDirectCall{}, false
 	}
-	unavailable := func(detail string) (string, bool) {
+	unavailable := func(detail string) (mcpDirectCall, bool) {
 		respondBlockerText(w, r, http.StatusServiceUnavailable, codeServiceUnavailable, mcpServerOfflineCopy, detail, nil)
-		return "", false
+		return mcpDirectCall{}, false
 	}
 	if serverID == swarm.InternalServerID {
 		return notFound()
@@ -146,7 +143,7 @@ func (s *AdminServer) resolveDirectMCPTool(w http.ResponseWriter, r *http.Reques
 	}
 	for _, tool := range tools {
 		if tool.Name == toolName {
-			return server.Name, true
+			return mcpDirectCall{ServerName: server.Name, Filesystem: isFilesystemMCPServer(server), ToolSchema: tool.InputSchema}, true
 		}
 	}
 	return notFound()
@@ -214,92 +211,13 @@ func attributeMCPToolCallExchange(r *http.Request, input exchange.MCPNormalizati
 	return input
 }
 
-// MCPL: Core-side filesystem path confinement. The upstream filesystem MCP
-// server also confines paths; Core does not rely on it.
-
-// errMCPWorkspaceRoot marks a workspace root Core cannot resolve at all.
-var errMCPWorkspaceRoot = errors.New("the workspace root could not be resolved")
-
-// mcpPathError names the refused argument key, never its value.
-type mcpPathError struct{ Key, Reason string }
-
-func (e *mcpPathError) Error() string { return "argument " + strconv.Quote(e.Key) + " " + e.Reason }
-
-// mcpWorkspaceRoot is the configured root, absolute (abs) and with the
-// symlinks of its existing prefix resolved (real).
-type mcpWorkspaceRoot struct{ abs, real string }
-
-func resolveMCPWorkspaceRoot() (mcpWorkspaceRoot, error) {
-	abs, err := filepath.Abs(strings.TrimSpace(mcp.ResolveFilesystemWorkspaceRoot()))
-	if err != nil {
-		return mcpWorkspaceRoot{}, errMCPWorkspaceRoot
-	}
-	real, err := resolveExistingMCPPath(abs)
-	if err != nil {
-		return mcpWorkspaceRoot{}, errMCPWorkspaceRoot
-	}
-	return mcpWorkspaceRoot{abs: abs, real: real}, nil
-}
-
-// confine returns the absolute path the upstream server receives, after
-// checking it lexically against the root and, following symlinks, against
-// the root's real path. Non-strings and dangling symlinks are refused.
-func (ws mcpWorkspaceRoot) confine(key string, raw any) (string, error) {
-	text, ok := raw.(string)
-	if !ok {
-		return "", &mcpPathError{Key: key, Reason: "is not a path string"}
-	}
-	candidate := ws.lexical(text)
-	if !mcpPathWithin(ws.abs, candidate) {
-		return "", &mcpPathError{Key: key, Reason: "resolves outside the workspace root"}
-	}
-	real, err := resolveExistingMCPPath(candidate)
-	if err != nil {
-		return "", &mcpPathError{Key: key, Reason: "could not be resolved inside the workspace root"}
-	}
-	if !mcpPathWithin(ws.real, real) {
-		return "", &mcpPathError{Key: key, Reason: "follows a symlink outside the workspace root"}
-	}
-	return candidate, nil
-}
-
-// resolveExistingMCPPath evaluates symlinks on the longest existing prefix
-// of the absolute, cleaned path p and appends the missing remainder. An
-// entry that exists but does not resolve (a dangling symlink) is an error,
-// because a write through it would land wherever it points.
-func resolveExistingMCPPath(p string) (string, error) {
-	current, rest := p, []string{}
-	for {
-		real, err := filepath.EvalSymlinks(current)
-		if err == nil {
-			return filepath.Join(append([]string{real}, rest...)...), nil
-		}
-		if !errors.Is(err, fs.ErrNotExist) {
-			return "", err
-		}
-		if _, lerr := os.Lstat(current); lerr == nil {
-			return "", fmt.Errorf("dangling symlink")
-		}
-		parent := filepath.Dir(current)
-		if parent == current {
-			return "", err
-		}
-		rest = append([]string{filepath.Base(current)}, rest...)
-		current = parent
-	}
-}
-
-func mcpPathWithin(root, p string) bool {
-	rel, err := filepath.Rel(root, p)
-	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) && !filepath.IsAbs(rel)
-}
-
-// confineMCPCallArguments refuses a call whose filesystem path arguments
-// leave the workspace: 403 mcp_path_outside_workspace (503 when the root
-// itself cannot be resolved), zero pool calls, and for a high-risk call a
-// best-effort keys-only refusal audit written instead of the "called" one.
+// confineMCPCallArguments refuses a filesystem call whose path arguments
+// leave the workspace (403 mcp_path_outside_workspace) or that carries an
+// unknown path-like argument (400 mcp_path_argument_unknown); 503 when the
+// root itself cannot be resolved. Zero pool calls, and for a high-risk call
+// a best-effort keys-only refusal audit instead of the "called" one.
 func (s *AdminServer) confineMCPCallArguments(w http.ResponseWriter, r *http.Request, serverID uuid.UUID, call mcpDirectCall, toolName string, args map[string]any) (map[string]any, bool) {
-	confined, err := normalizeMCPToolCallArgumentsForServer(call.ServerName, args)
+	confined, err := normalizeMCPToolCallArgumentsForServer(call.Filesystem, call.ToolSchema, args)
 	if err == nil {
 		return confined, true
 	}
@@ -307,10 +225,15 @@ func (s *AdminServer) confineMCPCallArguments(w http.ResponseWriter, r *http.Req
 		respondBlockerText(w, r, http.StatusServiceUnavailable, codeServiceUnavailable, mcpServerOfflineCopy, "the MYCELIS_WORKSPACE root could not be resolved", nil)
 		return nil, false
 	}
-	if call.Risk != "low" {
-		s.auditMCPDirectCall(r, "mcp_tool_call_refused", serverID, call, toolName, args, map[string]any{"refusal_reason": codeMCPPathOutsideWorkspace})
+	code, status, text := codeMCPPathOutsideWorkspace, http.StatusForbidden, blockerCopies[codeMCPPathOutsideWorkspace]
+	var pathErr *mcpPathError
+	if errors.As(err, &pathErr) && pathErr.Unknown {
+		code, status, text = codeMCPPathArgumentUnknown, http.StatusBadRequest, mcpPathArgumentUnknownCopy
 	}
-	respondBlocker(w, r, http.StatusForbidden, codeMCPPathOutsideWorkspace, err.Error(), nil)
+	if call.Risk != "low" {
+		s.auditMCPDirectCall(r, "mcp_tool_call_refused", serverID, call, toolName, args, map[string]any{"refusal_reason": code})
+	}
+	respondBlockerText(w, r, status, code, text, err.Error(), nil)
 	return nil, false
 }
 

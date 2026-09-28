@@ -15,9 +15,18 @@ import (
 
 const teamCommandCorrelationTTL = 30 * time.Minute
 
+// handleTrigger forwards team input to member agents. Posture is structural
+// (F16): only the team's canonical internal.command lane may carry execution
+// posture, steering, or command correlation. Every other input subject (for
+// example swarm.global.input.* or swarm.global.broadcast) reaches agents
+// planning-only, with its posture and correlation fields removed unverified.
 func (t *Team) handleTrigger(msg *nats.Msg) {
 	log.Printf("Team [%s] Triggered by [%s]", t.Manifest.Name, msg.Subject)
 	payload := normalizeCommandPayload(msg.Data)
+	if msg.Subject != fmt.Sprintf(protocol.TopicTeamInternalCommand, t.Manifest.ID) {
+		t.nc.Publish(fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID), planningOnlyTriggerPayload(payload))
+		return
+	}
 	guidance, steering := extractTeamSteering(payload)
 	if correlation := extractTeamCommandCorrelation(t.Manifest.ID, msg.Data, payload); correlation != nil {
 		accepted, err := t.acceptCommand(context.Background(), *correlation, msg.Subject, steering)
@@ -39,6 +48,38 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 	}
 	internalSubject := fmt.Sprintf(protocol.TopicTeamInternalTrigger, t.Manifest.ID)
 	t.nc.Publish(internalSubject, payload)
+}
+
+// triggerAuthorityKeys grant execution posture (run_id, contract_id,
+// intent_proof_id) or command/result correlation to a trigger.
+var triggerAuthorityKeys = []string{"run_id", "contract_id", "intent_proof_id", "work_item_id", "idempotency_key"}
+
+// planningOnlyTriggerPayload removes triggerAuthorityKeys from a JSON object
+// trigger, at the top level and inside every key matching "context" without
+// regard to case (encoding/json binds TeamAsk.Context case-insensitively).
+// Non-object payloads carry no such fields and are returned unchanged.
+func planningOnlyTriggerPayload(payload []byte) []byte {
+	var object map[string]any
+	if err := json.Unmarshal(bytes.TrimSpace(payload), &object); err != nil || object == nil {
+		return payload
+	}
+	stripTriggerAuthorityKeys(object)
+	for key, value := range object {
+		if nested, ok := value.(map[string]any); ok && strings.EqualFold(key, "context") {
+			stripTriggerAuthorityKeys(nested)
+		}
+	}
+	out, err := json.Marshal(object)
+	if err != nil {
+		return []byte("{}")
+	}
+	return out
+}
+
+func stripTriggerAuthorityKeys(values map[string]any) {
+	for _, key := range triggerAuthorityKeys {
+		delete(values, key)
+	}
 }
 
 func (t *Team) acceptCommandCorrelation(ctx context.Context, correlation teamCommandCorrelation, sourceChannel string) (bool, error) {
