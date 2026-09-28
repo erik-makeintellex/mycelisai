@@ -26,6 +26,8 @@ const DECK_CODES = [
     'mcp_env_rejected',
     'mcp_server_not_found',
     'mcp_connect_failed',
+    'memory_entry_archived',
+    'memory_entry_changed',
 ];
 
 describe('blockerCopy', () => {
@@ -163,6 +165,23 @@ describe('blockerCopy', () => {
         const admin = resolveBlockerCopy(copy, true);
         expect(admin.whatHappened).toMatch(/Connect failed after install/i);
         expect(admin.nextAction.href).toBe('/resources?tab=tools');
+    });
+
+    // MEM W2: the entry moved (edited or archived elsewhere) or was
+    // archived since the editor opened it (409s from PATCH
+    // /api/v1/memory/deployment-context/{id}).
+    it('maps memory_entry_archived to a restore-first copy with a dismiss action, no retry dead end', () => {
+        const copy = blockerCopy({ code: 'memory_entry_archived', httpStatus: 409, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/archived/i);
+        expect(copy.whatHappened).toMatch(/nothing was saved/i);
+        expect(copy.nextAction.intent).toBe('dismiss');
+    });
+
+    it('maps memory_entry_changed to a reload copy, distinct from memory_entry_archived', () => {
+        const copy = blockerCopy({ code: 'memory_entry_changed', httpStatus: 409, viewerIsAdmin: false });
+        expect(copy.whatHappened).toMatch(/changed/i);
+        expect(copy.nextAction.intent).toBe('retry');
+        expect(copy.nextAction.label).toBe('Reload');
     });
 
     it.each(['provider_timeout', 'empty_provider_output'])(
