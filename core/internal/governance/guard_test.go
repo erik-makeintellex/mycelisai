@@ -15,16 +15,17 @@ func TestValidateIngress(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "Valid GUI Input",
-			subject: "swarm.global.input.gui.command",
+			name:    "Valid User Input",
+			subject: "swarm.global.input.user",
 			data:    []byte("hello"),
 			wantErr: false,
 		},
 		{
-			name:    "Valid Sensor Input",
+			// F16: exact match only; deep subjects are no longer admitted.
+			name:    "Deep Sensor Subject Rejected",
 			subject: "swarm.global.input.sensor.temp",
 			data:    []byte("25c"),
-			wantErr: false,
+			wantErr: true,
 		},
 		{
 			name:    "Invalid Subject Prefix",

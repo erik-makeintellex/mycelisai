@@ -242,3 +242,15 @@ func availabilityForViewer(r *http.Request, availability cognitive.ExecutionAvai
 	availability.AdminAction = ""
 	return availability
 }
+
+// F16 comms inbound: 400 when the {provider} path value is not an allowed
+// comms provider (bad token, reserved lane, registered input source, unknown
+// provider, or `user` while its switch is off). Nothing is published.
+const codeCommsProviderRejected = "comms_provider_rejected"
+
+var commsProviderRejectedCopy = roleBlockerText{
+	User: blockerText{"Messages can't be accepted from this channel. Nothing was delivered.",
+		"Ask an admin which channels can send messages in."},
+	Admin: blockerText{"This inbound channel is not an allowed comms provider. Nothing was published.",
+		"Use a provider listed by GET /api/v1/comms/providers; reserved lanes (user, cli, sensor) and registered input sources are refused, and user needs MYCELIS_COMMS_ALLOW_USER_LANE=true."},
+}
