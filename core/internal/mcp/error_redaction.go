@@ -19,12 +19,19 @@ var toolErrorRedactions = []struct {
 	{regexp.MustCompile(`(?i)\b([A-Za-z0-9_]*(?:_key|_token|_secret)|api_?key|password|passwd|secret|token)(\s*[=:]\s*)("[^"]*"|'[^']*'|[^\s,;&]+)`), "${1}${2}[REDACTED]"},
 }
 
-// redactToolErrorText removes obvious credentials from MCP server error text
-// and caps its length. It is a best-effort filter, not a secret scanner.
-func redactToolErrorText(text string) string {
+// RedactToolText removes obvious credentials (bearer tokens, URL userinfo,
+// key=value secrets) from text without capping it. It is a best-effort
+// filter, not a secret scanner. Core applies it to retained MCP arguments.
+func RedactToolText(text string) string {
 	for _, rule := range toolErrorRedactions {
 		text = rule.pattern.ReplaceAllString(text, rule.replacement)
 	}
+	return text
+}
+
+// redactToolErrorText is RedactToolText for MCP server error text, capped.
+func redactToolErrorText(text string) string {
+	text = RedactToolText(text)
 	if len(text) <= maxToolErrorBytes {
 		return text
 	}

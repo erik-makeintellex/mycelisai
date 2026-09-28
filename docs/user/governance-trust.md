@@ -91,6 +91,8 @@ You can then:
 
 Only you can confirm your own proposal, unless it needs admin approval, in which case an admin confirms it. A proposal from a council member, and a team plan you launch, follow the same rules as one from Soma: a large team plan (more than 10 agents) or one using broadcast or external (MCP) tools needs admin approval. If a proposal expired, or was made before the latest governance update, ask Soma to propose it again. A team plan must be launched exactly as proposed; to change it, negotiate again with Soma first.
 
+Using a connected tool directly (Resources → Workspace, or the tools palette) follows the same line. Anyone signed in can read the workspace directly: list folders, read files, and search. Everything else, including creating or writing workspace files and every GitHub, Slack, fetch, database or paid-media tool, is for admins who can approve high-risk work. Anyone else sees "Only an admin can use this tool directly" and nothing runs; ask Soma to propose it and an admin approves the proposal. Each direct admin call is written to the activity log before it runs, and it is refused if the log is unavailable. Secrets in a call's inputs (tokens, keys, passwords, credentials in links) are hidden in the saved record.
+
 Known gap: approving a negotiated team plan from its chat proposal card still fails, so do not use it for this. Plan the team with Soma, then open the Workspace canvas and use its **Launch teams** button — it sends the confirm token from that negotiation and launches the plan.
 
 The system should preserve causality:
