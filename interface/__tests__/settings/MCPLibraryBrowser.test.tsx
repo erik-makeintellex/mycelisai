@@ -4,6 +4,15 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import MCPLibraryBrowser from '@/components/settings/MCPLibraryBrowser';
 import { useCortexStore, type MCPLibraryCategory } from '@/store/useCortexStore';
 
+// MCPA D10: install/reconfigure controls are admin-only (UI hint; Core
+// enforces mcp_config:write). Default to admin so existing install-flow
+// assertions below keep exercising the button; the dedicated
+// "non-admin" test overrides this per-case.
+let mockIsAdmin = true;
+vi.mock('@/lib/useIsAdmin', () => ({
+    useIsAdmin: () => ({ isAdmin: mockIsAdmin, checked: true }),
+}));
+
 const mockLibrary: MCPLibraryCategory[] = [
     {
         name: 'Development',
@@ -34,12 +43,13 @@ const mockLibrary: MCPLibraryCategory[] = [
 
 describe('MCPLibraryBrowser', () => {
     beforeEach(() => {
+        mockIsAdmin = true;
         useCortexStore.setState({
             mcpLibrary: mockLibrary,
             mcpServers: [],
             isFetchingMCPLibrary: false,
             fetchMCPLibrary: vi.fn(),
-            installFromLibrary: vi.fn().mockResolvedValue({ ok: true, message: 'Installed into your current MCP group without an extra approval step.' }),
+            installFromLibrary: vi.fn().mockResolvedValue({ ok: true, message: 'Installed. It is available across the workspace.' }),
         });
     });
 
@@ -57,10 +67,15 @@ describe('MCPLibraryBrowser', () => {
         expect((screen.getByRole('link', { name: 'Homepage' }) as HTMLAnchorElement).href).toBe('https://modelcontextprotocol.io/');
     });
 
-    it('surfaces install status instead of a follow-up approval prompt', async () => {
+    // MCPA D10: no dead end. installFromLibrary always resolves through
+    // install/apply (never blocked locally on a require_approval decision);
+    // a non-2xx renders blocker copy from the {code, httpStatus} envelope,
+    // never raw backend text, and never a success toast.
+    it('renders blocker copy on a rejected install instead of raw backend text', async () => {
         const installFromLibrary = vi.fn().mockResolvedValue({
             ok: false,
-            message: 'This MCP entry still needs an explicit approval boundary before it can be installed.',
+            code: 'admin_required',
+            httpStatus: 403,
         });
 
         useCortexStore.setState({ installFromLibrary });
@@ -72,7 +87,17 @@ describe('MCPLibraryBrowser', () => {
         await waitFor(() => {
             expect(installFromLibrary).toHaveBeenCalledWith('filesystem', undefined);
         });
-        expect(screen.getByText(/still needs an explicit approval boundary/i)).toBeDefined();
+        expect(await screen.findByRole('alert')).toBeDefined();
+        expect(screen.queryByText(/"code":"admin_required"/)).toBeNull();
+    });
+
+    it('hides install controls and explains why for a non-admin viewer', () => {
+        mockIsAdmin = false;
+
+        render(<MCPLibraryBrowser />);
+
+        expect(screen.queryByRole('button', { name: /install/i })).toBeNull();
+        expect(screen.getByText(/Only an admin can install or reconfigure connectors/i)).toBeDefined();
     });
 
     it('renders typed environment variable guidance when present', async () => {

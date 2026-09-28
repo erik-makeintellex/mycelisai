@@ -52,4 +52,37 @@ describe("MCPServerCard", () => {
         fireEvent.click(screen.getByRole("button", { name: /Edit in Library/i }));
         expect(onEdit).toHaveBeenCalledTimes(1);
     });
+
+    // MCPA D10: delete is an admin-only control. isAdmin is a UI hint only
+    // (Core still enforces mcp_config:write); it defaults to false so a
+    // caller that has not resolved the viewer role yet shows no control it
+    // cannot back.
+    it("hides the delete control for a non-admin viewer", () => {
+        render(<MCPServerCard server={server} onDelete={vi.fn()} recentActivity={[]} />);
+
+        expect(screen.queryByTitle("Delete server")).toBeNull();
+    });
+
+    it("lets an admin delete after a confirm click", async () => {
+        const onDelete = vi.fn().mockResolvedValue({ ok: true });
+        render(<MCPServerCard server={server} onDelete={onDelete} recentActivity={[]} isAdmin />);
+
+        fireEvent.click(screen.getByTitle("Delete server"));
+        fireEvent.click(screen.getByTitle("Click again to confirm"));
+
+        expect(onDelete).toHaveBeenCalledWith("srv-001");
+    });
+
+    // MCPA D10: honest failure -- a rejected delete renders blocker copy
+    // instead of a raw error and never a success toast.
+    it("renders blocker copy on a rejected delete instead of a raw error", async () => {
+        const onDelete = vi.fn().mockResolvedValue({ ok: false, code: "admin_required", httpStatus: 403 });
+        render(<MCPServerCard server={server} onDelete={onDelete} recentActivity={[]} isAdmin />);
+
+        fireEvent.click(screen.getByTitle("Delete server"));
+        fireEvent.click(screen.getByTitle("Click again to confirm"));
+
+        expect(await screen.findByRole("alert")).toBeDefined();
+        expect(screen.queryByText(/"code":"admin_required"/)).toBeNull();
+    });
 });

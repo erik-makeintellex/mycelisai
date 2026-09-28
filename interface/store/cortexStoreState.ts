@@ -22,6 +22,7 @@ import type {
     MCPServerWithTools,
     MCPLibraryCategory,
     MCPInstallResult,
+    MCPWriteResult,
     MCPTool,
     Mission,
     MissionBlueprint,
@@ -139,10 +140,10 @@ export interface CortexResourcesContract {
     updateArtifactStatus: (id: string, status: string) => Promise<void>;
     fetchMCPServers: () => Promise<void>;
     fetchMCPActivity: () => Promise<void>;
-    deleteMCPServer: (id: string) => Promise<void>;
+    deleteMCPServer: (id: string) => Promise<MCPWriteResult>;
     fetchMCPTools: () => Promise<void>;
     fetchMCPToolSets: () => Promise<void>;
-    createMCPToolSet: (input: MCPToolSetCreate) => Promise<boolean>;
+    createMCPToolSet: (input: MCPToolSetCreate) => Promise<MCPWriteResult>;
     fetchMCPLibrary: () => Promise<void>;
     installFromLibrary: (name: string, env?: Record<string, string>) => Promise<MCPInstallResult>;
     fetchSearchCapability: () => Promise<void>;

@@ -90,11 +90,15 @@ describe('useCortexStore resource registry', () => {
             });
             mockFetch.mockResolvedValue({ ok: true });
 
-            await useCortexStore.getState().deleteMCPServer('srv1');
+            const result = await useCortexStore.getState().deleteMCPServer('srv1');
 
+            expect(result).toEqual({ ok: true });
             expect(useCortexStore.getState().mcpServers).toHaveLength(0);
         });
 
+        // MCPA D10: honest failure -- a rejected delete surfaces the
+        // blocker envelope's code and never touches local state, so a 403
+        // can never be mistaken for a removed server.
         it('stores persisted MCP activity from API', async () => {
             const activity = [
                 {
@@ -149,7 +153,7 @@ describe('useCortexStore resource registry', () => {
                 .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: { id: 'set-host' } }) })
                 .mockResolvedValueOnce({ ok: true, json: async () => ({ ok: true, data: [] }) });
 
-            const ok = await useCortexStore.getState().createMCPToolSet({
+            const result = await useCortexStore.getState().createMCPToolSet({
                 name: 'deploy',
                 description: 'Deployment tools',
                 tool_refs: ['mcp:ssh/*'],
@@ -157,7 +161,7 @@ describe('useCortexStore resource registry', () => {
                 scope_ref: 'edge-node-1',
             });
 
-            expect(ok).toBe(true);
+            expect(result).toEqual({ ok: true });
             expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/v1/mcp/toolsets', expect.objectContaining({
                 method: 'POST',
                 body: JSON.stringify({
@@ -171,6 +175,33 @@ describe('useCortexStore resource registry', () => {
             expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/mcp/toolsets');
         });
 
+        // MCPA D10: admin-only, fail-closed. A 403 never calls the refresh
+        // fetch and surfaces the blocker code, not raw backend text.
+        // MCPA D5/D10: no dead end. A require_approval inspect decision no
+        // longer blocks the client; install still proceeds to /install and
+        // succeeds (the server enforces approvals:decide, not the browser).
+        // MCPA D10: honest failure on inspect/install non-2xx -- no raw
+        // backend text, and no success toast.
+        it.each([
+            ['admin_required', 403],
+            ['mcp_env_rejected', 400],
+            ['mcp_connect_failed', 502],
+            ['service_unavailable', 503],
+        ])('installFromLibrary surfaces %s on a %i from install', async (code, status) => {
+            mockFetch
+                .mockResolvedValueOnce({ ok: true, json: async () => ({ decision: 'allow' }) })
+                .mockResolvedValueOnce({ ok: false, status, json: async () => ({ ok: false, error: 'x', data: { code } }) });
+
+            const result = await useCortexStore.getState().installFromLibrary('fetch');
+
+            expect(result).toEqual({ ok: false, code, httpStatus: status, governance: undefined });
+        });
+
+        // Slice RED: library inspect/install/apply "not initialized" / bad
+        // JSON / unknown-entry error sites moved from http.Error text/plain
+        // to respondAPIError's application/json {ok:false,error} envelope
+        // (no data.code). The store parses by body content, not
+        // Content-Type, so both shapes land on the same honest fallback.
         it('records Mycelis Search capability status failures', async () => {
             mockFetch.mockResolvedValue({ ok: false, status: 503 });
 

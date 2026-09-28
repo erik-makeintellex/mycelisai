@@ -2,9 +2,11 @@
 
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
-import { Layers3, RefreshCw, Save, ShieldCheck } from "lucide-react";
-import type { MCPToolSet, MCPToolSetCreate, MCPToolSetScopeKind } from "@/store/useCortexStore";
+import { Layers3, Lock, RefreshCw, Save, ShieldCheck } from "lucide-react";
+import type { MCPToolSet, MCPToolSetCreate, MCPToolSetScopeKind, MCPWriteResult } from "@/store/useCortexStore";
 import { useCortexStore } from "@/store/useCortexStore";
+import { useIsAdmin } from "@/lib/useIsAdmin";
+import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
 import { MCPToolSetCommonChoices } from "./MCPToolSetCommonChoices";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -14,7 +16,10 @@ type Props = {
     isLoading: boolean;
     error: string | null;
     onRefresh: () => void;
-    onCreate: (input: MCPToolSetCreate) => Promise<boolean>;
+    onCreate: (input: MCPToolSetCreate) => Promise<MCPWriteResult>;
+    // MCPA D10: UI hint only -- new-layer stays gated server-side
+    // (mcp_config:write). Fail-closed default: hidden until resolved.
+    isAdmin?: boolean;
 };
 const scopes: Array<{ kind: MCPToolSetScopeKind; label: string; help: string; example: string }> = [
     { kind: "all", label: "Everyone", help: "Default tools Soma may use across this workspace.", example: "Workspace files" },
@@ -22,7 +27,7 @@ const scopes: Array<{ kind: MCPToolSetScopeKind; label: string; help: string; ex
     { kind: "host", label: "Host", help: "Tools limited to one runtime machine or service host.", example: "Local media node" },
 ];
 
-export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, onCreate }: Props) {
+export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, onCreate, isAdmin = false }: Props) {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [scopeKind, setScopeKind] = useState<MCPToolSetScopeKind>("all");
@@ -30,6 +35,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
     const [toolRefsText, setToolRefsText] = useState("");
     const [formError, setFormError] = useState<string | null>(null);
     const [saveState, setSaveState] = useState<SaveState>("idle");
+    const [saveBlocker, setSaveBlocker] = useState<{ code: string; httpStatus?: number } | null>(null);
     const counts = useMemo(() => {
         const result = { all: 0, group: 0, host: 0 };
         for (const toolSet of toolSets) {
@@ -58,19 +64,22 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
         }
         setFormError(null);
         setSaveState("saving");
-        const ok = await onCreate({
+        setSaveBlocker(null);
+        const result = await onCreate({
             name: nextName,
             description: description.trim() || undefined,
             tool_refs: parsedRefs,
             scope_kind: scopeKind,
             scope_ref: scopeKind === "all" ? undefined : target,
         });
-        setSaveState(ok ? "saved" : "error");
-        if (ok) {
+        setSaveState(result.ok ? "saved" : "error");
+        if (result.ok) {
             setName("");
             setDescription("");
             setScopeRef("");
             setToolRefsText("");
+        } else {
+            setSaveBlocker({ code: result.code ?? "request_failed", httpStatus: result.httpStatus });
         }
     }
     const applyChoice = (refs: string[], recommendedScope: MCPToolSetScopeKind) => {
@@ -131,7 +140,14 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
             {error && <Notice tone="warning" message={error} />}
             {formError && <Notice tone="danger" message={formError} />}
             {saveState === "saved" && <Notice tone="success" message="Permission group saved and refreshed." />}
-            {saveState === "error" && <Notice tone="danger" message="Permission group could not be saved." />}
+            {saveState === "error" && saveBlocker && (
+                <InlineBlockerNotice
+                    code={saveBlocker.code}
+                    httpStatus={saveBlocker.httpStatus}
+                    viewerIsAdmin={isAdmin}
+                    onDismiss={() => setSaveBlocker(null)}
+                />
+            )}
 
             <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)]">
                 <div className="min-h-[160px] rounded-lg border border-cortex-border bg-cortex-bg/50 p-3">
@@ -153,6 +169,17 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                     )}
                 </div>
 
+                {!isAdmin ? (
+                    <div className="rounded-lg border border-cortex-border bg-cortex-bg/50 p-3">
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
+                            <Lock className="mr-1 inline h-3 w-3" />
+                            Add permission group
+                        </p>
+                        <p className="mt-3 text-xs leading-5 text-cortex-text-muted">
+                            Only an admin can add or change permission groups. Ask an admin if you need a new one.
+                        </p>
+                    </div>
+                ) : (
                 <form onSubmit={handleSubmit} className="rounded-lg border border-cortex-border bg-cortex-bg/50 p-3">
                     <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-text-muted">
                         Add permission group
@@ -221,6 +248,7 @@ export function MCPToolSetLayersPanel({ toolSets, isLoading, error, onRefresh, o
                         {saveState === "saving" ? "Saving" : "Save permissions"}
                     </button>
                 </form>
+                )}
             </div>
         </section>
     );
@@ -232,6 +260,8 @@ export function MCPToolSetLayersStorePanel() {
     const error = useCortexStore((state) => state.mcpToolSetsError);
     const onRefresh = useCortexStore((state) => state.fetchMCPToolSets);
     const onCreate = useCortexStore((state) => state.createMCPToolSet);
+    // UI hint only -- new-layer stays gated server-side.
+    const { isAdmin } = useIsAdmin();
 
     return (
         <MCPToolSetLayersPanel
@@ -240,6 +270,7 @@ export function MCPToolSetLayersStorePanel() {
             error={error}
             onRefresh={onRefresh}
             onCreate={onCreate}
+            isAdmin={isAdmin}
         />
     );
 }

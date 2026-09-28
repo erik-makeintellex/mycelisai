@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Download, Search, Tag, Loader2, Settings2 } from "lucide-react";
+import { Download, Search, Tag, Loader2, Settings2, Lock } from "lucide-react";
 import { useCortexStore, type MCPLibraryEntry, type MCPLibraryCategory } from "@/store/useCortexStore";
 import { EnvConfigModal } from "./MCPLibraryEnvConfigModal";
+import { useIsAdmin } from "@/lib/useIsAdmin";
+import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
 
 export default function MCPLibraryBrowser() {
     return <MCPLibraryBrowserBody />;
@@ -25,6 +27,11 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
     const [installingName, setInstallingName] = useState<string | null>(null);
     const [envModalEntry, setEnvModalEntry] = useState<MCPLibraryEntry | null>(null);
     const [installMessage, setInstallMessage] = useState<string | null>(null);
+    // MCPA D10: a non-2xx install/apply renders blocker copy, never raw
+    // backend text and never a success toast.
+    const [installBlocker, setInstallBlocker] = useState<{ code: string; httpStatus?: number } | null>(null);
+    // UI hint only -- install is gated server-side (mcp_config:write).
+    const { isAdmin } = useIsAdmin();
 
     useEffect(() => {
         fetchLibrary();
@@ -33,6 +40,7 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
     const installedNames = new Set(mcpServers.map((s) => s.name));
 
     const handleInstallClick = (entry: MCPLibraryEntry, isInstalled = false) => {
+        if (!isAdmin) return;
         const hasRequiredEnv = (entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0);
         if (hasRequiredEnv) {
             setEnvModalEntry(entry);
@@ -46,15 +54,18 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
     const doInstall = async (name: string, env?: Record<string, string>) => {
         setInstallingName(name);
         setInstallMessage(null);
+        setInstallBlocker(null);
         const result = await installFromLibrary(name, env);
+        setInstallingName(null);
+        if (!result.ok) {
+            setInstallBlocker({ code: result.code ?? "request_failed", httpStatus: result.httpStatus });
+            return;
+        }
         if (result.message) {
             setInstallMessage(result.message);
         }
-        setInstallingName(null);
-        if (result.ok) {
-            setEnvModalEntry(null);
-            onInstalled?.(name);
-        }
+        setEnvModalEntry(null);
+        onInstalled?.(name);
     };
 
     const filterEntries = (categories: MCPLibraryCategory[]) => {
@@ -82,6 +93,23 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
                     service access, private data sources, or team tools. Installed connectors can be configured or reapplied from their cards.
                 </p>
             </div>
+
+            {!isAdmin && (
+                <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
+                    <p className="text-xs leading-5 text-cortex-text-muted">
+                        Only an admin can install or reconfigure connectors here. Ask an admin to add one you need.
+                    </p>
+                </div>
+            )}
+
+            {installBlocker && (
+                <InlineBlockerNotice
+                    code={installBlocker.code}
+                    httpStatus={installBlocker.httpStatus}
+                    viewerIsAdmin={isAdmin}
+                    onDismiss={() => setInstallBlocker(null)}
+                />
+            )}
 
             {installMessage && (
                 <div className="rounded-xl border border-cortex-border bg-cortex-surface px-4 py-3">
@@ -134,25 +162,34 @@ export function MCPLibraryBrowserBody({ onInstalled, initialSearchQuery = "" }: 
                                                 {entry.description}
                                             </p>
                                         </div>
-                                        <button
-                                            onClick={() => handleInstallClick(entry, isInstalled)}
-                                            disabled={isInstalling}
-                                            className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-colors ${
-                                                isInstalled
-                                                    ? "bg-cortex-success/10 text-cortex-success border border-cortex-success/20 hover:bg-cortex-success/20"
-                                                    : isInstalling
-                                                    ? "bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20 cursor-wait"
-                                                    : "bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/30 hover:bg-cortex-primary/20"
-                                            }`}
-                                        >
-                                            {isInstalled ? (
-                                                <><Settings2 className="w-3 h-3" /> CONFIGURE</>
-                                            ) : isInstalling ? (
-                                                <><Loader2 className="w-3 h-3 animate-spin" /> INSTALLING</>
-                                            ) : (
-                                                <><Download className="w-3 h-3" /> INSTALL</>
-                                            )}
-                                        </button>
+                                        {isAdmin ? (
+                                            <button
+                                                onClick={() => handleInstallClick(entry, isInstalled)}
+                                                disabled={isInstalling}
+                                                className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold transition-colors ${
+                                                    isInstalled
+                                                        ? "bg-cortex-success/10 text-cortex-success border border-cortex-success/20 hover:bg-cortex-success/20"
+                                                        : isInstalling
+                                                        ? "bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/20 cursor-wait"
+                                                        : "bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/30 hover:bg-cortex-primary/20"
+                                                }`}
+                                            >
+                                                {isInstalled ? (
+                                                    <><Settings2 className="w-3 h-3" /> CONFIGURE</>
+                                                ) : isInstalling ? (
+                                                    <><Loader2 className="w-3 h-3 animate-spin" /> INSTALLING</>
+                                                ) : (
+                                                    <><Download className="w-3 h-3" /> INSTALL</>
+                                                )}
+                                            </button>
+                                        ) : (
+                                            <span
+                                                className="flex-shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold text-cortex-text-muted border border-cortex-border"
+                                                title="Only an admin can install or reconfigure connectors"
+                                            >
+                                                <Lock className="w-3 h-3" /> {isInstalled ? "INSTALLED" : "ADMIN ONLY"}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex flex-wrap gap-1">
                                         {entry.tags.map((tag) => (

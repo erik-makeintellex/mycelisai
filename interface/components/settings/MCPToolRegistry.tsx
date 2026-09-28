@@ -11,6 +11,7 @@ import { MCPToolRegistryOverview } from "./MCPToolRegistryOverview";
 import { useInputSourceRegistry } from "./InputSourceRegistry";
 import { useSearchSourceRegistry } from "./MCPToolRegistrySearchSources";
 import { MCPInstallNotice, MCPRegistryEmptyBanner, MCPRegistryEmptyHero, MCPRegistryErrorBanner } from "./MCPToolRegistryNotices";
+import { useIsAdmin } from "@/lib/useIsAdmin";
 
 type Tab = "overview" | "servers" | "library";
 
@@ -35,6 +36,9 @@ export default function MCPToolRegistry() {
     const capabilitiesError = useCortexStore((s) => s.capabilitiesError);
     const fetchCapabilities = useCortexStore((s) => s.fetchCapabilities);
     const fetchMCPToolSets = useCortexStore((s) => s.fetchMCPToolSets);
+    // MCPA D10: UI hint only -- delete stays gated server-side. Not checked
+    // yet defaults to non-admin (fail-closed).
+    const { isAdmin } = useIsAdmin();
 
     const [activeTab, setActiveTab] = useState<Tab>("overview");
     const [installNotice, setInstallNotice] = useState<string | null>(null);
@@ -211,6 +215,7 @@ export default function MCPToolRegistry() {
                                             onDelete={deleteMCPServer}
                                             onEdit={() => setActiveTab("library")}
                                             recentActivity={recentActivityByServer.get(server.id) ?? []}
+                                            isAdmin={isAdmin}
                                         />
                                     ))}
                                 </div>

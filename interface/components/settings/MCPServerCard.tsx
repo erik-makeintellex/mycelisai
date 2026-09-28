@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { ChevronRight, Trash2, Server, Wrench, Settings2 } from "lucide-react";
-import type { MCPServerWithTools } from "@/store/useCortexStore";
+import type { MCPServerWithTools, MCPWriteResult } from "@/store/useCortexStore";
+import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
 
 // ── Status Dot Color ──────────────────────────────────────────
 
@@ -16,9 +17,14 @@ function statusDotClass(status: string, error?: string): string {
 
 interface MCPServerCardProps {
     server: MCPServerWithTools;
-    onDelete: (id: string) => void;
+    onDelete: (id: string) => Promise<MCPWriteResult>;
     recentActivity?: MCPRecentActivity[];
     onEdit?: () => void;
+    // MCPA D10: Core enforces mcp_config:write; this is only a UI hint that
+    // hides the control for a viewer who would just be refused. Fail-closed
+    // by default -- a caller that has not resolved the viewer role yet
+    // should not show a delete control it cannot back.
+    isAdmin?: boolean;
 }
 
 export interface MCPRecentActivity {
@@ -34,18 +40,26 @@ export interface MCPRecentActivity {
     agentId?: string;
 }
 
-export default function MCPServerCard({ server, onDelete, recentActivity = [], onEdit }: MCPServerCardProps) {
+export default function MCPServerCard({ server, onDelete, recentActivity = [], onEdit, isAdmin = false }: MCPServerCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    const [deleteBlocker, setDeleteBlocker] = useState<{ code: string; httpStatus?: number } | null>(null);
 
     const toolCount = server.tools?.length ?? 0;
     const latestActivity = recentActivity[0] ?? null;
 
-    function handleDelete(e: React.MouseEvent) {
+    async function handleDelete(e: React.MouseEvent) {
         e.stopPropagation();
         if (isConfirmingDelete) {
-            onDelete(server.id);
             setIsConfirmingDelete(false);
+            setDeleteBlocker(null);
+            // Honest failure: only a 2xx removes the card (the store already
+            // keeps local state untouched on a non-2xx). No success toast on
+            // failure.
+            const result = await onDelete(server.id);
+            if (!result.ok) {
+                setDeleteBlocker({ code: result.code ?? "request_failed", httpStatus: result.httpStatus });
+            }
         } else {
             setIsConfirmingDelete(true);
             // Auto-reset confirmation after 3 seconds
@@ -82,27 +96,40 @@ export default function MCPServerCard({ server, onDelete, recentActivity = [], o
                 {/* Spacer */}
                 <span className="flex-1" />
 
-                {/* Delete Button */}
-                <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={handleDelete}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleDelete(e as unknown as React.MouseEvent); }}
-                    className={`p-1.5 rounded-md transition-colors flex-shrink-0 ${
-                        isConfirmingDelete
-                            ? "bg-cortex-danger/20 text-cortex-danger"
-                            : "hover:bg-cortex-danger/10 text-cortex-text-muted hover:text-cortex-danger"
-                    }`}
-                    title={isConfirmingDelete ? "Click again to confirm" : "Delete server"}
-                >
-                    <Trash2 className="w-3.5 h-3.5" />
-                </span>
+                {/* Delete Button: admin-only UI hint (Core still enforces) */}
+                {isAdmin && (
+                    <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={handleDelete}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleDelete(e as unknown as React.MouseEvent); }}
+                        className={`p-1.5 rounded-md transition-colors flex-shrink-0 ${
+                            isConfirmingDelete
+                                ? "bg-cortex-danger/20 text-cortex-danger"
+                                : "hover:bg-cortex-danger/10 text-cortex-text-muted hover:text-cortex-danger"
+                        }`}
+                        title={isConfirmingDelete ? "Click again to confirm" : "Delete server"}
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </span>
+                )}
 
                 {/* Expand Chevron */}
                 <ChevronRight className={`w-4 h-4 text-cortex-text-muted transition-transform flex-shrink-0 ${
                     isExpanded ? "rotate-90" : ""
                 }`} />
             </button>
+
+            {deleteBlocker && (
+                <div className="px-4 pb-2 -mt-1">
+                    <InlineBlockerNotice
+                        code={deleteBlocker.code}
+                        httpStatus={deleteBlocker.httpStatus}
+                        viewerIsAdmin={isAdmin}
+                        onDismiss={() => setDeleteBlocker(null)}
+                    />
+                </div>
+            )}
 
             {/* Error Message */}
             {server.error && (
