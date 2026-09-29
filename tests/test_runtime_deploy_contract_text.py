@@ -360,13 +360,12 @@ def test_release_preflight_docs_prefer_lane_preset():
     assert not missing, "Release-preflight lane contract is missing from active docs:\n" + "\n".join(missing)
 
 
-def test_user_acceptance_doc_keeps_wsl_optional_and_cold_start_truthful():
+def test_user_acceptance_doc_runs_from_wsl_and_keeps_cold_start_truthful():
     text = REMOTE_USER_TESTING.read_text(encoding="utf-8")
 
     required_snippets = [
-        "Use WSL only when it supplies distinct deployment-mimic evidence",
-        "Keep the Windows root repo as the dev/staging worktree",
-        "use a clean WSL deployment-mimic checkout refreshed from git as the validation host",
+        "Source development and release proof both run in the WSL `dev` checkout",
+        "Run it from a clean committed `dev` in the WSL checkout, which is the single development and validation host.",
         "verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch",
         "classify it as `cold_start_first_request` instead of a clean first-pass success",
         "Do not silently relabel the run as a clean first-pass success",
@@ -374,83 +373,73 @@ def test_user_acceptance_doc_keeps_wsl_optional_and_cold_start_truthful():
     ]
 
     missing = [snippet for snippet in required_snippets if snippet not in text]
-    assert not missing, "User acceptance doc is missing guarded WSL/browser/cold-start guidance:\n" + "\n".join(missing)
+    assert not missing, "User acceptance doc is missing WSL-surface/browser/cold-start guidance:\n" + "\n".join(missing)
 
 
-def test_active_docs_reference_guarded_wsl_handoff_tasks():
-    snippets = [
-        (
-            README,
-            [
-                "`uv run inv wsl.status`",
-                "`uv run inv wsl.refresh`",
-                "`uv run inv wsl.validate`",
-                "`uv run inv wsl.cycle`",
-            ],
-        ),
-        (
-            TESTING,
-            [
-                "`uv run inv wsl.status`",
-                "`uv run inv wsl.refresh`",
-                "`uv run inv wsl.validate`",
-                "`uv run inv wsl.cycle`",
-            ],
-        ),
-        (
-            OPERATIONS,
-            [
-                "`wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`",
-            ],
-        ),
-        (
-            LOCAL_DEV_WORKFLOW,
-            [
-                "`uv run inv wsl.status`",
-                "`uv run inv wsl.refresh --branch <name>`",
-                "`uv run inv wsl.validate`",
-                "`uv run inv wsl.cycle --branch <name>`",
-            ],
-        ),
-        (
-            REMOTE_USER_TESTING,
-            [
-                "use a clean WSL deployment-mimic checkout refreshed from git as the validation host",
-            ],
-        ),
+def test_owned_docs_describe_one_wsl_development_surface_and_no_removed_wsl_tasks():
+    """CONS-SURFACE: WSL `dev` is the single development and proof surface. The
+    `wsl.*` tasks drove a separate WSL checkout from Windows and were removed, so
+    no owned doc may name them or describe Windows as the edit or git surface.
+    (`docs/TESTING.md` is a separate lane and is not checked here.)"""
+    docs = [README, OPERATIONS, LOCAL_DEV_WORKFLOW, REMOTE_USER_TESTING, DEPLOYMENT_METHODS, ROOT / "ops" / "README.md"]
+    forbidden = [
+        "inv wsl.",
+        "wsl.status",
+        "wsl.refresh",
+        "wsl.validate",
+        "wsl.cycle",
+        "architecture-sync",
+        "mycelis-root",
+        "WSL proof checkout",
+        "Windows is the source-edit",
+        "Windows is the edit/review/git",
+        "Windows repo as the edit",
+        "edit on Windows",
+        "Windows repo: canonical editing",
     ]
 
-    missing: list[str] = []
-    for path, required_snippets in snippets:
+    offenders = []
+    for path in docs:
         text = path.read_text(encoding="utf-8")
-        for snippet in required_snippets:
-            if snippet not in text:
-                missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
+        for snippet in forbidden:
+            if snippet in text:
+                offenders.append(f"{path.relative_to(ROOT)} still says `{snippet}`")
+    assert not offenders, "Docs still describe the retired Windows-edit / WSL-proof model:\n" + "\n".join(offenders)
 
-    assert not missing, "Guarded WSL handoff/proof tasks are missing from active docs:\n" + "\n".join(missing)
+    required = [
+        (README, "WSL `dev` is the single development and proof surface"),
+        (OPERATIONS, "WSL `dev` is the single development and proof surface"),
+        (LOCAL_DEV_WORKFLOW, "## Single Development Surface"),
+        (LOCAL_DEV_WORKFLOW, "Docker Desktop is not used"),
+        (DEPLOYMENT_METHODS, "edit, review, and test in the WSL `dev` checkout"),
+    ]
+    missing = [
+        f"{path.relative_to(ROOT)} missing `{snippet}`"
+        for path, snippet in required
+        if snippet not in path.read_text(encoding="utf-8")
+    ]
+    assert not missing, "Single-surface contract is missing from active docs:\n" + "\n".join(missing)
 
 
-def test_release_proof_sequence_keeps_wsl_conditional_before_deployment_certification():
+def test_release_proof_sequence_keeps_deployment_certification_after_preflight():
     snippets = [
         (
             TESTING,
-                [
-                    "Release-proof sequencing rule:",
-                    "clean committed `dev` release preflight",
-                    "only when the refreshed WSL proof checkout supplies distinct deployment-mimic evidence",
-                    "`ci.release-preflight --lane=runtime --no-e2e`",
-                    "Full Compose, Kubernetes, and broader headed browser certification",
-                ],
-            ),
-            (
-                V8_DEV_STATE,
-                [
-                    "optional refreshed WSL validation when it supplies distinct evidence",
-                    "Compose and Kubernetes deployment proof",
-                    "headed browser certification",
-                    "post-promotion health and browser smoke",
-                ],
-            ),
+            [
+                "Release-proof sequencing rule:",
+                "clean committed `dev` release preflight",
+                "`ci.release-preflight --lane=runtime --no-e2e`",
+                "Full Compose, Kubernetes, and broader headed browser certification",
+            ],
+        ),
+        (
+            V8_DEV_STATE,
+            [
+                "Compose and Kubernetes deployment proof",
+                "headed browser certification",
+                "post-promotion health and browser smoke",
+            ],
+        ),
     ]
 
     missing: list[str] = []
@@ -461,22 +450,6 @@ def test_release_proof_sequence_keeps_wsl_conditional_before_deployment_certific
                 missing.append(f"{path.relative_to(ROOT)} missing `{snippet}`")
 
     assert not missing, "Release-proof sequencing docs drifted from the active release order:\n" + "\n".join(missing)
-
-def test_windows_edit_wsl_proof_contract_does_not_turn_wsl_into_day_to_day_worktree():
-    text = LOCAL_DEV_WORKFLOW.read_text(encoding="utf-8")
-
-    required_snippets = [
-        "For day-to-day Windows development, keep the Windows repo as the edit/review/push surface.",
-        "Use this as the guarded WSL Compose deployment-mimic proof path when Windows editing is ready for build, API, UI, runtime, or release-style validation:",
-        "keep the WSL `mycelis-root` deployment checkout git-backed and disposable for Compose deployment-mimic proof",
-        "These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree.",
-    ]
-    missing = [snippet for snippet in required_snippets if snippet not in text]
-
-    assert not missing, "Local dev workflow is missing the Windows-edit/WSL-proof contract:\n" + "\n".join(missing)
-    assert "prefer a WSL worktree plus the Compose path above" not in text, (
-        "docs/LOCAL_DEV_WORKFLOW.md must not make a WSL worktree the day-to-day Windows edit surface"
-    )
 
 
 def test_identity_docs_describe_deploy_owned_people_access_contract():

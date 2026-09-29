@@ -18,6 +18,6 @@
 - No capability-eval harness exists yet (`tests/evals/` is absent on dev); the ai-runtime role may add one there only after the lead approves the location.
 
 ## Gotchas
-- Local model posture is vLLM on host port 8000; Mycelis reads `MYCELIS_PROVIDER_VLLM_MODEL_ID`, and a model switch must be proven from inside the Core container (`host.docker.internal:8000/v1`), not just from the host.
+- The local model posture is Windows Ollama through the relay (next line); vLLM is an optional, currently stopped provider. If vLLM is re-enabled, Mycelis reads `MYCELIS_PROVIDER_VLLM_MODEL_ID`, and a model switch must be proven from inside the Core container (`host.docker.internal:8000/v1`), not just from the host.
 - The live root is Windows Ollama (qwen3:14b) through the `mycelis-home-ollama-relay` container; `vllm-node` is stopped because WSL vLLM locked up. After a restart, run `uv run inv compose.warm-cognitive` before trusting any live inference proof. If vLLM is re-enabled, wait for `127.0.0.1:8000/v1/models` instead.
 - `MaxOutputTokens` (`types.go`, default 1024 via `DefaultMaxTokensForBudget`) caps output per provider; committed values in `core/config/cognitive.yaml` are 1024 or 2048 depending on provider (`vllm`: 1024) — read the active config (`uv run inv cognitive.*` status task) before assuming a budget.

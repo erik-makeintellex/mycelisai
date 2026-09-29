@@ -173,10 +173,7 @@ uv run inv ci.baseline
 uv run inv ci.service-check
 uv run inv ci.release-preflight --lane=release
 uv run inv api.delivery-proof
-uv run inv team.architecture-sync
 ```
-
-`team.architecture-sync` is a bounded coordination check, not an autonomous implementation run. Its standing-team prompts follow the current Workspace/Outcome hierarchy and Ask-to-Recover journey, with validated execution-to-deliverable handoff as the active release gate.
 
 Use `--live-backend` for browser proof that must hit a real Core backend. Service certification permits one serial retry after a ten-second backoff for the idempotent lifecycle bring-up following managed browser cleanup; persistent startup failure remains a hard gate and does not fall through to browser proof.
 
@@ -200,23 +197,16 @@ Choose the runtime lane first:
 - Compose for supported home-runtime proof
 - Rancher Desktop K3s or k3d/Helm for local cluster proof
 - source lifecycle for implementation
-- WSL proof checkout for guarded Compose release-style validation from Windows
+- the same WSL checkout for Compose release-style validation (`compose.up`, `ci.release-preflight`)
 
-Windows edit -> git push -> WSL refresh -> WSL validate is the guarded WSL Compose proof path:
-
-```bash
-uv run inv wsl.status
-uv run inv wsl.refresh
-uv run inv wsl.validate --lane=release
-uv run inv wsl.validate --lane=release --headed-browser
-```
+WSL `dev` is the single development and proof surface; the owner pushes, and Windows is only a host.
 
 The root and Interface install tasks use `npm ci` for Interface dependencies; release proof expects
 dependency bootstrap to preserve a clean lockfile and fail before validation if it cannot.
 
 ### Deployment Guidance Across Host Architectures
 
-- Windows x86_64: edit on Windows; prove through Compose, WSL Compose, or Kubernetes as the slice requires.
+- Windows x86_64: Windows is the host (Ollama); develop and prove in WSL through Compose or Kubernetes as the slice requires.
 - Linux x86_64: use Compose for home-runtime and k3d/Helm for cluster proof.
 - Linux arm64: prefer Compose or binary/control-node lanes with explicit remote AI.
 - Mixed-architecture deployment rule: keep AI, database, NATS, Core, and Interface addresses explicit.
@@ -292,8 +282,8 @@ Use [Testing](../TESTING.md) for gate details. Operational summary:
 - frontend: `uv run inv interface.test` and `interface.typecheck`
 - browser: `uv run inv interface.e2e`
 - live stack: `lifecycle.health` or `compose.health`
-- release: `ci.baseline` or `wsl.validate --lane=release`
-- visible live-window proof: `wsl.validate --lane=release --headed-browser` or focused `interface.e2e --headed --live-backend`
+- release: `ci.baseline` or `ci.release-preflight --lane=release`
+- visible live-window proof: focused `interface.e2e --headed --live-backend`
 
 Runtime checks must start clean, verify readiness, run proof once services are healthy, and shut down unless a follow-on check needs them.
 
@@ -316,7 +306,7 @@ Local CI tasks:
 - `ci.release-preflight`: lane-aware release gate that runs `ci.lint` first and stops before later stages on lint failure
 
 GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence. Hosted workflow maintenance stays on Node 24-capable action majors, runs Interface CI with Node.js 24, uses checksum-verified pinned Helm 3 instead of `azure/setup-helm@v4`, and requires self-hosted runners that support Node 24 actions.
-Invoke manages the Next.js server lifecycle for browser proof. Merge gates stop repo-owned Interface processes and managed Playwright listeners, verify service ownership before relying on occupied ports, and clear `.next` before production builds so Windows file locks cannot invalidate the candidate, then use the built production Interface server path. Windows process inventory uses one bounded repo-scoped Node/cmd query, and Windows tree termination has an extended bounded timeout so loaded hosts can finish descendant enumeration before any parent-only fallback. The default baseline targets the managed Chromium binary installed by the supported bootstrap path with one worker; cross-engine matrices require explicit browser provisioning. CI also keeps a Chromium authenticated-front-door smoke. Playwright reporter ownership remains in `interface/playwright.config.ts`, which emits readable output and retained JSON/JUnit evidence under `interface/test-results`; task wrappers must not replace that reporter set. CI Go gates address the Core module explicitly with `go -C` rather than relying on shell `cd` state, and release baseline Core tests run with `-p 1` so local runtime/browser probes are not destabilized by package-level contention. A failed captured Core command prints console-safe diagnostic output even when the Windows host code page cannot represent a test character. Run managed Interface build/test/browser proof serially for a workspace and port because those gates own shared Next/Vitest workers and server ports. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; every lane runs lint first, and `--lane=release` is the recommended full runtime/operator gate. Its runtime posture rejects loopback AI endpoints except for a WSL source endpoint that exactly matches the scheme and port of the explicit `host.docker.internal` Compose contract used for Windows mirrored networking. Guarded WSL proof-checkout tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`; add `--headed-browser` to `wsl.validate` or `wsl.cycle` when focused live-backend Playwright proof must open visible browser windows.
+Invoke manages the Next.js server lifecycle for browser proof. Merge gates stop repo-owned Interface processes and managed Playwright listeners, verify service ownership before relying on occupied ports, and clear `.next` before production builds so Windows file locks cannot invalidate the candidate, then use the built production Interface server path. Windows process inventory uses one bounded repo-scoped Node/cmd query, and Windows tree termination has an extended bounded timeout so loaded hosts can finish descendant enumeration before any parent-only fallback. The default baseline targets the managed Chromium binary installed by the supported bootstrap path with one worker; cross-engine matrices require explicit browser provisioning. CI also keeps a Chromium authenticated-front-door smoke. Playwright reporter ownership remains in `interface/playwright.config.ts`, which emits readable output and retained JSON/JUnit evidence under `interface/test-results`; task wrappers must not replace that reporter set. CI Go gates address the Core module explicitly with `go -C` rather than relying on shell `cd` state, and release baseline Core tests run with `-p 1` so local runtime/browser probes are not destabilized by package-level contention. A failed captured Core command prints console-safe diagnostic output even when the Windows host code page cannot represent a test character. Run managed Interface build/test/browser proof serially for a workspace and port because those gates own shared Next/Vitest workers and server ports. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; every lane runs lint first, and `--lane=release` is the recommended full runtime/operator gate. Its runtime posture rejects loopback AI endpoints except for a WSL source endpoint that exactly matches the scheme and port of the explicit `host.docker.internal` Compose contract used for Windows mirrored networking. Add `--headed` to `interface.e2e --live-backend` when focused live-backend Playwright proof must open visible browser windows.
 `uv run inv interface.check` includes a small retry loop for transient Windows socket-reuse errors after heavy browser proof, but persistent route failures still fail the task.
 
 ## VII. Deployment Architecture

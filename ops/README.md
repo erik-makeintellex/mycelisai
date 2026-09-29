@@ -30,22 +30,17 @@ B2 reuses existing task owners: `MYCELIS_COMPOSE_FRAMEWORK_RUNS=1 uv run inv com
 This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
-- Windows repo: canonical editing, review, and git-push surface for active development
-- WSL `mycelis-root` deployment checkout: guarded WSL Compose proof checkout for install, build, API/UI test, Compose runtime, and deployment-mimic validation
-- Windows source mode: run Core/Interface locally against PostgreSQL and NATS hosted by Rancher Desktop's Docker engine; use full application Compose or Kubernetes only after local evidence is acceptable
+- WSL `dev` checkout `~/Projects/mycelisai` (feature work in `~/Projects/mycelisai-worktrees/`): the single development and proof surface for edit, install, build, API/UI test, Compose runtime, and deployment validation; Windows is only a host (Ollama, editors through `\wsl.localhost\...`) and the owner runs `git push`
+- Source mode: run Core/Interface locally against PostgreSQL and NATS in Docker inside WSL; use full application Compose or Kubernetes only after local evidence is acceptable
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
-- if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 - cleanup tasks that include `.venv` skip the active Python runtime when invoked through `uv run inv`, then report the skipped path; remove the active environment from an external shell only when that is intentionally needed
 
-WSL Compose proof-checkout contract:
-- use the Windows repo to edit, review, and push; use Rancher Desktop K3s for Windows local Kubernetes parity and WSL when guarded Compose proof is required
-- after a Windows-side commit/push, refresh the WSL proof checkout from git before running WSL Compose evidence
-- keep destructive cleanup such as `git reset --hard` and source `git clean` scoped to the dedicated WSL proof checkout; `wsl.refresh` preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots so permission-owned runtime/cache mounts do not block source refresh
+WSL single-surface contract:
+- use Rancher Desktop K3s or k3d for local Kubernetes parity; run Compose proof (`compose.up`, `compose.health`, `ci.release-preflight`) from the same WSL checkout
+- keep destructive cleanup such as `git reset --hard` and source `git clean` scoped to that checkout, and never remove generated `workspace/tool-cache`, `workspace/logs`, or `workspace/docker-compose` roots by hand
 - when the runtime is hosted from WSL on the same Windows machine, the required operator-facing browser path is the Windows browser at `http://localhost:3000`
-- use `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when you want the guarded Windows-dev -> WSL-proof task path instead of a manual handoff
-- `uv run inv wsl.refresh` runs WSL git fetch noninteractively, tries a repo-local Git Credential Manager helper repair for GitHub HTTPS remotes when Git for Windows is visible from WSL, preserves generated WSL runtime/cache roots during source cleanup, and otherwise fails before reset/clean with SSH/HTTPS auth guidance; keep the boundary commit/push/fetch based instead of copying source trees
-- `uv run inv wsl.validate` now bootstraps `.env.compose` from `.env.compose.example` when the clean WSL proof checkout has no local compose env yet, creates the configured Compose output-block host path when needed, sanitizes the Linux-side PATH so Windows Docker credential helpers cannot hijack Docker pulls, uses local Linux probes when the Ollama relay is prepared inside WSL, then runs Compose-safe release-preflight, Compose health/storage proof, a `compose.warm-cognitive` text-model warm-up, focused live-backend browser workflows against the Compose-delivered UI, and the Windows GUI probe; `--lane=service` and `--lane=release` keep the runtime preflight step and let this task own the Compose service/browser proof, and `--headed-browser` adds visible Playwright windows for those focused live specs when browser-visible release evidence is required
-- WSL tasking is deliberately proof-checkout scoped. If the distro, Rancher Desktop, or Docker host is unhealthy, fix the host tool outside the repo task runner and then rerun the narrow validation task.
+- use `uv run inv interface.e2e --headed --live-backend` for visible live-window browser proof against the Compose-delivered UI
+- Repo tasks do not manage the host. If the distro, Rancher Desktop, or Docker host is unhealthy, fix the host tool outside the repo task runner and then rerun the narrow validation task.
 
 Deployment selection rule:
 - local source-mode run/build/test with Dockerized PostgreSQL/NATS and local Core/Interface is the default development and review lane
@@ -304,8 +299,7 @@ Delivery-focused validation, runner checks, and release preflight.
 - Delivery reporting should include the commands run plus the docs changed and the touched docs reviewed unchanged.
 
 ### `misc.py` (Team Coordination)
-Central architect sync path and utility task surfaces.
-- **Architecture Sync**: `uv run inv team.architecture-sync` sends the standing architecture, development, and AGUI teams the current Workspace/Outcome execution-to-deliverable gate and collects concise proof priorities; it does not authorize implementation by itself.
+Local maintenance utilities (no bus publishing: team coordination goes through Core dispatch, not Python tasks).
 - **Worktree Triage**: `uv run inv team.worktree-triage` — summarize a dirty git worktree's changed-file scope, whether a fresh install is needed, and which evidence commands to run next. Use before starting or handing off work in a linked delivery-target worktree, per `AGENTS.md`'s worktree-safety contract.
 
 ## Directives

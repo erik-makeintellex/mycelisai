@@ -65,7 +65,6 @@ def test_root_collection_registers_expected_namespaces():
         "quality",
         "team",
         "test",
-        "wsl",
     ]
 
 
@@ -152,19 +151,14 @@ def test_root_collection_exports_expected_task_surface():
         "logging.check-topics",
         "proto.generate",
         "quality.max-lines",
-        "team.architecture-sync",
         "team.worktree-triage",
         "test.coverage",
         "test.probe",
-        "wsl.cycle",
-        "wsl.refresh",
-        "wsl.status",
-        "wsl.validate",
     ]
 
 
 def test_root_task_surface_stays_within_operator_budget():
-    assert len(tasks.ns.task_names) <= 89
+    assert len(tasks.ns.task_names) <= 84
 
 
 def test_documented_invoke_commands_are_registered():
