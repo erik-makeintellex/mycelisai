@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -22,10 +23,32 @@ type TempMemoryEntry struct {
 }
 
 // PutTempMemory stores a temporary working-memory checkpoint owned by
-// ownerUserID, the verified user of the writing turn ("" for a write with no
-// user; MEM-LANES). ownerAgentID only names the writing agent.
-// ttlMinutes <= 0 means no expiry.
+// ownerUserID, the verified user of the writing turn (MEM-LANES).
+// ownerAgentID only names the writing agent; ttlMinutes <= 0 means no expiry.
+// A row with no user is refused here (MEM-LANES-3): only Core's own writers
+// store one, through PutSystemTempMemory.
 func (s *Service) PutTempMemory(ctx context.Context, tenantID, channelKey, ownerAgentID, content string, metadata map[string]any, ttlMinutes int, ownerUserID string) (string, error) {
+	if strings.TrimSpace(ownerUserID) == "" {
+		return "", fmt.Errorf("put temp memory: a row with no user can only come from a Core system writer")
+	}
+	return s.putTemp(ctx, tenantID, channelKey, ownerAgentID, content, OwnerLaneMetadata(metadata, ownerUserID), ttlMinutes)
+}
+
+// PutSystemTempMemory stores a no-user (system-class) row written by one of
+// Core's own writers, named by writer: the bus checkpoint and AutoSummarize.
+// It is the only path to a row that no-user prompts and users' signal reads
+// admit (tempReadClause); model tools never call it (MEM-LANES-3).
+func (s *Service) PutSystemTempMemory(ctx context.Context, tenantID, channelKey, ownerAgentID, content string, metadata map[string]any, ttlMinutes int, writer string) (string, error) {
+	writer = strings.TrimSpace(writer)
+	if writer == "" {
+		return "", fmt.Errorf("put system temp memory: the Core writer is required")
+	}
+	meta := OwnerLaneMetadata(metadata, "")
+	meta[SystemWriterKey] = writer
+	return s.putTemp(ctx, tenantID, channelKey, ownerAgentID, content, meta, ttlMinutes)
+}
+
+func (s *Service) putTemp(ctx context.Context, tenantID, channelKey, ownerAgentID, content string, meta map[string]any, ttlMinutes int) (string, error) {
 	if s == nil || s.db == nil {
 		return "", fmt.Errorf("memory service offline")
 	}
@@ -41,7 +64,7 @@ func (s *Service) PutTempMemory(ctx context.Context, tenantID, channelKey, owner
 	if content == "" {
 		return "", fmt.Errorf("content is required")
 	}
-	metaJSON, _ := json.Marshal(OwnerLaneMetadata(metadata, ownerUserID))
+	metaJSON, _ := json.Marshal(meta)
 
 	var expiresAt any = nil
 	if ttlMinutes > 0 {

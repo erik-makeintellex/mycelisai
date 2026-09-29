@@ -22,16 +22,24 @@ import (
 //   - a short lifetime (the chat request timeout, at most recallTurnMaxTTL);
 //   - a single use.
 //
-// At most recallTurnCap tokens are outstanding, and at most recallTurnUserCap
-// for one user (MEM-LANES-2), so one user cannot hold them all. An unknown,
-// expired or mismatched token resolves to Unavailable; a missing one to no
-// user.
+// At most recallTurnCap tokens are outstanding. A user's further turns share
+// recallTurnCap - recallTurnReserve slots, at most recallTurnUserCap each
+// (MEM-LANES-2); a user's first outstanding turn may also use the reserve
+// (MEM-LANES-3), so users filling their caps cannot refuse another user's
+// first turn. An unknown, expired or mismatched token resolves to
+// Unavailable; a missing one to no user.
 const RecallTurnHeader = "Mycelis-Recall-Turn"
 
 const (
 	recallTurnMaxTTL  = 5 * time.Minute
 	recallTurnCap     = 256
 	recallTurnUserCap = 32
+	// recallTurnReserve slots are kept for users who hold no token yet
+	// (MEM-LANES-3). A per-user cap alone is always filled by
+	// recallTurnCap/recallTurnUserCap users (8); with the reserve, refusing a
+	// first turn takes the shared pool full plus 64 distinct users each
+	// mid-turn, which is real load rather than a few callers holding tokens.
+	recallTurnReserve = 64
 	// recallTurnRefused is sent when no token could be registered; it never
 	// resolves, so the agent treats the turn as unavailable, never unscoped.
 	recallTurnRefused = "unavailable"
@@ -96,7 +104,9 @@ func RegisterRecallTurn(access RecallAccess, subject, reply string, ttl time.Dur
 		}
 	}
 	total := len(recallTurns.m)
-	if total >= recallTurnCap || held >= recallTurnUserCap {
+	shared := total < recallTurnCap-recallTurnReserve && held < recallTurnUserCap
+	firstTurn := held == 0 && total < recallTurnCap
+	if !shared && !firstTurn {
 		recallTurns.Unlock()
 		log.Printf("recall turn refused: at capacity for %q (%s holds %d of %d, %d of %d outstanding in all)",
 			subject, holder, held, recallTurnUserCap, total, recallTurnCap)

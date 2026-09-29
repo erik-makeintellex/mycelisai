@@ -164,5 +164,9 @@ func (r *InternalToolRegistry) summarizeAndCheckpoint(ctx context.Context, scope
 	if strings.TrimSpace(scope.TeamID) != "" {
 		channelKey = fmt.Sprintf("team.%s.planning", scope.TeamID)
 	}
+	if owner == "" {
+		// AutoSummarize is a Core writer (MEM-LANES-3): its no-user checkpoint is system state.
+		return r.mem.PutSystemTempMemory(ctx, scope.TenantID, channelKey, scope.AgentID, content, metadata, 240, "auto_summarize")
+	}
 	return r.mem.PutTempMemory(ctx, scope.TenantID, channelKey, scope.AgentID, content, metadata, 240, owner)
 }

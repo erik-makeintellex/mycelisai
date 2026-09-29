@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/mycelis/core/internal/deploymentcontext"
 	"github.com/mycelis/core/internal/memory"
 )
 
@@ -133,4 +134,17 @@ func dedupeStringValues(values []string) []string {
 		out = append(out, value)
 	}
 	return out
+}
+
+// deploymentContextVisibility governs a load_deployment_context save like
+// remember (MEM-LANES-3). It resolves the visibility the save would store
+// (deploymentcontext.ResolveVisibility: a missing or unknown value such as
+// "public" is global), then applies ownerLaneVisibility. The org-wide classes
+// are org-wide by definition and stay under requireConfirmedOrgWideWrite.
+func deploymentContextVisibility(ctx context.Context, knowledgeClass, requested string, scope memoryScope) (string, string) {
+	scope.Visibility = deploymentcontext.ResolveVisibility(knowledgeClass, requested)
+	if orgWideContextClasses[strings.ToLower(strings.TrimSpace(knowledgeClass))] {
+		return scope.Visibility, ""
+	}
+	return ownerLaneVisibility(recallAccessFromContext(ctx), scope)
 }

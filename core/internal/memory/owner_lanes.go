@@ -27,27 +27,24 @@ const (
 	// latest bus signal on a subject. Their system-class rows are bus state,
 	// an org-wide class, not saved memory.
 	SignalCheckpointChannelPrefix = "signal.latest."
+	// SystemWriterKey names the Core writer of a temp row with no user
+	// (MEM-LANES-3). Only PutSystemTempMemory sets it, so a system row is
+	// always Core's own, never a model tool's.
+	SystemWriterKey = "system_writer"
 )
 
-// SharedTempChannel reports whether other turns read a channel's no-user
-// rows (MEM-LANES-2): every signal checkpoint channel reaches signed-in users,
-// and lead.shared and interaction.contract reach every no-user lead prompt.
-// A no-user row there must come from Core's bus writer, never a model tool.
-func SharedTempChannel(channelKey string) bool {
-	key := strings.TrimSpace(channelKey)
-	return strings.HasPrefix(key, SignalCheckpointChannelPrefix) || key == "lead.shared" || key == "interaction.contract"
-}
-
-// ownerLaneTypes are the context_vectors types written by the owner lanes.
-var ownerLaneTypes = []string{"agent_memory", "conversation"}
+// ownerLaneTypes are the context_vectors types written by the owner lanes
+// (inception recipes joined in MEM-LANES-3).
+var ownerLaneTypes = []string{"agent_memory", "conversation", "inception_recipe"}
 
 // OwnerLaneMetadata returns a copy of metadata stamped with the owner of one
 // lane write: ownerUserID, or the system class when the write has no user.
-// Any caller-supplied owner key is dropped first, so it cannot be forged.
+// Any caller-supplied owner or writer key is dropped first, so it cannot be
+// forged.
 func OwnerLaneMetadata(metadata map[string]any, ownerUserID string) map[string]any {
 	out := make(map[string]any, len(metadata)+1)
 	for key, value := range metadata {
-		if key == OwnerUserIDKey || key == OwnerClassKey {
+		if key == OwnerUserIDKey || key == OwnerClassKey || key == SystemWriterKey {
 			continue
 		}
 		out[key] = value
@@ -82,13 +79,16 @@ func ownerLaneClause(meta string, reader GovernedReader, args []any, nextArg int
 }
 
 // tempReadClause keeps temp-memory rows the reader may read. A signed-in
-// reader sees their own rows plus system-class signal checkpoints; a reader
-// with no user sees system-class rows. A user's row never reaches another
-// user or a no-user turn, and a legacy row with neither owner key reaches no
-// one (MEM-LANES-2: it cannot be told apart from a user's turn content).
+// reader sees their own rows plus Core-written signal checkpoints; a reader
+// with no user sees Core-written system rows. A user's row never reaches
+// another user or a no-user turn. A row with no user that Core's system
+// writer did not mark (a legacy row, or a model tool's no-user write from
+// before MEM-LANES-3) reaches no one: it cannot be told apart from a user's
+// turn content.
 func tempReadClause(reader GovernedReader, args []any, nextArg int) (string, []any, int) {
 	owner := fmt.Sprintf("NULLIF(btrim(metadata->>'%s'), '')", OwnerUserIDKey)
-	system := fmt.Sprintf("(%s IS NULL AND metadata->>'%s' = '%s')", owner, OwnerClassKey, OwnerClassSystem)
+	system := fmt.Sprintf("(%s IS NULL AND metadata->>'%s' = '%s' AND NULLIF(btrim(metadata->>'%s'), '') IS NOT NULL)",
+		owner, OwnerClassKey, OwnerClassSystem, SystemWriterKey)
 	if user := strings.TrimSpace(reader.UserID); user != "" {
 		args = append(args, user, SignalCheckpointChannelPrefix)
 		return fmt.Sprintf("(%s = $%d OR (%s AND starts_with(channel_key, $%d)))", owner, nextArg, system, nextArg+1), args, nextArg + 2
