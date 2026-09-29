@@ -32,7 +32,7 @@ func TestAgentPublishToolBusSignal_StatusChannelForMCP(t *testing.T) {
 	}
 	nc.Flush()
 
-	agent.publishToolBusSignal(protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{
+	agent.publishToolBusSignal(RecallAccess{}, protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{
 		"state": "invoked",
 		"tool":  "read_file",
 	})
@@ -89,7 +89,7 @@ func TestAgentPublishToolBusSignal_ResultChannelForMCP(t *testing.T) {
 	}
 	nc.Flush()
 
-	agent.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{
+	agent.publishToolBusSignal(RecallAccess{}, protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{
 		"state":          "completed",
 		"tool":           "web_search",
 		"result_preview": "ok",
@@ -152,7 +152,7 @@ func TestAgentPublishToolBusSignal_PersistsLatestCheckpoint(t *testing.T) {
 		internalTools: reg,
 	}
 
-	agent.publishToolBusSignal(protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{
+	agent.publishToolBusSignal(RecallAccess{}, protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{
 		"state": "invoked",
 		"tool":  "filesystem/read_file",
 	})

@@ -205,8 +205,11 @@ func TestMemLanesRealDB_TempChannelsFollowTheRequestingUser(t *testing.T) {
 	reg := w.registry(router)
 	const aTemp, legacy, signal = "MemLanes kiwi checkpoint 3131.", "MemLanes legacy kiwi temp 1212.", "MemLanes kiwi signal 4545."
 	memlanesCall(t, "A temp write", reg.handleTempMemoryWrite, w.accA, map[string]any{"channel": "lead.shared", "content": aTemp})
-	if _, err := w.db.Exec(`INSERT INTO temp_memory_channels (tenant_id, channel_key, owner_agent_id, content) VALUES
-		('default', 'lead.shared', 'admin', $1), ('default', 'signal.latest.swarm.team.memlanes.signal.status', 'memlanes', $2)`, legacy, signal); err != nil {
+	// MEM-LANES-2: a signal checkpoint reaches users only as system bus state;
+	// a legacy row with neither owner key reaches no one.
+	if _, err := w.db.Exec(`INSERT INTO temp_memory_channels (tenant_id, channel_key, owner_agent_id, content, metadata) VALUES
+		('default', 'lead.shared', 'admin', $1, '{}'), ('default', 'signal.latest.swarm.team.memlanes.signal.status', 'memlanes', $2, '{"owner_class":"system"}'),
+		('default', 'signal.latest.swarm.team.memlanes-legacy.signal.status', 'memlanes', 'MemLanes legacy kiwi signal 4646.', '{}')`, legacy, signal); err != nil {
 		t.Fatalf("seed legacy temp: %v", err)
 	}
 	// A's own chat history becomes a continuity checkpoint in the team planning channel.
@@ -241,6 +244,9 @@ func TestMemLanesRealDB_TempChannelsFollowTheRequestingUser(t *testing.T) {
 	signalOut := memlanesCall(t, "B read_signals", reg.handleReadSignals, w.accB,
 		map[string]any{"latest_only": true, "channel_key": "signal.latest.swarm.team.memlanes.signal.status"})
 	memlanesCheck(t, "B read_signals", signalOut, []string{"4545"}, nil)
+	legacyOut := memlanesCall(t, "B read_signals legacy", reg.handleReadSignals, w.accB,
+		map[string]any{"latest_only": true, "channel_key": "signal.latest.swarm.team.memlanes-legacy.signal.status"})
+	memlanesCheck(t, "B read_signals legacy", legacyOut, nil, []string{"4646"})
 	memlanesCall(t, "B temp clear", reg.handleTempMemoryClear, w.accB, map[string]any{"channel": "lead.shared"})
 	memlanesCheck(t, "A after B clear", read(w.accA), []string{"3131"}, nil)
 	if _, err := reg.handleTempMemoryWrite(sruToolCtx(RecallAccess{Unavailable: true}), map[string]any{"channel": "lead.shared", "content": "MemLanes unverified 2222."}); err == nil {

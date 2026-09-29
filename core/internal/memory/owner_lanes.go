@@ -17,17 +17,26 @@ import (
 //
 // Reads are filtered per viewer below. Rows saved before owners were recorded
 // carry neither key: they are never user-readable unless they are already
-// org-wide (visibility global for the vector lanes, a signal checkpoint
-// channel for temp memory).
+// org-wide (visibility global for the vector lanes). A temp row with no user
+// reaches a signed-in user only as a system-class signal checkpoint.
 const (
 	OwnerUserIDKey   = "owner_user_id"
 	OwnerClassKey    = "owner_class"
 	OwnerClassSystem = "system"
 	// SignalCheckpointChannelPrefix names the temp channels that mirror the
-	// latest bus signal on a subject. Their owner-less rows are bus state, an
-	// org-wide class, not saved memory.
+	// latest bus signal on a subject. Their system-class rows are bus state,
+	// an org-wide class, not saved memory.
 	SignalCheckpointChannelPrefix = "signal.latest."
 )
+
+// SharedTempChannel reports whether other turns read a channel's no-user
+// rows (MEM-LANES-2): every signal checkpoint channel reaches signed-in users,
+// and lead.shared and interaction.contract reach every no-user lead prompt.
+// A no-user row there must come from Core's bus writer, never a model tool.
+func SharedTempChannel(channelKey string) bool {
+	key := strings.TrimSpace(channelKey)
+	return strings.HasPrefix(key, SignalCheckpointChannelPrefix) || key == "lead.shared" || key == "interaction.contract"
+}
 
 // ownerLaneTypes are the context_vectors types written by the owner lanes.
 var ownerLaneTypes = []string{"agent_memory", "conversation"}
@@ -73,20 +82,18 @@ func ownerLaneClause(meta string, reader GovernedReader, args []any, nextArg int
 }
 
 // tempReadClause keeps temp-memory rows the reader may read. A signed-in
-// reader sees their own rows plus owner-less signal checkpoints; a reader
-// with no user sees system rows plus owner-less signal checkpoints. A user's
-// row never reaches another user or a no-user turn, and a legacy owner-less
-// row outside a signal channel reaches no one.
+// reader sees their own rows plus system-class signal checkpoints; a reader
+// with no user sees system-class rows. A user's row never reaches another
+// user or a no-user turn, and a legacy row with neither owner key reaches no
+// one (MEM-LANES-2: it cannot be told apart from a user's turn content).
 func tempReadClause(reader GovernedReader, args []any, nextArg int) (string, []any, int) {
 	owner := fmt.Sprintf("NULLIF(btrim(metadata->>'%s'), '')", OwnerUserIDKey)
-	signal := fmt.Sprintf("(%s IS NULL AND starts_with(channel_key, $%d))", owner, nextArg)
-	args = append(args, SignalCheckpointChannelPrefix)
-	nextArg++
+	system := fmt.Sprintf("(%s IS NULL AND metadata->>'%s' = '%s')", owner, OwnerClassKey, OwnerClassSystem)
 	if user := strings.TrimSpace(reader.UserID); user != "" {
-		args = append(args, user)
-		return fmt.Sprintf("(%s = $%d OR %s)", owner, nextArg, signal), args, nextArg + 1
+		args = append(args, user, SignalCheckpointChannelPrefix)
+		return fmt.Sprintf("(%s = $%d OR (%s AND starts_with(channel_key, $%d)))", owner, nextArg, system, nextArg+1), args, nextArg + 2
 	}
-	return fmt.Sprintf("((%s IS NULL AND metadata->>'%s' = '%s') OR %s)", owner, OwnerClassKey, OwnerClassSystem, signal), args, nextArg
+	return system, args, nextArg
 }
 
 // tempClearClause limits a clear to the reader's own rows: a signed-in

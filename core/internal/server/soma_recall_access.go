@@ -26,9 +26,13 @@ func (s *AdminServer) memoryReaderFromContext(ctx context.Context) (memory.Gover
 	return s.memoryReader(req)
 }
 
-// recallAccessFor is the saved-memory read scope of the identity in ctx.
+// recallAccessFor is the saved-memory read scope of the identity in ctx. It
+// also carries the M2 org-wide write authority (root admin with
+// memory:write, as memoryLifecycleDenial applies it), which alone lets a
+// memory tool save a fact or summary org-wide (MEM-LANES-2).
 func (s *AdminServer) recallAccessFor(ctx context.Context) swarm.RecallAccess {
-	if IdentityFromContext(ctx) == nil {
+	identity := IdentityFromContext(ctx)
+	if identity == nil {
 		return swarm.RecallAccess{}
 	}
 	reader, err := s.memoryReaderFromContext(ctx)
@@ -36,7 +40,8 @@ func (s *AdminServer) recallAccessFor(ctx context.Context) swarm.RecallAccess {
 		log.Printf("soma recall scope: memory access check failed, governed recall withheld: %v", err)
 		return swarm.RecallAccess{Unavailable: true}
 	}
-	return swarm.RecallAccess{Reader: reader, User: true}
+	orgWide := identity.Role == "admin" && hasScope(identity, scopeMemoryWrite)
+	return swarm.RecallAccess{Reader: reader, User: true, OrgWideWrite: orgWide}
 }
 
 // recallTurnMsg builds the direct request to an agent. A turn with a user

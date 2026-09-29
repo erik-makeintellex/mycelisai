@@ -43,6 +43,9 @@ func (a *Agent) processUserTurn(access RecallAccess, input string, history []cog
 	result := a.processTurn(access, input, history, true, nil)
 	if access.Unavailable {
 		result.Text = withRecallUnavailableNote(result.Text)
+		if access.atCapacity && strings.TrimSpace(result.Text) != "" {
+			result.Text += " " + recallAtCapacityNote
+		}
 	}
 	return result
 }
