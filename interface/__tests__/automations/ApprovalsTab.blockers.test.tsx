@@ -10,11 +10,6 @@ vi.mock("@/components/approvals/DecisionCard", () => ({
   DecisionCard: () => <div data-testid="decision-card">DecisionCard</div>,
 }));
 
-vi.mock("@/components/workspace/TrustSlider", () => ({
-  __esModule: true,
-  default: () => <div data-testid="trust-slider">TrustSlider</div>,
-}));
-
 vi.mock("@/components/dashboard/ManifestationPanel", () => ({
   __esModule: true,
   default: () => <div data-testid="manifestation-panel">ManifestationPanel</div>,

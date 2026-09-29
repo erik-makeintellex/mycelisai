@@ -27,7 +27,7 @@ func TestConnectAs_UsesDistinctConnectionNamesForSplitLanes(t *testing.T) {
 		srv.WaitForShutdown()
 	})
 
-	coreClient, err := Connect(srv.ClientURL())
+	coreClient, err := ConnectAs(srv.ClientURL(), "")
 	if err != nil {
 		t.Fatalf("connect core client: %v", err)
 	}

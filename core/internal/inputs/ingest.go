@@ -84,22 +84,6 @@ func EventFromBusMessage(source Source, subject string, data []byte, headers map
 	return event, nil
 }
 
-func NormalizeNATSMessage(source Source, subject string, data []byte) IngestEvent {
-	event, err := EventFromBusMessage(source, subject, data, nil)
-	if err != nil {
-		return IngestEvent{
-			SourceID:      source.ID,
-			ChannelKey:    "default",
-			Payload:       json.RawMessage(`{}`),
-			SourceKind:    defaultSourceKind(source.AdapterKind),
-			SourceChannel: subject,
-			PayloadKind:   defaultPayloadKind(source.AdapterKind),
-			TenantID:      firstNonEmpty(source.TenantID, "default"),
-		}
-	}
-	return event
-}
-
 func normalizedPayloadFromBusData(data []byte, event *IngestEvent) (json.RawMessage, time.Time, error) {
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 {
@@ -177,15 +161,6 @@ func payloadStringField(payload json.RawMessage, key string) string {
 	}
 	value, _ := values[key].(string)
 	return strings.TrimSpace(value)
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
-		}
-	}
-	return ""
 }
 
 func defaultSourceKind(adapterKind string) string {

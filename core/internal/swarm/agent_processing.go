@@ -27,10 +27,6 @@ type ProcessResult struct {
 	Partial          bool                             `json:"partial,omitempty"`          // Text is incomplete work cut off by a stop
 }
 
-func (a *Agent) processMessage(input string, priorHistory []cognitive.ChatMessage) string {
-	return a.processMessageStructured(input, priorHistory).Text
-}
-
 func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.ChatMessage) ProcessResult {
 	return a.processMessageStructuredWithPosture(input, priorHistory, true)
 }

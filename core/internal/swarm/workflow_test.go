@@ -45,7 +45,7 @@ func TestWorkflow_FullLoop(t *testing.T) {
 	// 3. Setup Soma with Registry
 	// We'll manually inject a team instead of loading from disk to keep test self-contained
 	guard := &governance.Guard{}
-	registry := NewRegistry(".") // Empty
+	registry := NewRegistryFromRuntimeOrganization(nil) // Empty
 	soma := NewSoma(nc, guard, registry, brain, nil, nil, nil)
 
 	// Manually inject a team

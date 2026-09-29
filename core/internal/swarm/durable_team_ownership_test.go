@@ -90,7 +90,7 @@ func (*refusingDurableTeamStore) DeleteRuntimeTeam(context.Context, string) erro
 func TestStopTeamDurablyPreservesRuntimeOnOwnershipRefusal(t *testing.T) {
 	_, nc := startTestNATS(t)
 	store := &refusingDurableTeamStore{}
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	soma.SetDurableTeamStore(store)
 	manifest := completeDurableManifest()
 	if err := soma.SpawnTeam(manifest); err != nil {

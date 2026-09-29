@@ -4,7 +4,6 @@ import ApprovalsTab from "@/components/automations/ApprovalsTab";
 import { useCortexStore } from "@/store/useCortexStore";
 
 vi.mock("reactflow", async () => await import("../mocks/reactflow"));
-vi.mock("@/components/workspace/TrustSlider", () => ({ default: () => <div /> }));
 vi.mock("@/components/dashboard/ManifestationPanel", () => ({ default: () => <div /> }));
 
 describe("ApprovalsTab audit section load error", () => {

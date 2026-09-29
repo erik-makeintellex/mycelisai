@@ -11,17 +11,6 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (s *AdminServer) insertTeamWorkMissionEventDB(ctx context.Context, event *protocol.TeamStatusEvent) error {
-	if strings.TrimSpace(event.RunID) == "" {
-		return nil
-	}
-	db := s.getDB()
-	if db == nil {
-		return errors.New("database not available")
-	}
-	return s.insertTeamWorkMissionEventExec(ctx, db, event)
-}
-
 func (s *AdminServer) insertTeamWorkMissionEventExec(ctx context.Context, exec teamWorkSQLExecutor, event *protocol.TeamStatusEvent) error {
 	if strings.TrimSpace(event.RunID) == "" {
 		return nil

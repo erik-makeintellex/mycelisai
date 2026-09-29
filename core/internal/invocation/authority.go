@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"sort"
 )
 
@@ -166,11 +165,4 @@ func lockBinding(ctx context.Context, tx *sql.Tx) (binding, error) {
 		return binding{}, err
 	}
 	return b, nil
-}
-
-func sameAuthority(left, right authority) error {
-	if digest(left) != digest(right) {
-		return fmt.Errorf("%w: current resource authority changed", ErrDenied)
-	}
-	return nil
 }

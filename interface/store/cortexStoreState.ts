@@ -87,8 +87,6 @@ export interface CortexResourcesContract {
     selectedArtifact: CTSEnvelope | null;
     missions: Mission[];
     isFetchingMissions: boolean;
-    trustThreshold: number;
-    isSyncingThreshold: boolean;
     isToolsPaletteOpen: boolean;
     sensorFeeds: SensorNode[];
     isFetchingSensors: boolean;
@@ -122,8 +120,6 @@ export interface CortexResourcesContract {
     selectArtifact: (artifact: CTSEnvelope | null) => void;
     approveArtifact: (id: string) => void;
     rejectArtifact: (id: string, reason: string) => void;
-    setTrustThreshold: (value: number) => void;
-    fetchTrustThreshold: () => Promise<void>;
     toggleToolsPalette: () => void;
     fetchSensors: () => Promise<void>;
     toggleSensorGroup: (group: string) => void;

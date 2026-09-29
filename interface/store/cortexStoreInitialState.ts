@@ -73,8 +73,6 @@ const initialResourcesState: StripActions<CortexResourcesContract> = {
     selectedArtifact: null,
     missions: [],
     isFetchingMissions: false,
-    trustThreshold: 0.7,
-    isSyncingThreshold: false,
     isToolsPaletteOpen: false,
     sensorFeeds: [],
     isFetchingSensors: false,

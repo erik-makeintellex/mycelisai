@@ -196,18 +196,6 @@ func (s *AdminServer) insertTeamStatusEventExec(ctx context.Context, exec teamWo
 	return s.insertTeamWorkMissionEventExec(ctx, exec, event)
 }
 
-func (s *AdminServer) updateTeamWorkItemLastEventDB(ctx context.Context, item *protocol.TeamWorkItem, event protocol.TeamStatusEvent) error {
-	db := s.getDB()
-	if db == nil {
-		return errors.New("database not available")
-	}
-	if err := s.updateTeamWorkItemLastEventExec(ctx, db, item, event); err != nil {
-		return err
-	}
-	item.LastEvent = &event
-	return nil
-}
-
 func (s *AdminServer) updateTeamWorkItemLastEventExec(ctx context.Context, exec teamWorkSQLExecutor, item *protocol.TeamWorkItem, event protocol.TeamStatusEvent) error {
 	if exec == nil {
 		return errors.New("database not available")

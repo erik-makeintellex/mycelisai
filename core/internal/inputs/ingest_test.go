@@ -3,6 +3,7 @@ package inputs
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func TestNormalizeNATSMessagePreservesSignalMetadata(t *testing.T) {
+func TestEventFromBusMessagePreservesSignalMetadata(t *testing.T) {
 	raw, err := protocol.WrapSignalPayloadWithMeta(
 		protocol.SourceKindSensor,
 		"warehouse.temperature",
@@ -23,9 +24,12 @@ func TestNormalizeNATSMessagePreservesSignalMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatalf("wrap: %v", err)
 	}
-	event := NormalizeNATSMessage(Source{
+	event, err := EventFromBusMessage(Source{
 		ID: "warehouse-sensor", AdapterKind: AdapterSensor, TenantID: "default",
-	}, "swarm.global.input.warehouse-sensor", raw)
+	}, fmt.Sprintf(protocol.TopicGlobalInputFmt, "warehouse-sensor"), raw, nil)
+	if err != nil {
+		t.Fatalf("EventFromBusMessage: %v", err)
+	}
 	if event.SourceKind != string(protocol.SourceKindSensor) || event.PayloadKind != string(protocol.PayloadKindTelemetry) {
 		t.Fatalf("event metadata = %+v", event)
 	}

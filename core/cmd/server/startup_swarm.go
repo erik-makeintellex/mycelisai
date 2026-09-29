@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -14,13 +13,10 @@ import (
 	"github.com/mycelis/core/internal/events"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
-	"github.com/mycelis/core/internal/overseer"
 	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/internal/server"
-	mycelisSignal "github.com/mycelis/core/internal/signal"
 	"github.com/mycelis/core/internal/swarm"
 	"github.com/mycelis/core/internal/triggers"
-	"github.com/mycelis/core/pkg/protocol"
 	"github.com/nats-io/nats.go"
 )
 
@@ -121,33 +117,6 @@ func startArchivistRuntime(ctx context.Context, mux *http.ServeMux, observerNC *
 	if observerNC != nil {
 		go archivist.StartDaemon(ctx, observerNC, "22222222-2222-2222-2222-222222222222")
 	}
-}
-
-func startOverseerEngine(nc *nats.Conn, streamHandler *mycelisSignal.StreamHandler) *overseer.Engine {
-	if nc == nil {
-		log.Println("WARN: Overseer disabled (no NATS connection).")
-		return nil
-	}
-	overseerEngine := overseer.NewEngine(nc)
-	overseerEngine.SetGovernanceCallback(func(env *protocol.CTSEnvelope) {
-		if streamHandler == nil {
-			return
-		}
-		data, _ := json.Marshal(map[string]interface{}{
-			"type":        "governance_halt",
-			"source":      env.Meta.SourceNode,
-			"trust_score": env.TrustScore,
-			"timestamp":   env.Meta.Timestamp.Format(time.RFC3339),
-			"trace_id":    env.Meta.TraceID,
-		})
-		streamHandler.Broadcast(string(data))
-	})
-	if err := overseerEngine.Start(); err != nil {
-		log.Printf("WARN: Overseer failed to start: %v", err)
-	} else {
-		log.Println("Overseer Engine Online. Trust Economy active.")
-	}
-	return overseerEngine
 }
 
 func loadMCPLibrary(ctx context.Context, mcpService *mcp.Service, mcpPool *mcp.ClientPool) *mcp.Library {

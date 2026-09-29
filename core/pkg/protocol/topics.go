@@ -29,9 +29,6 @@ const (
 	TopicTeamTelemetryFmt  = "swarm.team.%s.telemetry" // team ID
 	TopicTeamTelemetryWild = "swarm.team.*.telemetry"
 
-	// Mission DAG (Overseer)
-	TopicMissionTask = "swarm.mission.task"
-
 	// Wildcard subscriptions
 	TopicTeamInternalWild     = "swarm.team.*.internal.>"
 	TopicTeamSignalStatusWild = "swarm.team.*.signal.status"

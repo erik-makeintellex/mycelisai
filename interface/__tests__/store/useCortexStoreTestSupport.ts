@@ -62,8 +62,6 @@ export function resetCortexStore(overrides: Partial<CortexState> = {}) {
         mcpActivity: [],
         isFetchingMCPActivity: false,
         mcpTools: [],
-        trustThreshold: 0.7,
-        isSyncingThreshold: false,
         blueprint: null,
         nodes,
         edges,

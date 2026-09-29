@@ -117,36 +117,3 @@ func TestToolRef_MatchesTool(t *testing.T) {
 		}
 	}
 }
-
-func TestExtractMCPRefs(t *testing.T) {
-	tools := []string{
-		"read_file",
-		"mcp:filesystem/read_file",
-		"consult_council",
-		"mcp:github/*",
-		"toolset:workspace",
-		"write_file",
-	}
-	refs := ExtractMCPRefs(tools)
-	if len(refs) != 2 {
-		t.Fatalf("ExtractMCPRefs: got %d refs, want 2", len(refs))
-	}
-	if refs[0].ServerName != "filesystem" || refs[0].ToolName != "read_file" {
-		t.Errorf("refs[0] = %+v, want filesystem/read_file", refs[0])
-	}
-	if refs[1].ServerName != "github" || refs[1].ToolName != "*" {
-		t.Errorf("refs[1] = %+v, want github/*", refs[1])
-	}
-}
-
-func TestHasMCPRefs(t *testing.T) {
-	if HasMCPRefs([]string{"read_file", "write_file"}) {
-		t.Error("HasMCPRefs should return false for internal-only tools")
-	}
-	if !HasMCPRefs([]string{"read_file", "mcp:filesystem/*"}) {
-		t.Error("HasMCPRefs should return true with mcp: ref")
-	}
-	if !HasMCPRefs([]string{"toolset:workspace"}) {
-		t.Error("HasMCPRefs should return true with toolset: ref")
-	}
-}

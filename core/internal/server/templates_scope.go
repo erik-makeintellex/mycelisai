@@ -2,13 +2,9 @@ package server
 
 import "github.com/mycelis/core/pkg/protocol"
 
-// buildScopeFromBlueprint extracts scope validation metadata from a blueprint,
-// including the server-side approval classification (A2b C1).
-func buildScopeFromBlueprint(bp *protocol.MissionBlueprint) *protocol.ScopeValidation {
-	return buildScopeFromBlueprintFor(bp, defaultUserGovernanceProfile(""))
-}
-
-// buildScopeFromBlueprintFor classifies a blueprint with the same rules and
+// buildScopeFromBlueprintFor extracts scope validation metadata from a
+// blueprint, including the server-side approval classification (A2b C1). It
+// classifies a blueprint with the same rules and
 // constants as chat and council proposals: every agent tool is a planned
 // action for buildApprovalPolicy (tool risk classes, cost, external data),
 // agent/team count raises capability risk, and applyApproverTier mirrors the

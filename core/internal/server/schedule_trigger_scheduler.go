@@ -32,19 +32,6 @@ func (ls *LoopScheduler) runDueScheduleTriggersAt(now time.Time) int {
 	return proposed
 }
 
-func proposeScheduleRule(ctx context.Context, store *triggers.Store, rule triggers.TriggerRule, now time.Time) bool {
-	if rule.ScheduleIntervalSeconds <= 0 {
-		_ = store.LogExecution(ctx, &triggers.TriggerExecution{
-			RuleID:     rule.ID,
-			EventID:    scheduleRuleEventID(rule.ID, now),
-			Status:     "skipped",
-			SkipReason: "schedule_interval_seconds required",
-		})
-		return false
-	}
-	return proposeScheduleRuleWithHandoffRefs(ctx, store, rule, now, "", "", nil)
-}
-
 func (s *AdminServer) proposeScheduleRuleHandoff(ctx context.Context, rule triggers.TriggerRule, now time.Time) bool {
 	if s == nil || s.Triggers == nil {
 		return false

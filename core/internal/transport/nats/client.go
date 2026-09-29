@@ -12,17 +12,11 @@ type Client struct {
 	Conn *nats.Conn
 }
 
-// Connect establishes a connection to the NATS server with automatic reconnects.
-// MaxReconnects(-1) means unlimited — the process will keep retrying indefinitely
-// so that transient infrastructure drops (k8s pod restart, bridge flap) are healed
-// without requiring a Core restart.
-func Connect(url string) (*Client, error) {
-	return ConnectAs(url, "Mycelis Core")
-}
-
-// ConnectAs establishes a named connection to the NATS server.
-// Distinct names make it easier to separate chat-critical traffic from
-// background observer/fanout lanes while retaining the same retry posture.
+// ConnectAs establishes a named connection to the NATS server with automatic
+// reconnects; an empty name means "Mycelis Core". MaxReconnects(-1) means
+// unlimited, so transient infrastructure drops (k8s pod restart, bridge flap)
+// heal without a Core restart. Distinct names separate chat-critical traffic
+// from background observer/fanout lanes while keeping the same retry posture.
 func ConnectAs(url, connectionName string) (*Client, error) {
 	name := connectionName
 	if name == "" {

@@ -69,7 +69,6 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 	soma := startSomaRuntime(ctx, mux, core, selection, registry, services)
 	registerBootstrapRoutes(mux, services.Bootstrap)
 	startArchivistRuntime(ctx, mux, core.ObserverNC, services.Archivist)
-	overseerEngine := startOverseerEngine(core.NC, services.Stream)
 
 	mcpLibrary := loadMCPLibrary(ctx, services.MCP, services.MCPPool)
 	services.Capabilities = capabilities.NewService(capabilities.Dependencies{
@@ -102,7 +101,6 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		core.NC,
 		services.Stream,
 		services.MetaArchitect,
-		overseerEngine,
 		services.Archivist,
 		services.MCP,
 		services.MCPPool,

@@ -112,6 +112,20 @@ describe('cortexStoreStreamSlice', () => {
         expect(state.missionChat[0]?.content).toContain('Work started');
     });
 
+    it('never turns a legacy governance_halt signal into a pending deliverable (CONS-C3)', () => {
+        createSlice().initializeStream();
+        const source = MockEventSource.latest()!;
+
+        send(source, {
+            type: 'governance_halt',
+            source: 'agent-alpha',
+            trust_score: 0.3,
+            timestamp: '2026-07-31T12:00:03Z',
+        }, 'halt-1');
+
+        expect(state.pendingArtifacts).toHaveLength(0);
+    });
+
     it('retains replay ids when force recreates EventSource', () => {
         createSlice().initializeStream();
         const firstSource = MockEventSource.latest()!;

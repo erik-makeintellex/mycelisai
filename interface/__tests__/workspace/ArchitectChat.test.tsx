@@ -3,9 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import type { SVGProps } from 'react';
 
 // vi.mock calls BEFORE component imports
-vi.mock('@/components/workspace/TrustSlider', () => ({
-    default: () => <div data-testid="trust-slider">TrustSlider</div>,
-}));
 vi.mock('lucide-react', () => ({
     Send: (props: SVGProps<SVGSVGElement>) => <svg data-testid="send-icon" {...props} />,
     Loader2: (props: SVGProps<SVGSVGElement>) => <svg data-testid="loader-icon" {...props} />,

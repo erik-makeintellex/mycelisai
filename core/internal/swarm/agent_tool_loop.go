@@ -33,10 +33,6 @@ type agentToolLoopResult struct {
 	recall RecallAccess
 }
 
-func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
-	return a.runTurnToolLoop(RecallAccess{}, input, priorHistory, req, resp, profile, planningOnly, requirement)
-}
-
 func (a *Agent) runTurnToolLoop(access RecallAccess, input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
 	result := agentToolLoopResult{resp: resp, responseText: resp.Text, recall: access}
 	if a.toolExecutor == nil || len(a.Manifest.Tools) == 0 {

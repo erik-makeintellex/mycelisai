@@ -56,24 +56,3 @@ func (ref *ToolRef) MatchesTool(serverName, toolName string) bool {
 	}
 	return ref.ToolName == toolName
 }
-
-// ExtractMCPRefs filters a Tools[] list and returns parsed ToolRefs for all mcp: entries.
-func ExtractMCPRefs(tools []string) []ToolRef {
-	var refs []ToolRef
-	for _, t := range tools {
-		if ref := ParseToolRef(t); ref != nil {
-			refs = append(refs, *ref)
-		}
-	}
-	return refs
-}
-
-// HasMCPRefs returns true if the tools list contains any mcp: or toolset: references.
-func HasMCPRefs(tools []string) bool {
-	for _, t := range tools {
-		if IsMCPRef(t) || IsToolSetRef(t) {
-			return true
-		}
-	}
-	return false
-}

@@ -44,10 +44,6 @@ func InferOutputClass(kind string, refs ...string) OutputClass {
 	}
 }
 
-func IsUserDeliverableOutputClass(value string) bool {
-	return NormalizeOutputClass(value) == OutputClassUserDeliverable
-}
-
 func inferOutputClassFromPath(value string) OutputClass {
 	path := strings.ToLower(strings.TrimSpace(value))
 	path = strings.ReplaceAll(path, "\\", "/")

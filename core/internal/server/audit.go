@@ -1,7 +1,6 @@
 package server
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -162,12 +161,4 @@ func (s *AdminServer) HandleCancelAction(w http.ResponseWriter, r *http.Request)
 		"intent_proof_id": req.IntentProofID,
 		"audit_event_id":  auditID,
 	}))
-}
-
-func rowsAffected(result sql.Result) int64 {
-	if result == nil {
-		return 0
-	}
-	count, _ := result.RowsAffected()
-	return count
 }

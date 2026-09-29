@@ -24,7 +24,6 @@ import (
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/outputvalidation"
-	"github.com/mycelis/core/internal/overseer"
 	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/reactive"
 	"github.com/mycelis/core/internal/registry"
@@ -53,7 +52,6 @@ type AdminServer struct {
 	NC            *nats.Conn // NATS for chat request-reply routing
 	Stream        *signal.StreamHandler
 	MetaArchitect *cognitive.MetaArchitect
-	Overseer      *overseer.Engine     // Phase 5.2: Trust Economy
 	Archivist     *memory.Archivist    // Phase 5.3: RAG Persistence
 	Proposals     *ProposalStore       // Phase 5.3: Team Manifestation
 	MCP           *mcp.Service         // Phase 7.0: MCP Ingress
@@ -93,7 +91,7 @@ type AdminServer struct {
 	OutputValidator                outputvalidation.Validator
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
 	// Reactive engine: routes subscribed NATS messages to Soma for evaluation.
 	// nc may be nil (NATS offline); engine degrades gracefully.
 	reactiveEngine := reactive.New(nc, func(profileID, topic string, msg []byte) {
@@ -118,7 +116,6 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		NC:                  nc,
 		Stream:              stream,
 		MetaArchitect:       architect,
-		Overseer:            ov,
 		Archivist:           arch,
 		Proposals:           NewProposalStore(),
 		MCP:                 mcpSvc,

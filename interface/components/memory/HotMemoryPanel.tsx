@@ -41,7 +41,6 @@ function typeDotColor(type?: string): string {
             return "bg-cortex-success";
         case "error":
             return "bg-cortex-danger";
-        case "governance_halt":
         case "governance":
             return "bg-cortex-warning";
         default:

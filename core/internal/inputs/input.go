@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 var (
@@ -69,7 +71,7 @@ func NormalizeSourceInput(in SourceInput) (Source, error) {
 	bufferPolicy := normalizeJSON(in.BufferPolicy)
 	subject := strings.TrimSpace(in.AllowedIngressSubject)
 	if subject == "" {
-		subject = "swarm.global.input." + id
+		subject = fmt.Sprintf(protocol.TopicGlobalInputFmt, id)
 	}
 	if !safeIngressSubject(subject) {
 		return Source{}, fmt.Errorf("%w: allowed_ingress_subject must be a concrete swarm.global.input.* subject", ErrInvalidInput)
@@ -181,7 +183,8 @@ func safeIngressSubject(subject string) bool {
 	if strings.ContainsAny(subject, " *>") {
 		return false
 	}
-	return strings.HasPrefix(subject, "swarm.global.input.") && subject != "swarm.global.input."
+	prefix := strings.TrimSuffix(protocol.TopicGlobalInputFmt, "%s")
+	return strings.HasPrefix(subject, prefix) && subject != prefix
 }
 
 func ErrorStatus(err error) int {

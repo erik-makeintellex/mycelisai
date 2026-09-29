@@ -3,7 +3,7 @@ import type { OutcomeHealthState } from "@/lib/outcomeHealth";
 export interface CTSEnvelope {
     id: string;
     source: string;
-    signal: 'artifact' | 'governance_halt';
+    signal: 'artifact';
     timestamp: string;
     trust_score?: number;
     payload: {

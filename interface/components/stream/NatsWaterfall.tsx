@@ -33,7 +33,6 @@ function classifyDirection(type?: string): SignalDirection {
         case 'cognitive':
         case 'error':
         case 'governance':
-        case 'governance_halt':
         case 'memory':
         case 'intent':
         default:
@@ -84,7 +83,6 @@ function spectrumColor(type?: string): { dot: string; text: string; glow: string
                 glow: 'shadow-[0_0_8px_rgba(234,84,85,0.4)]',
             };
         case 'governance':
-        case 'governance_halt':
             return {
                 dot: 'bg-cortex-warning',
                 text: 'text-cortex-warning',

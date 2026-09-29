@@ -120,9 +120,3 @@ type Blocker struct {
 	Message    string `json:"message"`
 	NextAction string `json:"next_action"`
 }
-
-type Store struct{}
-
-func NewStore(any) *Store {
-	return &Store{}
-}

@@ -80,7 +80,7 @@ func TestSomaStartRestoresDurableTeamsWithStandingPrecedence(t *testing.T) {
 		"team_id": "dynamic-team",
 		"name":    "Dynamic Team",
 	})
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests([]*TeamManifest{standing}), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{Teams: []*TeamManifest{standing}}), nil, nil, nil, nil)
 	soma.SetDurableTeamLoader(staticDurableTeamLoader{manifests: []*TeamManifest{restoredDuplicate, restoredDynamic}})
 	if err := soma.Start(); err != nil {
 		t.Fatalf("Soma.Start: %v", err)
