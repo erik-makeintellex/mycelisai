@@ -91,6 +91,8 @@ Core actions:
 - reject
 - inspect structured payload details
 
+Load failures are shown, not hidden. If the queue, policy, or Audit tab cannot load (for example a permission error or an unavailable service), the tab shows a plain-language notice with a "Try again" action instead of an empty state such as "No recent audit activity". An empty list means the load succeeded and there was nothing to show. Automation rules follow the same rule in the store; their tab notice ships with the human-first UI work.
+
 ---
 
 ## Workflow Builder (Admin Tools)

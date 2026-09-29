@@ -134,6 +134,7 @@ const initialGovernanceOpsState: StripActions<CortexGovernanceOpsContract> = {
     streamConnectionState: 'idle',
     activeSquadRoomId: null,
     teamRoster: [],
+    teamRosterError: null,
     isFetchingTeamRoster: false,
     policyConfig: null,
     policyError: null,
@@ -144,6 +145,7 @@ const initialGovernanceOpsState: StripActions<CortexGovernanceOpsContract> = {
     isFetchingApprovals: false,
     auditLog: [],
     isFetchingAuditLog: false,
+    auditLogError: null,
     cognitiveStatus: null,
     servicesStatus: [],
     isFetchingServicesStatus: false,
@@ -167,6 +169,7 @@ const initialAutomationRunsState: StripActions<CortexAutomationRunsContract> = {
     isFetchingRuns: false,
     triggerRules: [],
     isFetchingTriggers: false,
+    triggerRulesError: null,
     conversationTurns: null,
     isFetchingConversation: false,
 };

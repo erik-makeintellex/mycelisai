@@ -303,7 +303,7 @@ describe('useCortexStore resource registry', () => {
             expect(useCortexStore.getState().auditLog).toEqual(auditLog);
         });
 
-        it('fetchAuditLog treats a 403 as an empty role-restricted state, not an error', async () => {
+        it('fetchAuditLog records a 403 as an error and keeps the list, not a fake empty state', async () => {
             const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
             useCortexStore.setState({ auditLog: [{ id: 'stale' } as never] });
             mockFetch.mockResolvedValue({
@@ -314,7 +314,8 @@ describe('useCortexStore resource registry', () => {
 
             await useCortexStore.getState().fetchAuditLog();
 
-            expect(useCortexStore.getState().auditLog).toEqual([]);
+            expect(useCortexStore.getState().auditLogError).toEqual({ code: undefined, httpStatus: 403 });
+            expect(useCortexStore.getState().auditLog).toEqual([{ id: 'stale' }]);
             expect(useCortexStore.getState().isFetchingAuditLog).toBe(false);
             expect(consoleError).not.toHaveBeenCalled();
             consoleError.mockRestore();
