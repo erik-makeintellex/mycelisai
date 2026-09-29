@@ -56,12 +56,14 @@ test.describe("Canonical first-demo success path", () => {
         ok: true,
         data: {
           run_id: runId,
+          run_status: "completed",
+          confirmed: true,
           verified: true,
           execution_state: "verified",
           execution_summary: {
             execution: {
               shape: "directed_execution",
-              status: "verified",
+              status: "completed",
               summary: "Mocked first-demo success retained the project package.",
             },
             outputs: [{

@@ -77,7 +77,21 @@ async function openAndMeasureOutputReview(page: Page) {
   const toggle = page.getByRole("button", { name: "Open Outcome Vault" });
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
-  await toggle.click();
+  // E2E-T1: the toggle is interactive (visible, hit-testable, not
+  // intercepted -- verified with document.elementFromPoint) the moment the
+  // fixture navigates, but a click that lands before this client component
+  // finishes hydrating is a no-op: nothing replays it once React attaches
+  // its listener. Retry the click instead of trusting a single dispatch.
+  await expect
+    .poll(
+      async () => {
+        if ((await toggle.getAttribute("aria-expanded")) === "true") return true;
+        await toggle.click();
+        return false;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe(true);
 
   const outputSurface = page.getByTestId("soma-outcome-vault-overlay").getByRole("dialog", { name: "Outcome Vault" });
   await expect(outputSurface).toHaveAttribute("role", "dialog");
