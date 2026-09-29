@@ -19,7 +19,9 @@ func (a *Agent) handleDirectRequest(msg *nats.Msg) {
 	log.Printf("Agent [%s] direct request (%d prior turns): %s", a.Manifest.ID, len(history), truncateLog(input, 200))
 	// SRU: only Core's in-process turn token carries a user's read scope; a
 	// request without one (another publisher, a council consult) has no user.
-	result := a.processUserTurn(claimRecallTurn(msg.Header.Get(RecallTurnHeader)), input, history)
+	// MEM-LANES: the token counts only on the subject and reply inbox it was
+	// issued for.
+	result := a.processUserTurn(claimRecallTurn(msg.Header.Get(RecallTurnHeader), msg.Subject, msg.Reply), input, history)
 	if msg.Reply != "" {
 		if respBytes, err := json.Marshal(result); err == nil {
 			msg.Respond(respBytes)

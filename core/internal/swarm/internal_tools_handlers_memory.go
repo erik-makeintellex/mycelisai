@@ -9,13 +9,34 @@ import (
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/internal/deploymentcontext"
+	"github.com/mycelis/core/internal/memory"
 )
 
-func currentToolUserLabel(ctx context.Context) string {
-	if inv, ok := ToolInvocationContextFromContext(ctx); ok && strings.TrimSpace(inv.UserLabel) != "" {
-		return strings.TrimSpace(inv.UserLabel)
+// noUserSaveOwner is the owner id of a Soma-tool save with no user and no
+// Core-set user label. It is no user's id, so the save is never readable
+// through the legacy loaded_by label rule by an identity named "soma".
+const noUserSaveOwner = "system:soma"
+
+// toolSaveOwner is whom a Soma-tool deployment-context save belongs to
+// (MEM-LANES): the turn's verified user (owner id plus their label), else the
+// Core-set invocation label (the confirmed path), else nobody.
+func toolSaveOwner(ctx context.Context) (string, map[string]any, error) {
+	access := recallAccessFromContext(ctx)
+	owner, err := access.ownerUserID()
+	if err != nil {
+		return "", nil, err
 	}
-	return "soma"
+	if owner != "" {
+		label := strings.TrimSpace(access.Reader.Label)
+		if label == "" {
+			label = owner
+		}
+		return label, map[string]any{memory.OwnerUserIDKey: owner}, nil
+	}
+	if inv, ok := ToolInvocationContextFromContext(ctx); ok && strings.TrimSpace(inv.UserLabel) != "" {
+		return strings.TrimSpace(inv.UserLabel), nil, nil
+	}
+	return "soma", map[string]any{memory.OwnerUserIDKey: noUserSaveOwner}, nil
 }
 
 func (r *InternalToolRegistry) handleStoreArtifact(ctx context.Context, args map[string]any) (string, error) {
@@ -57,9 +78,15 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 	if r.db == nil {
 		return "", fmt.Errorf("database not available — cannot persist memory")
 	}
+	// MEM-LANES: the fact belongs to the turn's verified user; an unverified
+	// user saves nothing.
+	owner, err := recallAccessFromContext(ctx).ownerUserID()
+	if err != nil {
+		return "", fmt.Errorf("remember refused: %w. Nothing was saved.", err)
+	}
 
 	scope := resolveMemoryScope(ctx, args)
-	_, err := r.db.ExecContext(ctx, `
+	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO agent_memories (category, content, context, tenant_id, team_id, agent_id, run_id, visibility, created_at)
 		VALUES ($1, $2, $3, $4, NULLIF($5,''), $6, NULLIF($7,''), $8, NOW())
 	`, category, content, memContext, scope.TenantID, scope.TeamID, scope.AgentID, scope.RunID, scope.Visibility)
@@ -67,7 +94,14 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 		return "", fmt.Errorf("remember failed to persist the memory: %w", err)
 	}
 
-	storeMemoryVector(ctx, r.brain, r.mem, category, content, memContext, scope)
+	// The owner-attributed vector row is the only copy recall returns for a
+	// user's own fact (the agent_memories row has no owner column).
+	if err := storeMemoryVector(ctx, r.brain, r.mem, category, content, memContext, scope, owner); err != nil {
+		if owner != "" {
+			return "", fmt.Errorf("remember stored the fact but could not index it for your recall: %w", err)
+		}
+		log.Printf("remember: vector index failed (non-fatal for a no-user turn): %v", err)
+	}
 	return fmt.Sprintf("Remembered [%s]: %s", category, content), nil
 }
 
@@ -90,6 +124,10 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		return "", fmt.Errorf("load_deployment_context requires 'title' and 'content'")
 	}
 
+	label, ownerMeta, err := toolSaveOwner(ctx)
+	if err != nil {
+		return "", fmt.Errorf("load_deployment_context refused: %w. Nothing was saved.", err)
+	}
 	scope := resolveMemoryScope(ctx, args)
 	result, err := svc.Ingest(ctx, deploymentcontext.IngestRequest{
 		KnowledgeClass:    stringValue(args["knowledge_class"]),
@@ -104,11 +142,12 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		Tags:              stringSlice(args["tags"]),
 		AgentID:           scope.AgentID,
 		TeamID:            scope.TeamID,
-		UserLabel:         currentToolUserLabel(ctx),
+		UserLabel:         label,
 		SomaContextKind:   stringValue(args["soma_context_kind"]),
 		OutputSpecificity: stringValue(args["output_specificity"]),
 		ContentDomain:     stringValue(args["content_domain"]),
 		TargetGoalSets:    stringSlice(args["target_goal_sets"]),
+		ExtraMetadata:     ownerMeta,
 	})
 	if err != nil {
 		return "", err
@@ -154,6 +193,10 @@ func (r *InternalToolRegistry) handlePromoteDeploymentContext(ctx context.Contex
 		return "", err
 	}
 
+	label, _, err := toolSaveOwner(ctx)
+	if err != nil {
+		return "", fmt.Errorf("promote_deployment_context refused: %w. Nothing was promoted.", err)
+	}
 	scope := resolveMemoryScope(ctx, args)
 	result, err := svc.Promote(ctx, deploymentcontext.PromoteRequest{
 		SourceArtifactID: sourceArtifactID,
@@ -168,7 +211,7 @@ func (r *InternalToolRegistry) handlePromoteDeploymentContext(ctx context.Contex
 		Tags:             stringSlice(args["tags"]),
 		AgentID:          scope.AgentID,
 		TeamID:           scope.TeamID,
-		UserLabel:        currentToolUserLabel(ctx),
+		UserLabel:        label,
 	})
 	if err != nil {
 		return "", err
@@ -217,6 +260,10 @@ func (r *InternalToolRegistry) handleTempMemoryWrite(ctx context.Context, args m
 	if r.mem == nil {
 		return "", fmt.Errorf("memory service offline — temp channels unavailable")
 	}
+	ownerUserID, err := recallAccessFromContext(ctx).ownerUserID()
+	if err != nil {
+		return "", fmt.Errorf("temp_memory_write refused: %w. Nothing was saved.", err)
+	}
 	channel := stringValue(args["channel"])
 	content := stringValue(args["content"])
 	owner := stringValue(args["owner_agent_id"])
@@ -225,7 +272,7 @@ func (r *InternalToolRegistry) handleTempMemoryWrite(ctx context.Context, args m
 	if ttlRaw, ok := args["ttl_minutes"].(float64); ok {
 		ttl = int(ttlRaw)
 	}
-	id, err := r.mem.PutTempMemory(ctx, "default", channel, owner, content, metadata, ttl)
+	id, err := r.mem.PutTempMemory(ctx, "default", channel, owner, content, metadata, ttl, ownerUserID)
 	if err != nil {
 		return "", err
 	}
@@ -236,12 +283,16 @@ func (r *InternalToolRegistry) handleTempMemoryRead(ctx context.Context, args ma
 	if r.mem == nil {
 		return "", fmt.Errorf("memory service offline — temp channels unavailable")
 	}
+	reader, err := recallAccessFromContext(ctx).laneReader()
+	if err != nil {
+		return "", fmt.Errorf("temp_memory_read unavailable: %w", err)
+	}
 	channel := stringValue(args["channel"])
 	limit := 10
 	if l, ok := args["limit"].(float64); ok && l > 0 {
 		limit = int(l)
 	}
-	entries, err := r.mem.GetTempMemory(ctx, "default", channel, limit)
+	entries, err := r.mem.GetTempMemory(ctx, "default", channel, limit, reader)
 	if err != nil {
 		return "", err
 	}
@@ -252,8 +303,12 @@ func (r *InternalToolRegistry) handleTempMemoryClear(ctx context.Context, args m
 	if r.mem == nil {
 		return "", fmt.Errorf("memory service offline — temp channels unavailable")
 	}
+	reader, err := recallAccessFromContext(ctx).laneReader()
+	if err != nil {
+		return "", fmt.Errorf("temp_memory_clear refused: %w. Nothing was cleared.", err)
+	}
 	channel := stringValue(args["channel"])
-	deleted, err := r.mem.ClearTempMemory(ctx, "default", channel)
+	deleted, err := r.mem.ClearTempMemory(ctx, "default", channel, reader)
 	if err != nil {
 		return "", err
 	}
@@ -271,12 +326,23 @@ func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, 
 	if r.mem == nil {
 		return "", fmt.Errorf("memory service offline — cannot store summary")
 	}
-	return r.summarizeAndStore(ctx, resolveMemoryScope(ctx, args), messagesText, 0)
+	owner, err := recallAccessFromContext(ctx).ownerUserID()
+	if err != nil {
+		return "", fmt.Errorf("summarize_conversation refused: %w. Nothing was saved.", err)
+	}
+	return r.summarizeAndStore(ctx, resolveMemoryScope(ctx, args), owner, messagesText, 0)
 }
 
-// AutoSummarize compresses a chat history window into a temporary continuity checkpoint.
-func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID, teamID string, history []cognitive.ChatMessage) {
+// AutoSummarize compresses a chat history window into a temporary continuity
+// checkpoint owned by the turn's user (access; MEM-LANES). A turn whose user
+// could not be verified writes nothing.
+func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, access RecallAccess, agentID, teamID string, history []cognitive.ChatMessage) {
 	if r.brain == nil || r.mem == nil {
+		return
+	}
+	owner, err := access.ownerUserID()
+	if err != nil {
+		log.Printf("AutoSummarize [%s]: skipped: %v", agentID, err)
 		return
 	}
 	var sb strings.Builder
@@ -284,7 +350,10 @@ func (r *InternalToolRegistry) AutoSummarize(ctx context.Context, agentID, teamI
 		sb.WriteString(fmt.Sprintf("[%s]: %s\n", m.Role, m.Content))
 	}
 	scope := memoryScope{TenantID: "default", TeamID: strings.TrimSpace(teamID), AgentID: strings.TrimSpace(agentID), Visibility: "team"}
-	checkpointID, err := r.summarizeAndCheckpoint(ctx, scope, sb.String(), len(history))
+	if owner != "" {
+		scope.Visibility = "private"
+	}
+	checkpointID, err := r.summarizeAndCheckpoint(ctx, scope, owner, sb.String(), len(history))
 	if err != nil {
 		log.Printf("AutoSummarize [%s]: failed: %v", agentID, err)
 		return

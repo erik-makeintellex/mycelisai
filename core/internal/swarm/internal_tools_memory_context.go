@@ -11,8 +11,14 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID, currentInput string) {
+// writeRecalledMemory injects past conversation summaries the turn's user may
+// read (MEM-LANES): their own, or org-wide ones; none when access failed.
+func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, access RecallAccess, agentID, currentInput string) {
 	if r.brain == nil || r.mem == nil || currentInput == "" {
+		return
+	}
+	reader, err := access.laneReader()
+	if err != nil {
 		return
 	}
 
@@ -35,7 +41,7 @@ func (r *InternalToolRegistry) writeRecalledMemory(sb *strings.Builder, agentID,
 		return
 	}
 
-	summaries, err := r.mem.RecallConversations(ctx, vec, agentID, 3)
+	summaries, err := r.mem.RecallConversations(ctx, vec, agentID, 3, reader)
 	if err != nil || len(summaries) == 0 {
 		return
 	}

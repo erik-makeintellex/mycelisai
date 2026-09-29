@@ -195,21 +195,27 @@ func artifactExchangeRuntimeMetadata(ctx context.Context) (runID, runClass, noRu
 	return "", "no_run", "Artifact normalization did not receive an execution run id."
 }
 
-func storeMemoryVector(ctx context.Context, brain *cognitive.Router, mem *memory.Service, category, content, memContext string, scope memoryScope) {
-	if brain == nil || mem == nil {
-		return
+// storeMemoryVector indexes a remembered fact for recall, stamped with its
+// owner (MEM-LANES). Without a working embedding engine the row is stored
+// pending, so keyword recall still finds it.
+func storeMemoryVector(ctx context.Context, brain *cognitive.Router, mem *memory.Service, category, content, memContext string, scope memoryScope, owner string) error {
+	if mem == nil {
+		return fmt.Errorf("memory service offline")
 	}
 	embeddingText := fmt.Sprintf("[%s] %s", category, content)
 	if memContext != "" {
 		embeddingText += " (context: " + memContext + ")"
 	}
-	vec, err := brain.Embed(ctx, embeddingText, "")
-	if err != nil {
-		log.Printf("remember: embedding failed (non-fatal): %v", err)
-		return
+	var vec []float64
+	if brain != nil {
+		embedded, err := brain.Embed(ctx, embeddingText, "")
+		if err != nil {
+			log.Printf("remember: embedding failed, stored for keyword recall: %v", err)
+		} else {
+			vec = embedded
+		}
 	}
-	meta := map[string]any{"type": "agent_memory", "category": category, "source": "agent_memory", "tenant_id": scope.TenantID, "team_id": scope.TeamID, "agent_id": scope.AgentID, "run_id": scope.RunID, "visibility": scope.Visibility}
-	if insertErr := mem.StoreVector(ctx, embeddingText, vec, meta); insertErr != nil {
-		log.Printf("remember: vector insert failed: %v", insertErr)
-	}
+	meta := memory.OwnerLaneMetadata(map[string]any{"type": "agent_memory", "category": category, "source": "agent_memory", "tenant_id": scope.TenantID,
+		"team_id": scope.TeamID, "agent_id": scope.AgentID, "run_id": scope.RunID, "visibility": scope.Visibility}, owner)
+	return mem.StoreVector(ctx, embeddingText, vec, meta)
 }

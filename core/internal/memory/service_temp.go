@@ -21,9 +21,11 @@ type TempMemoryEntry struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
-// PutTempMemory stores a temporary working-memory checkpoint.
+// PutTempMemory stores a temporary working-memory checkpoint owned by
+// ownerUserID, the verified user of the writing turn ("" for a write with no
+// user; MEM-LANES). ownerAgentID only names the writing agent.
 // ttlMinutes <= 0 means no expiry.
-func (s *Service) PutTempMemory(ctx context.Context, tenantID, channelKey, ownerAgentID, content string, metadata map[string]any, ttlMinutes int) (string, error) {
+func (s *Service) PutTempMemory(ctx context.Context, tenantID, channelKey, ownerAgentID, content string, metadata map[string]any, ttlMinutes int, ownerUserID string) (string, error) {
 	if s == nil || s.db == nil {
 		return "", fmt.Errorf("memory service offline")
 	}
@@ -39,11 +41,7 @@ func (s *Service) PutTempMemory(ctx context.Context, tenantID, channelKey, owner
 	if content == "" {
 		return "", fmt.Errorf("content is required")
 	}
-	if metadata == nil {
-		metadata = map[string]any{}
-	}
-
-	metaJSON, _ := json.Marshal(metadata)
+	metaJSON, _ := json.Marshal(OwnerLaneMetadata(metadata, ownerUserID))
 
 	var expiresAt any = nil
 	if ttlMinutes > 0 {
@@ -64,8 +62,9 @@ func (s *Service) PutTempMemory(ctx context.Context, tenantID, channelKey, owner
 	return id, nil
 }
 
-// GetTempMemory fetches recent, non-expired entries for a channel.
-func (s *Service) GetTempMemory(ctx context.Context, tenantID, channelKey string, limit int) ([]TempMemoryEntry, error) {
+// GetTempMemory fetches recent, non-expired entries of a channel that reader
+// may read (tempReadClause).
+func (s *Service) GetTempMemory(ctx context.Context, tenantID, channelKey string, limit int, reader GovernedReader) ([]TempMemoryEntry, error) {
 	if s == nil || s.db == nil {
 		return nil, fmt.Errorf("memory service offline")
 	}
@@ -78,7 +77,7 @@ func (s *Service) GetTempMemory(ctx context.Context, tenantID, channelKey string
 	if limit <= 0 {
 		limit = 10
 	}
-
+	read, args, next := tempReadClause(reader, []any{tenantID, channelKey}, 3)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id::text, tenant_id, channel_key, owner_agent_id, content, metadata,
 		       expires_at, created_at, updated_at
@@ -86,9 +85,9 @@ func (s *Service) GetTempMemory(ctx context.Context, tenantID, channelKey string
 		WHERE tenant_id = $1
 		  AND channel_key = $2
 		  AND (expires_at IS NULL OR expires_at > NOW())
+		  AND `+read+`
 		ORDER BY updated_at DESC
-		LIMIT $3
-	`, tenantID, channelKey, limit)
+		LIMIT $`+fmt.Sprint(next), append(args, limit)...)
 	if err != nil {
 		return nil, fmt.Errorf("get temp memory: %w", err)
 	}
@@ -117,14 +116,18 @@ func (s *Service) GetTempMemory(ctx context.Context, tenantID, channelKey string
 		}
 		out = append(out, e)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("read temp memory: %w", err)
+	}
 	if out == nil {
 		out = []TempMemoryEntry{}
 	}
 	return out, nil
 }
 
-// ClearTempMemory deletes entries for the given channel.
-func (s *Service) ClearTempMemory(ctx context.Context, tenantID, channelKey string) (int64, error) {
+// ClearTempMemory deletes the reader's own entries of a channel
+// (tempClearClause); other users' and system rows stay.
+func (s *Service) ClearTempMemory(ctx context.Context, tenantID, channelKey string, reader GovernedReader) (int64, error) {
 	if s == nil || s.db == nil {
 		return 0, fmt.Errorf("memory service offline")
 	}
@@ -134,11 +137,10 @@ func (s *Service) ClearTempMemory(ctx context.Context, tenantID, channelKey stri
 	if channelKey == "" {
 		return 0, fmt.Errorf("channel_key is required")
 	}
-
+	own, args, _ := tempClearClause(reader, []any{tenantID, channelKey}, 3)
 	res, err := s.db.ExecContext(ctx, `
 		DELETE FROM temp_memory_channels
-		WHERE tenant_id = $1 AND channel_key = $2
-	`, tenantID, channelKey)
+		WHERE tenant_id = $1 AND channel_key = $2 AND `+own, args...)
 	if err != nil {
 		return 0, fmt.Errorf("clear temp memory: %w", err)
 	}

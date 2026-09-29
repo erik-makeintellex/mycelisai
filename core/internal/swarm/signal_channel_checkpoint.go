@@ -8,9 +8,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/mycelis/core/internal/memory"
 )
 
-const signalCheckpointChannelPrefix = "signal.latest."
+// signalCheckpointChannelPrefix is shared with the temp read rule, which
+// treats owner-less rows under it as org-wide bus state (MEM-LANES).
+const signalCheckpointChannelPrefix = memory.SignalCheckpointChannelPrefix
 
 func parseOptionalBool(args map[string]any, key string, defaultValue bool) bool {
 	if args == nil {
@@ -129,10 +133,16 @@ func (r *InternalToolRegistry) upsertSignalCheckpoint(
 		metadata = map[string]any{}
 	}
 
-	if _, err := r.mem.ClearTempMemory(ctx, "default", channelKey); err != nil {
+	// MEM-LANES: a checkpoint written in a user's turn belongs to that user and
+	// replaces only their own; a no-user (bus) checkpoint replaces owner-less rows.
+	owner, err := recallAccessFromContext(ctx).ownerUserID()
+	if err != nil {
+		return "", fmt.Errorf("store checkpoint: %w", err)
+	}
+	if _, err := r.mem.ClearTempMemory(ctx, "default", channelKey, memory.GovernedReader{UserID: owner}); err != nil {
 		return "", fmt.Errorf("clear existing checkpoint: %w", err)
 	}
-	id, err := r.mem.PutTempMemory(ctx, "default", channelKey, ownerAgentID, content, metadata, 0)
+	id, err := r.mem.PutTempMemory(ctx, "default", channelKey, ownerAgentID, content, metadata, 0, owner)
 	if err != nil {
 		return "", fmt.Errorf("store checkpoint: %w", err)
 	}

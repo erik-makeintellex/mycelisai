@@ -106,7 +106,7 @@ func (a *Agent) processTurn(access RecallAccess, input string, priorHistory []co
 	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
 		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
 		copy(histCopy, priorHistory)
-		go a.internalTools.AutoSummarize(a.ctx, a.Manifest.ID, a.TeamID, histCopy)
+		go a.internalTools.AutoSummarize(a.ctx, access, a.Manifest.ID, a.TeamID, histCopy)
 	}
 
 	providerID, modelUsed := "", ""

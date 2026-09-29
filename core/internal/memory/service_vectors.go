@@ -43,19 +43,29 @@ type SemanticSearchOptions struct {
 	// Reader, when set, admits governed-store rows only if that viewer may read
 	// their saved entry (MEM-LIST). Every governed recall sets it: user-facing
 	// routes from the request, agent recall from the turn's requesting user
-	// (SRU; the empty reader when there is none). Nil is unscoped.
+	// (SRU; the empty reader when there is none). It also filters the owner
+	// lanes (remembered facts, conversation summaries; MEM-LANES
+	// ownerLaneClause). Nil is unscoped.
 	Reader *GovernedReader
 }
 
-// StoreVector persists an embedding into context_vectors for future RAG retrieval.
+// StoreVector persists an embedding into context_vectors for future RAG
+// retrieval. An empty embedding stores the row pending (NULL embedding), so
+// keyword recall still finds it while no embedding engine works.
 func (s *Service) StoreVector(ctx context.Context, content string, embedding []float64, metadata map[string]any) error {
+	if s == nil || s.db == nil {
+		return fmt.Errorf("store vector failed: memory service offline")
+	}
 	metaJSON, _ := json.Marshal(metadata)
-	vecStr := formatVector(embedding)
+	var vecArg any
+	if len(embedding) > 0 {
+		vecArg = formatVector(embedding)
+	}
 
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO context_vectors (content, embedding, metadata)
 		VALUES ($1, $2::vector, $3)
-	`, content, vecStr, metaJSON)
+	`, content, vecArg, metaJSON)
 
 	if err != nil {
 		return fmt.Errorf("store vector failed: %w", err)

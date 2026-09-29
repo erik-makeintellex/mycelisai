@@ -13,32 +13,21 @@ import (
 	"github.com/mycelis/core/internal/memory"
 )
 
+// recallStructuredMemories reads org-wide (visibility global) agent_memories
+// rows only (MEM-LANES). The table has no owner column, so its private and
+// team rows cannot be attributed to a user: a user's own facts are recalled
+// from their owner-stamped vector rows instead (recallVectorMemories).
 func recallStructuredMemories(ctx context.Context, db *sql.DB, query, category string, limit int, scope memoryScope) []memoryResult {
 	if db == nil {
 		return nil
 	}
-	clauses := []string{"tenant_id = $1", "content ILIKE '%' || $2 || '%'"}
+	clauses := []string{"tenant_id = $1", "content ILIKE '%' || $2 || '%'", "visibility = 'global'"}
 	queryArgs := []any{scope.TenantID, query}
 	nextArg := 3
 	if category != "" {
 		clauses = append(clauses, fmt.Sprintf("category = $%d", nextArg))
 		queryArgs = append(queryArgs, category)
 		nextArg++
-	}
-	scopeParts := make([]string, 0, 3)
-	if scope.TeamID != "" {
-		scopeParts = append(scopeParts, fmt.Sprintf("(team_id = $%d AND visibility IN ('team', 'global'))", nextArg))
-		queryArgs = append(queryArgs, scope.TeamID)
-		nextArg++
-	}
-	if scope.AgentID != "" {
-		scopeParts = append(scopeParts, fmt.Sprintf("(agent_id = $%d AND visibility = 'private')", nextArg))
-		queryArgs = append(queryArgs, scope.AgentID)
-		nextArg++
-	}
-	if len(scopeParts) > 0 {
-		scopeParts = append(scopeParts, "visibility = 'global'")
-		clauses = append(clauses, "("+strings.Join(scopeParts, " OR ")+")")
 	}
 
 	rdbmsQuery := `
@@ -146,19 +135,19 @@ func normalizeConversationSummary(text string) parsedConversationSummary {
 	return parsed
 }
 
-func (r *InternalToolRegistry) summarizeAndStore(ctx context.Context, scope memoryScope, messagesText string, msgCount int) (string, error) {
+func (r *InternalToolRegistry) summarizeAndStore(ctx context.Context, scope memoryScope, owner, messagesText string, msgCount int) (string, error) {
 	parsed, err := r.summarizeConversation(ctx, messagesText)
 	if err != nil {
 		return "", err
 	}
 	embedFunc := memory.EmbedFunc(r.brain.Embed)
 	return r.mem.StoreConversationSummary(ctx, embedFunc, memory.ConversationSummaryInput{
-		AgentID: scope.AgentID, TenantID: scope.TenantID, TeamID: scope.TeamID, RunID: scope.RunID, Visibility: scope.Visibility,
+		AgentID: scope.AgentID, TenantID: scope.TenantID, TeamID: scope.TeamID, RunID: scope.RunID, Visibility: scope.Visibility, OwnerUserID: owner,
 		Summary: parsed.Summary, KeyTopics: parsed.KeyTopics, UserPreferences: parsed.UserPreferences, PersonalityNotes: parsed.PersonalityNotes, DataReferences: parsed.DataReferences, MessageCount: msgCount,
 	})
 }
 
-func (r *InternalToolRegistry) summarizeAndCheckpoint(ctx context.Context, scope memoryScope, messagesText string, msgCount int) (string, error) {
+func (r *InternalToolRegistry) summarizeAndCheckpoint(ctx context.Context, scope memoryScope, owner, messagesText string, msgCount int) (string, error) {
 	parsed, err := r.summarizeConversation(ctx, messagesText)
 	if err != nil {
 		return "", err
@@ -175,5 +164,5 @@ func (r *InternalToolRegistry) summarizeAndCheckpoint(ctx context.Context, scope
 	if strings.TrimSpace(scope.TeamID) != "" {
 		channelKey = fmt.Sprintf("team.%s.planning", scope.TeamID)
 	}
-	return r.mem.PutTempMemory(ctx, scope.TenantID, channelKey, scope.AgentID, content, metadata, 240)
+	return r.mem.PutTempMemory(ctx, scope.TenantID, channelKey, scope.AgentID, content, metadata, 240, owner)
 }

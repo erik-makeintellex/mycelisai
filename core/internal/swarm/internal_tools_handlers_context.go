@@ -35,9 +35,9 @@ func (r *InternalToolRegistry) BuildContextForTurn(access RecallAccess, agentID,
 	r.writeTeamRoster(&sb)
 	r.writeCognitiveStatus(&sb)
 	r.writeMCPServers(&sb)
-	r.writeRecalledMemory(&sb, agentID, currentInput)
+	r.writeRecalledMemory(&sb, access, agentID, currentInput)
 	sources := r.writeDeploymentContext(&sb, access, agentID, teamID, currentInput, true)
-	r.writeLeadTempMemory(&sb, agentID, teamID, role)
+	r.writeLeadTempMemory(&sb, access, agentID, teamID, role)
 	sb.WriteString("### Memory Boundaries\n")
 	sb.WriteString("- **SOMA_MEMORY**: Soma-owned continuity and durable orchestrator facts. Use `recall`, `search_memory`, and reviewed `remember` only for classified Soma continuity; admin-shaped `soma_operating_context` is a governed sublane, not casual chat memory.\n")
 	sb.WriteString("- **AGENT_MEMORY**: team/agent-scoped specialist continuity, decisions, and lessons. It must stay scoped to the agent/team unless explicitly reviewed for wider promotion.\n")
@@ -87,13 +87,16 @@ func (r *InternalToolRegistry) isLeadAgent(agentID, teamID, role string) bool {
 	return tid == "admin-core" || tid == "council-core" || id == "admin" || strings.HasPrefix(id, "council-") || strings.Contains(rl, "lead") || rl == "architect" || rl == "coder" || rl == "creative" || rl == "sentry"
 }
 
-func (r *InternalToolRegistry) writeLeadTempMemory(sb *strings.Builder, agentID, teamID, role string) {
+// writeLeadTempMemory injects the lead's temp channels as the turn's user may
+// read them (MEM-LANES): their own checkpoints, never another user's.
+func (r *InternalToolRegistry) writeLeadTempMemory(sb *strings.Builder, access RecallAccess, agentID, teamID, role string) {
 	if !r.isLeadAgent(agentID, teamID, role) {
 		return
 	}
 	sb.WriteString("### Persistent Temp Memory Channels (Restart-Safe)\n")
 	sb.WriteString("Use these checkpoints to continue work consistently across provider/service restarts.\n")
-	if r.mem == nil {
+	reader, err := access.laneReader()
+	if r.mem == nil || err != nil {
 		sb.WriteString("- Memory backend unavailable; rely on current contract and checkpoint once memory is restored.\n")
 		sb.WriteString("Stability rules: preserve user interaction style, output shape, and action sequencing unless user explicitly changes intent.\n\n")
 		return
@@ -105,7 +108,7 @@ func (r *InternalToolRegistry) writeLeadTempMemory(sb *strings.Builder, agentID,
 		channels = append(channels, fmt.Sprintf("team.%s.planning", teamID))
 	}
 	for _, ch := range channels {
-		entries, err := r.mem.GetTempMemory(ctx, "default", ch, 3)
+		entries, err := r.mem.GetTempMemory(ctx, "default", ch, 3, reader)
 		if err != nil || len(entries) == 0 {
 			continue
 		}
