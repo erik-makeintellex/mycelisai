@@ -100,48 +100,6 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 	respondJSON(w, response)
 }
 
-// GET /api/v1/memory/sitreps?team_id=<uuid>&limit=10
-// Returns recent SitReps for a team.
-func (s *AdminServer) HandleListSitReps(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if s.Mem == nil {
-		http.Error(w, `{"error":"Memory service offline"}`, http.StatusServiceUnavailable)
-		return
-	}
-
-	teamID := r.URL.Query().Get("team_id")
-	if teamID == "" {
-		teamID = "22222222-2222-2222-2222-222222222222" // Default team
-	}
-
-	limit := 10
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
-		}
-	}
-
-	sitreps, err := s.Mem.ListSitReps(r.Context(), teamID, limit)
-	if err != nil {
-		http.Error(w, `{"error":"failed to retrieve sitreps"}`, http.StatusInternalServerError)
-		return
-	}
-
-	if sitreps == nil {
-		sitreps = []map[string]any{}
-	}
-
-	respondJSON(w, map[string]any{
-		"team_id": teamID,
-		"sitreps": sitreps,
-		"count":   len(sitreps),
-	})
-}
-
 // GET /api/v1/sensors
 // Lists only running endpoint-backed SensorAgents with their real probe state.
 // No runtime or no configured sensors yields an empty list and an honest status.

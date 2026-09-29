@@ -77,7 +77,7 @@ func TestGetTempMemory_HappyPath(t *testing.T) {
 	}).AddRow("mem-1", "default", "lead.shared", "admin", "checkpoint", `{"phase":"research"}`, nil, now, now)
 
 	mock.ExpectQuery("SELECT id::text, tenant_id, channel_key, owner_agent_id, content, metadata").
-		WithArgs("default", "lead.shared", SignalCheckpointChannelPrefix, "user-a", 10).
+		WithArgs("default", "lead.shared", "user-a", SignalCheckpointChannelPrefix, 10).
 		WillReturnRows(rows)
 
 	entries, err := svc.GetTempMemory(context.Background(), "default", "lead.shared", 10, GovernedReader{UserID: "user-a"})

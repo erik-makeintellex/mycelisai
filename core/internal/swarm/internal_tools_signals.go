@@ -150,6 +150,7 @@ func (r *InternalToolRegistry) handlePublishSignal(ctx context.Context, args map
 	checkpointID, checkpointErr := r.upsertSignalCheckpoint(ctx, channelKey, ownerAgentID, checkpointContent, checkpointMetadata)
 	if checkpointErr != nil {
 		log.Printf("publish_signal checkpoint update failed on [%s]: %v", channelKey, checkpointErr)
+		return fmt.Sprintf("Signal published to %s (%d bytes). The channel checkpoint on %s was not stored: %v.", subject, len(payload), channelKey, checkpointErr), nil
 	}
 
 	if checkpointID != "" {

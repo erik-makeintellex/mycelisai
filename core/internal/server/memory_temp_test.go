@@ -39,7 +39,7 @@ func TestHandleTempMemory_Get_HappyPath(t *testing.T) {
 		"id", "tenant_id", "channel_key", "owner_agent_id", "content", "metadata", "expires_at", "created_at", "updated_at",
 	}).AddRow("mem-1", "default", "lead.shared", "admin", "checkpoint", `{"phase":"draft"}`, nil, now, now)
 	mock.ExpectQuery("SELECT id::text, tenant_id, channel_key, owner_agent_id, content, metadata").
-		WithArgs("default", "lead.shared", memory.SignalCheckpointChannelPrefix, tempRootAdmin.UserID, 10).
+		WithArgs("default", "lead.shared", tempRootAdmin.UserID, memory.SignalCheckpointChannelPrefix, 10).
 		WillReturnRows(rows)
 
 	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleTempMemory), "GET", "/api/v1/memory/temp?channel=lead.shared", "", tempRootAdmin)

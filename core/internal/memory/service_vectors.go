@@ -2,7 +2,6 @@ package memory
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -121,56 +120,6 @@ func (s *Service) SemanticSearchWithOptions(ctx context.Context, queryVec []floa
 		}
 		r.RetrievalMode = RecallModeSemantic
 		results = append(results, r)
-	}
-	return results, nil
-}
-
-// ListSitReps retrieves recent SitReps for a team.
-func (s *Service) ListSitReps(ctx context.Context, teamID string, limit int) ([]map[string]any, error) {
-	if limit <= 0 {
-		limit = 10
-	}
-
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, team_id, timestamp, time_window_start, time_window_end, summary, key_events, strategies, status
-		FROM sitreps
-		WHERE team_id = $1
-		ORDER BY timestamp DESC
-		LIMIT $2
-	`, teamID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var results []map[string]any
-	for rows.Next() {
-		var id, tID, summary, status string
-		var strategies sql.NullString
-		var ts, winStart, winEnd time.Time
-		var keyEventsJSON []byte
-
-		if err := rows.Scan(&id, &tID, &ts, &winStart, &winEnd, &summary, &keyEventsJSON, &strategies, &status); err != nil {
-			return nil, err
-		}
-
-		entry := map[string]any{
-			"id":                id,
-			"team_id":           tID,
-			"timestamp":         ts,
-			"time_window_start": winStart,
-			"time_window_end":   winEnd,
-			"summary":           summary,
-			"strategies":        strategies.String,
-			"status":            status,
-		}
-
-		var keyEvents []string
-		if json.Unmarshal(keyEventsJSON, &keyEvents) == nil {
-			entry["key_events"] = keyEvents
-		}
-
-		results = append(results, entry)
 	}
 	return results, nil
 }

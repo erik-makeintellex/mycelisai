@@ -26,11 +26,30 @@ type RecallAccess struct {
 	Reader      memory.GovernedReader
 	User        bool
 	Unavailable bool
+	// OrgWideWrite is the M2 authority to share memory org-wide: a verified
+	// root admin with memory:write. Core sets it from the request identity
+	// (MEM-LANES-2); a model's visibility argument never does.
+	OrgWideWrite bool
+	// atCapacity marks an Unavailable turn whose token Core refused because
+	// the outstanding-turn cap was reached (claimRecallTurn sets it).
+	atCapacity bool
 }
 
 // errRecallUnavailable is returned by memory tools when the turn's read
 // scope could not be verified.
 var errRecallUnavailable = errors.New("saved memory is unavailable for this turn: the requesting user's memory access could not be verified")
+
+// errRecallAtCapacity is returned instead when Core refused the turn token
+// for capacity (MEM-LANES-2), so the refusal names the real cause.
+var errRecallAtCapacity = errors.New("saved memory is unavailable for this turn: Core is at capacity for concurrent memory turns; try again in a moment")
+
+// unavailableErr is the honest reason an Unavailable turn has no memory.
+func (a RecallAccess) unavailableErr() error {
+	if a.atCapacity {
+		return errRecallAtCapacity
+	}
+	return errRecallUnavailable
+}
 
 // errNoOwnerID refuses a memory write for a signed-in identity without a user
 // id: it could neither be attributed nor read back.
@@ -41,7 +60,7 @@ var errNoOwnerID = errors.New("saved memory needs a signed-in user id for this t
 // user could not be verified is refused, never saved unowned.
 func (a RecallAccess) ownerUserID() (string, error) {
 	if a.Unavailable {
-		return "", errRecallUnavailable
+		return "", a.unavailableErr()
 	}
 	if !a.User {
 		return "", nil
@@ -69,7 +88,7 @@ func (a RecallAccess) laneReader() (memory.GovernedReader, error) {
 // Recall never runs with a nil reader, which would be unscoped.
 func (a RecallAccess) governedReader() (*memory.GovernedReader, error) {
 	if a.Unavailable {
-		return nil, errRecallUnavailable
+		return nil, a.unavailableErr()
 	}
 	if !a.User {
 		return &memory.GovernedReader{}, nil
@@ -98,7 +117,7 @@ func (r *InternalToolRegistry) requirePromotableSource(ctx context.Context, sour
 	access := recallAccessFromContext(ctx)
 	switch {
 	case access.Unavailable:
-		return fmt.Errorf("promote_deployment_context refused: %v. Nothing was promoted.", errRecallUnavailable)
+		return fmt.Errorf("promote_deployment_context refused: %v. Nothing was promoted.", access.unavailableErr())
 	case !access.User:
 		return errors.New("promote_deployment_context refused: promoting saved memory needs a signed-in user who can read the source entry. Nothing was promoted.")
 	case r.db == nil:

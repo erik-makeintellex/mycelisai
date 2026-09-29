@@ -27,7 +27,7 @@ func (a *Agent) prepareToolCall(input string, toolCall *toolCallPayload, failedT
 		return true
 	}
 	preflightDone[member] = true
-	summary, err := a.runCouncilPreflight(member, input, toolCall)
+	summary, err := a.runCouncilPreflight(result.recall, member, input, toolCall)
 	if err != nil {
 		log.Printf("Agent [%s] council preflight failed for %s: %v", a.Manifest.ID, toolCall.Name, err)
 		return true
@@ -79,7 +79,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 
 	isMCPTool := serverID != InternalServerID
 	if isMCPTool {
-		a.publishToolBusSignal(protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{"state": "invoked", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "arguments": toolCall.Arguments, "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
+		a.publishToolBusSignal(result.recall, protocol.PayloadKindStatus, protocol.SourceKindMCP, map[string]any{"state": "invoked", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "arguments": toolCall.Arguments, "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 	}
 	toolResult, err := a.toolExecutor.CallTool(toolCtx, serverID, toolCall.Name, toolCall.Arguments)
 	if IsToolNotPermitted(err) {
@@ -98,7 +98,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 		reinfer(toolCall.Name, fmt.Sprintf("Tool %s failed: %v", toolCall.Name, err))
 		if isMCPTool {
 			a.persistMCPExchangeResult(serverID, toolCall.Name, "failed", err.Error(), map[string]any{"arguments": toolCall.Arguments, "error": err.Error()})
-			a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "failed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "error": err.Error(), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
+			a.publishToolBusSignal(result.recall, protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "failed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "error": err.Error(), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 		}
 		return false
 	}
@@ -153,7 +153,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	if isMCPTool {
 		preview := truncateLog(toolResult, 500)
 		a.persistMCPExchangeResult(serverID, toolCall.Name, "completed", preview, map[string]any{"arguments": toolCall.Arguments, "result_preview": preview})
-		a.publishToolBusSignal(protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "completed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "result_preview": truncateLog(toolResult, 500), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
+		a.publishToolBusSignal(result.recall, protocol.PayloadKindResult, protocol.SourceKindMCP, map[string]any{"state": "completed", "tool": toolCall.Name, "server_id": serverID.String(), "iteration": i + 1, "result_preview": truncateLog(toolResult, 500), "team_input": fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID)})
 	}
 	if projectPackageHistoryEnabled(requirement) {
 		latest := compactProjectPackageToolOutcome(toolCall.Name, true)

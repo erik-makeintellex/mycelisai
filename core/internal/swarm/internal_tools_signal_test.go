@@ -245,8 +245,8 @@ func TestHandleReadSignals_LatestOnlyReturnsCheckpoint(t *testing.T) {
 	now := time.Now().UTC()
 
 	mock.ExpectQuery("SELECT id::text, tenant_id, channel_key, owner_agent_id, content, metadata").
-		// MEM-LANES: a no-user read admits system rows and signal checkpoints.
-		WithArgs("default", channelKey, memory.SignalCheckpointChannelPrefix, 1).
+		// MEM-LANES-2: a no-user read admits system-class rows only.
+		WithArgs("default", channelKey, 1).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "tenant_id", "channel_key", "owner_agent_id", "content", "metadata", "expires_at", "created_at", "updated_at",
 		}).AddRow(

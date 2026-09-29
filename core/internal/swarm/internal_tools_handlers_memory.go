@@ -80,12 +80,15 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 	}
 	// MEM-LANES: the fact belongs to the turn's verified user; an unverified
 	// user saves nothing.
-	owner, err := recallAccessFromContext(ctx).ownerUserID()
+	access := recallAccessFromContext(ctx)
+	owner, err := access.ownerUserID()
 	if err != nil {
 		return "", fmt.Errorf("remember refused: %w. Nothing was saved.", err)
 	}
 
 	scope := resolveMemoryScope(ctx, args)
+	var note string // MEM-LANES-2: the model's visibility is a request only
+	scope.Visibility, note = ownerLaneVisibility(access, scope)
 	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO agent_memories (category, content, context, tenant_id, team_id, agent_id, run_id, visibility, created_at)
 		VALUES ($1, $2, $3, $4, NULLIF($5,''), $6, NULLIF($7,''), $8, NOW())
@@ -102,7 +105,7 @@ func (r *InternalToolRegistry) handleRemember(ctx context.Context, args map[stri
 		}
 		log.Printf("remember: vector index failed (non-fatal for a no-user turn): %v", err)
 	}
-	return fmt.Sprintf("Remembered [%s]: %s", category, content), nil
+	return withVisibilityNote(fmt.Sprintf("Remembered [%s]: %s", category, content), note), nil
 }
 
 func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, args map[string]any) (string, error) {
@@ -265,6 +268,9 @@ func (r *InternalToolRegistry) handleTempMemoryWrite(ctx context.Context, args m
 		return "", fmt.Errorf("temp_memory_write refused: %w. Nothing was saved.", err)
 	}
 	channel := stringValue(args["channel"])
+	if ownerUserID == "" && memory.SharedTempChannel(channel) {
+		return "", fmt.Errorf("temp_memory_write refused: %w. Nothing was saved.", errSharedChannelNoUser)
+	}
 	content := stringValue(args["content"])
 	owner := stringValue(args["owner_agent_id"])
 	metadata, _ := args["metadata"].(map[string]any)
@@ -326,11 +332,19 @@ func (r *InternalToolRegistry) handleSummarizeConversation(ctx context.Context, 
 	if r.mem == nil {
 		return "", fmt.Errorf("memory service offline — cannot store summary")
 	}
-	owner, err := recallAccessFromContext(ctx).ownerUserID()
+	access := recallAccessFromContext(ctx)
+	owner, err := access.ownerUserID()
 	if err != nil {
 		return "", fmt.Errorf("summarize_conversation refused: %w. Nothing was saved.", err)
 	}
-	return r.summarizeAndStore(ctx, resolveMemoryScope(ctx, args), owner, messagesText, 0)
+	scope := resolveMemoryScope(ctx, args)
+	var note string // MEM-LANES-2: the model's visibility is a request only
+	scope.Visibility, note = ownerLaneVisibility(access, scope)
+	id, err := r.summarizeAndStore(ctx, scope, owner, messagesText, 0)
+	if err != nil {
+		return "", err
+	}
+	return withVisibilityNote(id, note), nil
 }
 
 // AutoSummarize compresses a chat history window into a temporary continuity

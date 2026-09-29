@@ -134,9 +134,9 @@ Who sees a saved Deployment Context entry in the Memory list, entry actions, and
 
 Soma chat follows the same rule for saved Deployment Context entries. When you chat with Soma, the entries it reads for its answer, its **Sources** line, and its search of Deployment Context use only entries you can see. Team work and background work that no signed-in user started use org-wide entries only. If Soma cannot check your memory access, it answers without saved memory and says so in the reply. Promoting a customer-context entry into company knowledge works only when the person who confirms it can see that entry.
 
-Facts Soma remembers during your chat, summaries of your conversations, and Soma's temporary continuity notes from your chat belong to you. Soma recalls them, puts them in its prompt, and finds them in memory search only for you. Another user's Soma never sees them. A fact is shared with a team only when you ask Soma to share it with the team, and then only proven members of that team see it. A fact saved with global visibility is org-wide. Work that no signed-in user started does not see any user's facts or notes. If Soma cannot confirm who you are for memory, it saves nothing and says so. Facts and summaries saved before 2026-09-28 had no owner, so nobody sees them in recall unless they were already org-wide.
+Facts Soma remembers during your chat, summaries of your conversations, and Soma's temporary continuity notes from your chat belong to you. Soma recalls them, puts them in its prompt, and finds them in memory search only for you. Another user's Soma never sees them. This includes council specialists Soma consults during your chat, and the latest tool status Soma keeps for a tool it ran for you: they work as you, so what they save is yours too.
 
-> **Known limitation (2026-09-28):** SitReps (team activity summaries) are not yet filtered per user.
+Soma cannot widen who sees a fact or summary on its own. It is shared with a team only when you ask Soma to share it with a team you are a verified member of, and then only proven members of that team see it. It is shared with the whole organization only when an admin with `memory:write` asks for that. Otherwise it is kept private, and Soma's tool result says it was kept private. Work that no signed-in user started does not see any user's facts or notes, and it cannot post notes or signal checkpoints into the channels that other chats read; only Mycelis's own status updates go there. If Soma cannot confirm who you are for memory, it saves nothing and says so. If Mycelis is handling too many chats at once to check your memory access, Soma says it was at capacity instead. Facts, summaries and signal checkpoints saved before 2026-09-28 had no owner, so nobody sees them in recall unless they were already org-wide.
 
 Manual memory creation may appear through admin/runtime tooling where enabled, but it is not the default path for larger source documents. Stored facts or context are available to agents only within their allowed memory scope and trust boundary.
 
@@ -160,6 +160,8 @@ Each SitRep covers:
 - Notable errors or governance events
 
 SitReps are the "warm" tier — indexed for fast retrieval and embedded for semantic search.
+
+You see SitReps only for teams you are a verified member of. An admin with `groups:read` sees every team's SitReps. You must be signed in, and asking for a team you do not belong to shows nothing and says so.
 
 ---
 

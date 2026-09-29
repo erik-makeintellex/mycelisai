@@ -94,16 +94,17 @@ func formatCouncilPreflightQuestion(userInput string, call *toolCallPayload) str
 	return fmt.Sprintf("Preflight review before executing tool '%s' with args %s. User request: %s. Provide concise execution guidance and edge cases.", call.Name, args, strings.TrimSpace(userInput))
 }
 
-func (a *Agent) runCouncilPreflight(userMember string, userInput string, call *toolCallPayload) (string, error) {
+func (a *Agent) runCouncilPreflight(recall RecallAccess, userMember string, userInput string, call *toolCallPayload) (string, error) {
 	if a == nil || a.toolExecutor == nil {
 		return "", fmt.Errorf("tool executor unavailable")
 	}
 	// Preflight is a Core-owned step, so consult_council runs as a
-	// runtime-owned base tool even when the agent does not declare it.
+	// runtime-owned base tool even when the agent does not declare it. It
+	// carries the turn's user (MEM-LANES-2), so the consult stays theirs.
 	runtimeCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
 		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand,
-		RuntimeOwned: true,
+		RuntimeOwned: true, Recall: recall,
 	})
 	serverID, toolName, err := a.toolExecutor.FindToolByName(runtimeCtx, "consult_council")
 	if err != nil {

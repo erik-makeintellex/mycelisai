@@ -24,9 +24,12 @@ func (r *InternalToolRegistry) handleConsultCouncil(ctx context.Context, args ma
 		return "", fmt.Errorf("NATS not available — cannot consult council")
 	}
 
-	reqCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	const consultTimeout = 30 * time.Second
+	reqCtx, cancel := context.WithTimeout(ctx, consultTimeout)
 	defer cancel()
-	msg, err := r.nc.RequestWithContext(reqCtx, fmt.Sprintf(protocol.TopicCouncilRequestFmt, member), []byte(question))
+	// MEM-LANES-2: the council member runs under this turn's user, so its
+	// memory reads and writes stay that user's instead of becoming no-user rows.
+	msg, err := requestWithRecallTurn(reqCtx, r.nc, recallAccessFromContext(ctx), fmt.Sprintf(protocol.TopicCouncilRequestFmt, member), []byte(question), consultTimeout)
 	if err != nil {
 		return "", fmt.Errorf("council member %s did not respond: %w", member, err)
 	}

@@ -2,7 +2,10 @@ package swarm
 
 import (
 	"context"
+	"fmt"
 	"strings"
+
+	"github.com/mycelis/core/internal/memory"
 )
 
 type memoryScope struct {
@@ -60,14 +63,59 @@ func resolveMemoryScope(ctx context.Context, args map[string]any) memoryScope {
 			scope.Visibility = "private"
 		case scope.TeamID != "":
 			scope.Visibility = "team"
-		case scope.AgentID != "":
-			scope.Visibility = "private"
 		default:
-			scope.Visibility = "global"
+			// No user and no team, including a call with no invocation
+			// context: never org-wide by default (MEM-LANES-2).
+			scope.Visibility = "private"
 		}
 	}
 
 	return scope
+}
+
+// ownerLaneVisibility is the visibility a remembered fact or conversation
+// summary is saved with (MEM-LANES-2). The model's visibility is a request,
+// never authority:
+//
+//   - global needs the M2 authority Core set on the turn (OrgWideWrite: a
+//     verified root admin with memory:write); a turn with no user, and a call
+//     with no invocation context, never has it;
+//   - team needs a team, and in a user's turn proven membership of it (the
+//     reader's MEM-LIST team keys);
+//   - everything else is private.
+//
+// A narrowed request returns a note for the tool result.
+func ownerLaneVisibility(access RecallAccess, scope memoryScope) (string, string) {
+	switch scope.Visibility {
+	case "global":
+		if access.User && !access.Unavailable && access.OrgWideWrite {
+			return "global", ""
+		}
+		return "private", "Kept private: sharing saved memory with the whole organization needs a root admin with memory:write."
+	case "team":
+		if scope.TeamID == "" {
+			return "private", "Kept private: this turn has no team to share it with."
+		}
+		if !access.User {
+			return "team", ""
+		}
+		key := memory.GovernedTeamKey(scope.TenantID, scope.TeamID)
+		for _, member := range access.Reader.TeamKeys {
+			if member == key {
+				return "team", ""
+			}
+		}
+		return "private", fmt.Sprintf("Kept private: you are not a verified member of team %s, so it was not shared with the team.", scope.TeamID)
+	}
+	return "private", ""
+}
+
+// withVisibilityNote appends a narrowed-visibility note to a tool result.
+func withVisibilityNote(result, note string) string {
+	if note == "" {
+		return result
+	}
+	return result + " " + note
 }
 
 func dedupeStringValues(values []string) []string {
