@@ -3,7 +3,7 @@
 > Navigation: [Core AGENTS.md](../AGENTS.md) | [Repo AGENTS.md](../../AGENTS.md)
 
 ## Owns / does not own
-- `core/migrations/001_current_schema.sql`, the single current-schema baseline, plus the schema-integrity/installer-compatibility tests that pin it (`tests/test_db_*.py`) -> `mycelis-schema` (`.claude/agents/`, local-only and gitignored), the sole writer. No other role edits DDL; request changes through the lead.
+- `core/migrations/001_current_schema.sql`, the single current-schema baseline, plus the schema-integrity/installer-compatibility tests that pin it (`tests/test_db_*.py`) -> `mycelis-schema` (`.claude/agents/`, tracked roster), the sole writer. No other role edits DDL; request changes through the lead.
 - `ops/db*.py` installer behavior is shared with `mycelis-platform-ops` only where installer plumbing (not schema content) is involved.
 
 ## Contracts

@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../../AGENTS.md) | [Core AGENTS.md](../../core/AGENTS.md)
 
 ## Owns / does not own
-- `services/framework-runs/**`: a separate Go module (`go.mod` declares `github.com/mycelis/framework-runs`, not `github.com/mycelis/core`) with its own `cmd/framework-runs`, `internal/{auth,config,controller,executor,httpapi,journal,protocol}`, `migrations/`, and `Dockerfile` -> `mycelis-core-execution` (`.claude/agents/`, local-only and gitignored; the role file names this module explicitly).
+- `services/framework-runs/**`: a separate Go module (`go.mod` declares `github.com/mycelis/framework-runs`, not `github.com/mycelis/core`) with its own `cmd/framework-runs`, `internal/{auth,config,controller,executor,httpapi,journal,protocol}`, `migrations/`, and `Dockerfile` -> `mycelis-core-execution` (`.claude/agents/`, tracked roster; the role file names this module explicitly).
 - This is the confined Runs HTTP client/control service from the P0.10 B2 delivery, not the Core monolith; do not fold its authority logic into `core/internal/runs/**` without an explicit architecture decision.
 
 ## Contracts

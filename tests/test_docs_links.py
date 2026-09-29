@@ -42,6 +42,11 @@ def _area_agents_files() -> set[Path]:
     return found
 
 
+def _harness_artifact_docs() -> set[Path]:
+    """Tracked harness docs: root CLAUDE.md and the .claude/agents roster."""
+    return {ROOT / "CLAUDE.md", *sorted((ROOT / ".claude" / "agents").glob("*.md"))}
+
+
 def test_readme_docs_home_and_architecture_links_resolve():
     for path in (README, DOCS_HOME, CANONICAL_PRD, ROOT / "architecture" / "README.md"):
         _assert_links_resolve(path)
@@ -58,6 +63,7 @@ def test_all_active_documentation_links_resolve():
         *sorted((ROOT / "docs").rglob("*.md")),
         *sorted((ROOT / "architecture").rglob("*.md")),
         *_area_agents_files(),
+        *_harness_artifact_docs(),
     }
 
     for path in sorted(documentation):

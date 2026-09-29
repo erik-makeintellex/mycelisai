@@ -47,7 +47,6 @@ nats-data/
 .build/
 .logs/
 core/workspace/
-CLAUDE.md
 
 # Logs and Debug
 *.log
@@ -66,7 +65,8 @@ migration-pod.yaml
 seeds.sql
 
 # Local agent/session artifacts
-.claude/
+.claude/*
+!.claude/agents/
 .claude/settings.local.json
 interface/test-results/
 interface/playwright-report/

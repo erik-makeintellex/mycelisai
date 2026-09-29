@@ -3,7 +3,7 @@
 > Navigation: [Interface AGENTS.md](../AGENTS.md) | [Repo AGENTS.md](../../AGENTS.md)
 
 ## Owns / does not own
-- `interface/e2e/specs/**` (81 specs), `interface/e2e/support/**` (fixtures, live-journey helpers), `interface/e2e/global-setup.ts`, `interface/playwright.config.ts` -> `mycelis-e2e-proof` (`.claude/agents/`, local-only and gitignored). Distinct from `mycelis-interface`, which owns product code, not the e2e harness.
+- `interface/e2e/specs/**` (81 specs), `interface/e2e/support/**` (fixtures, live-journey helpers), `interface/e2e/global-setup.ts`, `interface/playwright.config.ts` -> `mycelis-e2e-proof` (`.claude/agents/`, tracked roster). Distinct from `mycelis-interface`, which owns product code, not the e2e harness.
 - Browser proof is run only under an exclusive lease from the lead; this role adds missing assertions and triages spec failures, it does not casually run the full suite against the shared stack.
 
 ## Contracts

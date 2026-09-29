@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../AGENTS.md) | [Docs Home](README.md)
 
 ## Owns / does not own
-- `docs/**` except `docs/architecture-library/MYCELIS_CANONICAL_PRD.md` and `.state/V8_DEV_STATE.md`, `ops/README.md`, and docs entries in `interface/lib/docsManifest.ts` -> `mycelis-docs-steward` (`.claude/agents/`, local-only and gitignored).
+- `docs/**` except `docs/architecture-library/MYCELIS_CANONICAL_PRD.md` and `.state/V8_DEV_STATE.md`, `ops/README.md`, and docs entries in `interface/lib/docsManifest.ts` -> `mycelis-docs-steward` (`.claude/agents/`, tracked roster).
 - `MYCELIS_CANONICAL_PRD.md` and `.state/V8_DEV_STATE.md` are lead-owned; docs-steward edits only the exact text the lead or `mycelis-architect` hands over, never independently.
 - `docs/TESTING.md` and `docs/architecture/OPERATIONS.md` are at their line cap (the "Task runner tightening" target is CLOSED); edits to them must be net-zero or shrink.
 - `architecture/` (the user-shared root-level entrypoint, not under `docs/`) follows the same docs-steward ownership per root `AGENTS.md` "Canonical Docs Location".

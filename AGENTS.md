@@ -127,7 +127,7 @@ Use the smallest tier that passes the task's proof gate; optimize accepted resul
 - A newly available model enters a tier only after it passes that tier's proof gate on a bounded slice. A model name is not evidence.
 - One agent is the default; spawn only authorized, independent work. Escalate a tier after a concrete failed proof or unresolved ambiguity, not for routine command execution.
 - Record model, tier, token usage, latency, and retries in close-out when the harness exposes them. Do not invent savings or confuse the lead session's model with spawn settings.
-- Harness rosters (for example local `.claude/agents/` or Codex agent config) must follow this table and the rules in this file; they are not authority. Codex effort guidance follows [official Codex documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). All assignments are repository operating choices, not capability guarantees.
+- Harness rosters (for example the tracked `.claude/agents/` roster or Codex agent config) must follow this table and the rules in this file; they are not authority. Codex effort guidance follows [official Codex documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents). All assignments are repository operating choices, not capability guarantees.
 
 ## Context Execution
 
@@ -192,6 +192,7 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Before spawning for a target, declare its team: at most 3 roles from the harness roster (for example writer, second writer or interface writer, then independent QA), each with its model tier. Record the team in the scoreboard's "Delivery Targets And Teams" table (`.state/V8_DEV_STATE.md`). Changing a role means updating that row first.
 - Continuing a target reuses its declared team. Resume a live agent that holds the context; otherwise respawn the same role with a fresh packet. When a target closes, mark its row closed and list the agents actually used, so the next continuation starts from the record, not from memory.
 - Close-out must include what teams or agents were reused, spawned, messaged, closed, or intentionally skipped. List them per delivery target.
+- The tracked harness sources are `.claude/agents/` (the role roster, with `.claude/agents/README.md` as its index) and `.claude/agents/WRITER_BRIEF.md` (the writer rules); root `CLAUDE.md` only orients the harness and points here. Packets stay transient; their outcomes are recorded in the scoreboard.
 
 ## Canonical Docs Location
 
@@ -240,9 +241,9 @@ This repository is Go-first for product/runtime work and Python-first for manage
 - Prefer the configured service targets over host folklore. Read process env plus `.env`, `.env.compose`, task defaults, Compose/Helm values, and the active proof command before choosing addresses, ports, storage roots, or provider endpoints.
 - Do not treat `localhost`, `127.0.0.1`, `0.0.0.0`, `host.docker.internal`, a Windows LAN IP, an in-cluster service name, or a port-forward as interchangeable. Each name is valid only from a particular network namespace. Prove reachability from the process that will use it.
 - `0.0.0.0` is a bind/listen address, not a client/probe target. Service probes and browser/API clients should use the configured reachable host such as `127.0.0.1`, a published host port, a service DNS name, or an operator-facing URL.
-- Windows remains a valid editing, git, browser, and local-service surface when configured; WSL/Linux remains a valid development and proof surface when configured. The current environment, not historical habit, decides where install/build/test/Compose/browser proof runs.
+- The WSL `dev` checkout is the single development and proof surface; Windows is only a host (Ollama, browser, editors through `\\wsl.localhost\...`). The owner runs `git push`.
 - When working from WSL or Linux, keep performance-sensitive checkouts, virtualenvs, Node modules, Go caches, Playwright browsers, generated outputs, and tool caches on the native Linux filesystem unless the task explicitly proves a mounted Windows path. Avoid `/mnt/*` for hot build/test paths by default.
-- When working from Windows, keep Windows-only cleanup and host-service actions scoped to repo-owned artifacts or explicitly approved user-profile caches. Do not delete Docker volumes, WSL distros, Rancher/Desktop state, or shared package caches as a substitute for configured cleanup tasks.
+- Do not delete Docker volumes, WSL distros, or shared package caches as a substitute for configured cleanup tasks.
 
 ## Configured Service Target Standard
 

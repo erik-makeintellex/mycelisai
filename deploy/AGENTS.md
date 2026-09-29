@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../AGENTS.md) | [Charts AGENTS.md](../charts/AGENTS.md)
 
 ## Owns / does not own
-- `deploy/compose/**` (Compose overlays) plus root `docker-compose.yml` -> `mycelis-platform-ops` (`.claude/agents/`, local-only and gitignored).
+- `deploy/compose/**` (Compose overlays) plus root `docker-compose.yml` -> `mycelis-platform-ops` (`.claude/agents/`, tracked roster).
 - See [`charts/AGENTS.md`](../charts/AGENTS.md) for the Helm/Kubernetes counterpart; a topology change here (ports, service names, env forwarding) is usually mirrored there.
 
 ## Contracts

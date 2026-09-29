@@ -23,6 +23,11 @@ def _area_agents_files() -> set[Path]:
     return found
 
 
+def _harness_artifact_docs() -> set[Path]:
+    """Tracked harness docs: root CLAUDE.md and the .claude/agents roster."""
+    return {ROOT / "CLAUDE.md", *sorted((ROOT / ".claude" / "agents").glob("*.md"))}
+
+
 @dataclass
 class FakeResult:
     exited: int = 0
@@ -169,6 +174,7 @@ def test_documented_invoke_commands_are_registered():
         *sorted((ROOT / "docs").rglob("*.md")),
         *sorted((ROOT / "architecture").rglob("*.md")),
         *_area_agents_files(),
+        *_harness_artifact_docs(),
     }
     command_pattern = re.compile(r"uv run inv ([a-z][a-z0-9]*(?:[.-][a-z0-9]+)*)(?![a-z0-9.*-])")
     documented_tasks = {
