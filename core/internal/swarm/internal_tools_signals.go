@@ -186,7 +186,12 @@ func (r *InternalToolRegistry) handleReadSignals(ctx context.Context, args map[s
 		if r.mem == nil {
 			return "", fmt.Errorf("memory service offline — latest channel checkpoints unavailable")
 		}
-		entries, err := r.mem.GetTempMemory(ctx, "default", channelKey, 1)
+		// MEM-LANES: a checkpoint written in a user's turn is that user's.
+		reader, err := recallAccessFromContext(ctx).laneReader()
+		if err != nil {
+			return "", fmt.Errorf("read latest channel checkpoint: %w", err)
+		}
+		entries, err := r.mem.GetTempMemory(ctx, "default", channelKey, 1, reader)
 		if err != nil {
 			return "", fmt.Errorf("read latest channel checkpoint: %w", err)
 		}

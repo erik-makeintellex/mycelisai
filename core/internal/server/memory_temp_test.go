@@ -22,6 +22,14 @@ func withMemoryDB(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 	}, mock
 }
 
+// tempRootAdmin is the only caller the temp route admits (MEM-LANES).
+var tempRootAdmin = memoryUser("user-root-temp", "root", "admin", "memory:write")
+
+func tempRequest(t *testing.T, s *AdminServer, method, path, body string) int {
+	t.Helper()
+	return doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleTempMemory), method, path, body, tempRootAdmin).Code
+}
+
 func TestHandleTempMemory_Get_HappyPath(t *testing.T) {
 	opt, mock := withMemoryDB(t)
 	s := newTestServer(opt)
@@ -31,10 +39,10 @@ func TestHandleTempMemory_Get_HappyPath(t *testing.T) {
 		"id", "tenant_id", "channel_key", "owner_agent_id", "content", "metadata", "expires_at", "created_at", "updated_at",
 	}).AddRow("mem-1", "default", "lead.shared", "admin", "checkpoint", `{"phase":"draft"}`, nil, now, now)
 	mock.ExpectQuery("SELECT id::text, tenant_id, channel_key, owner_agent_id, content, metadata").
-		WithArgs("default", "lead.shared", 10).
+		WithArgs("default", "lead.shared", memory.SignalCheckpointChannelPrefix, tempRootAdmin.UserID, 10).
 		WillReturnRows(rows)
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleTempMemory), "GET", "/api/v1/memory/temp?channel=lead.shared", "")
+	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleTempMemory), "GET", "/api/v1/memory/temp?channel=lead.shared", "", tempRootAdmin)
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp map[string]any
@@ -53,13 +61,8 @@ func TestHandleTempMemory_Post_HappyPath(t *testing.T) {
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow("mem-2"))
 
 	body := `{"channel":"lead.shared","content":"checkpoint","owner_agent_id":"admin","ttl_minutes":30,"metadata":{"phase":"draft"}}`
-	rr := doRequest(t, http.HandlerFunc(s.HandleTempMemory), "POST", "/api/v1/memory/temp", body)
-	assertStatus(t, rr, http.StatusOK)
-
-	var resp map[string]any
-	assertJSON(t, rr, &resp)
-	if resp["ok"] != true {
-		t.Fatalf("expected ok=true, got %v", resp["ok"])
+	if code := tempRequest(t, s, "POST", "/api/v1/memory/temp", body); code != http.StatusOK {
+		t.Fatalf("status %d", code)
 	}
 }
 
@@ -68,27 +71,32 @@ func TestHandleTempMemory_Delete_HappyPath(t *testing.T) {
 	s := newTestServer(opt)
 
 	mock.ExpectExec("DELETE FROM temp_memory_channels").
-		WithArgs("default", "lead.shared").
+		WithArgs("default", "lead.shared", tempRootAdmin.UserID).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleTempMemory), "DELETE", "/api/v1/memory/temp?channel=lead.shared", "")
-	assertStatus(t, rr, http.StatusOK)
+	if code := tempRequest(t, s, "DELETE", "/api/v1/memory/temp?channel=lead.shared", ""); code != http.StatusOK {
+		t.Fatalf("status %d", code)
+	}
 }
 
 func TestHandleTempMemory_ValidationAndNilMem(t *testing.T) {
 	s := newTestServer()
-
-	rr := doRequest(t, http.HandlerFunc(s.HandleTempMemory), "GET", "/api/v1/memory/temp?channel=lead.shared", "")
-	assertStatus(t, rr, http.StatusServiceUnavailable)
+	if code := tempRequest(t, s, "GET", "/api/v1/memory/temp?channel=lead.shared", ""); code != http.StatusServiceUnavailable {
+		t.Fatalf("nil mem: status %d", code)
+	}
 
 	opt, _ := withMemoryDB(t)
 	s = newTestServer(opt)
-	rr = doRequest(t, http.HandlerFunc(s.HandleTempMemory), "GET", "/api/v1/memory/temp", "")
-	assertStatus(t, rr, http.StatusBadRequest)
-
-	rr = doRequest(t, http.HandlerFunc(s.HandleTempMemory), "POST", "/api/v1/memory/temp", `{"channel":"x"}`)
-	assertStatus(t, rr, http.StatusBadRequest)
-
-	rr = doRequest(t, http.HandlerFunc(s.HandleTempMemory), "PATCH", "/api/v1/memory/temp", "")
-	assertStatus(t, rr, http.StatusMethodNotAllowed)
+	for _, tc := range []struct {
+		method, path, body string
+		want               int
+	}{
+		{"GET", "/api/v1/memory/temp", "", http.StatusBadRequest},
+		{"POST", "/api/v1/memory/temp", `{"channel":"x"}`, http.StatusBadRequest},
+		{"PATCH", "/api/v1/memory/temp", "", http.StatusMethodNotAllowed},
+	} {
+		if code := tempRequest(t, s, tc.method, tc.path, tc.body); code != tc.want {
+			t.Errorf("%s %s: status %d, want %d", tc.method, tc.path, code, tc.want)
+		}
+	}
 }

@@ -82,8 +82,9 @@ func TestHandleSearchMemory_UsesInvocationTeamScope(t *testing.T) {
 
 	// The 2-dim fake engine cannot serve the 768-dim store, so recall is keyword.
 	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
-		// SRU: a call with no requesting user reads with the empty reader.
-		WithArgs("default", "alpha", "lead-alpha", "", "", "{}", "planning memory", 5).
+		// SRU: a call with no requesting user reads with the empty reader;
+		// MEM-LANES adds the owner-lane rule (lane types, user, team keys).
+		WithArgs("default", "alpha", "lead-alpha", "", "", "{}", `{"agent_memory","conversation"}`, "", "{}", "planning memory", 5).
 		WillReturnRows(nowRows)
 
 	registry := NewInternalToolRegistry(InternalToolDeps{
@@ -127,7 +128,7 @@ func TestAutoSummarize_StoresTempPlanningCheckpoint(t *testing.T) {
 		Mem: mem,
 	})
 
-	registry.AutoSummarize(context.Background(), "lead-alpha", "alpha", []cognitive.ChatMessage{
+	registry.AutoSummarize(context.Background(), RecallAccess{}, "lead-alpha", "alpha", []cognitive.ChatMessage{
 		{Role: "user", Content: "Let's think through the plan first."},
 		{Role: "assistant", Content: "I'll outline the planning options."},
 	})
@@ -270,7 +271,7 @@ func TestBuildContext_IncludesDeploymentContextRecall(t *testing.T) {
 	mem := memory.NewServiceWithDB(db)
 	// The 2-dim fake engine cannot serve the 768-dim store, so recall is keyword.
 	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
-		WithArgs("default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", "", "", "{}", "Summarize our MCP security posture.", 5).
+		WithArgs("default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", "", "", "{}", `{"agent_memory","conversation"}`, "", "{}", "Summarize our MCP security posture.", 5).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
 			AddRow("vec-ctx", "[customer_context] secure web access via MCP policy gates", `{"artifact_title":"Security Brief","source_label":"operator brief","visibility":"global","knowledge_class":"customer_context"}`, 0.93, time.Now()).
 			AddRow("vec-company", "[company_knowledge] approved deployment playbook", `{"artifact_title":"Deployment Playbook","source_label":"approved company guide","visibility":"global","knowledge_class":"company_knowledge"}`, 0.9, time.Now()).

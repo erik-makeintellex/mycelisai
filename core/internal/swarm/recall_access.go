@@ -2,13 +2,10 @@ package swarm
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 
 	"github.com/mycelis/core/internal/memory"
 )
@@ -31,56 +28,41 @@ type RecallAccess struct {
 	Unavailable bool
 }
 
-// RecallTurnHeader carries the Core-minted turn token on a direct request to
-// an agent. The token is random, single use and resolvable only inside this
-// process, so a NATS publisher cannot claim another user's read scope: an
-// unknown token resolves to Unavailable, a missing one to no user.
-const RecallTurnHeader = "Mycelis-Recall-Turn"
-
 // errRecallUnavailable is returned by memory tools when the turn's read
 // scope could not be verified.
 var errRecallUnavailable = errors.New("saved memory is unavailable for this turn: the requesting user's memory access could not be verified")
 
-var recallTurns = struct {
-	sync.Mutex
-	m map[string]RecallAccess
-}{m: map[string]RecallAccess{}}
+// errNoOwnerID refuses a memory write for a signed-in identity without a user
+// id: it could neither be attributed nor read back.
+var errNoOwnerID = errors.New("saved memory needs a signed-in user id for this turn")
 
-// RegisterRecallTurn stores access under a fresh token for one direct
-// request. release removes it if the agent never claimed it.
-func RegisterRecallTurn(access RecallAccess) (string, func()) {
-	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
-		// No token: the agent treats the turn as unavailable, never unscoped.
-		return "unavailable", func() {}
+// ownerUserID is whom a memory write of this scope belongs to (MEM-LANES):
+// the verified requesting user, or "" for a turn with no user. A write whose
+// user could not be verified is refused, never saved unowned.
+func (a RecallAccess) ownerUserID() (string, error) {
+	if a.Unavailable {
+		return "", errRecallUnavailable
 	}
-	token := hex.EncodeToString(raw)
-	recallTurns.Lock()
-	recallTurns.m[token] = access
-	recallTurns.Unlock()
-	return token, func() {
-		recallTurns.Lock()
-		delete(recallTurns.m, token)
-		recallTurns.Unlock()
+	if !a.User {
+		return "", nil
 	}
+	if owner := strings.TrimSpace(a.Reader.UserID); owner != "" {
+		return owner, nil
+	}
+	return "", errNoOwnerID
 }
 
-// claimRecallTurn resolves and consumes a turn token. No token means no
-// user; a token this process did not mint (or already consumed) is a failed
-// lookup.
-func claimRecallTurn(token string) RecallAccess {
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return RecallAccess{}
+// laneReader is the reader of the owner lanes (temp channels, conversation
+// summaries): the requesting user, or the empty reader for no user. It
+// refuses exactly when a write of the same scope would be refused.
+func (a RecallAccess) laneReader() (memory.GovernedReader, error) {
+	if _, err := a.ownerUserID(); err != nil {
+		return memory.GovernedReader{}, err
 	}
-	recallTurns.Lock()
-	access, ok := recallTurns.m[token]
-	delete(recallTurns.m, token)
-	recallTurns.Unlock()
-	if !ok {
-		return RecallAccess{Unavailable: true}
+	if !a.User {
+		return memory.GovernedReader{}, nil
 	}
-	return access
+	return a.Reader, nil
 }
 
 // governedReader is the reader every governed recall of this scope applies.

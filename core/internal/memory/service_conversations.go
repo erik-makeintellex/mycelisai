@@ -26,11 +26,14 @@ type ConversationSummary struct {
 // ConversationSummaryInput captures the durable summary payload plus the
 // recall-scope metadata that will be stored alongside its vector embedding.
 type ConversationSummaryInput struct {
-	AgentID          string
-	TenantID         string
-	TeamID           string
-	RunID            string
-	Visibility       string
+	AgentID    string
+	TenantID   string
+	TeamID     string
+	RunID      string
+	Visibility string
+	// OwnerUserID is the verified user of the summarized turn ("" for no
+	// user); it is stamped on the vector that recall reads (MEM-LANES).
+	OwnerUserID      string
 	Summary          string
 	KeyTopics        []string
 	UserPreferences  map[string]any
@@ -79,7 +82,7 @@ func (s *Service) StoreConversationSummary(ctx context.Context, cog EmbedFunc, i
 		embText := fmt.Sprintf("[conversation] %s", input.Summary)
 		vec, err := cog(ctx, embText, "")
 		if err == nil {
-			meta := map[string]any{
+			meta := OwnerLaneMetadata(map[string]any{
 				"type":       "conversation",
 				"agent_id":   input.AgentID,
 				"summary_id": summaryID,
@@ -88,7 +91,7 @@ func (s *Service) StoreConversationSummary(ctx context.Context, cog EmbedFunc, i
 				"run_id":     strings.TrimSpace(input.RunID),
 				"visibility": strings.ToLower(strings.TrimSpace(input.Visibility)),
 				"source":     "conversation_summary",
-			}
+			}, input.OwnerUserID)
 			if storeErr := s.StoreVector(ctx, embText, vec, meta); storeErr != nil {
 				log.Printf("conversation summary: vector store failed (non-fatal): %v", storeErr)
 			}
@@ -100,16 +103,20 @@ func (s *Service) StoreConversationSummary(ctx context.Context, cog EmbedFunc, i
 	return summaryID, nil
 }
 
-// RecallConversations finds the most relevant past conversation summaries for a query.
-// Uses semantic search on context_vectors filtered by type="conversation", then JOINs
-// with conversation_summaries for structured data.
-func (s *Service) RecallConversations(ctx context.Context, queryVec []float64, agentID string, limit int) ([]ConversationSummary, error) {
+// RecallConversations finds the most relevant past conversation summaries
+// reader may read (ownerLaneClause, MEM-LANES). Uses semantic search on
+// context_vectors filtered by type="conversation", then JOINs with
+// conversation_summaries for structured data.
+func (s *Service) RecallConversations(ctx context.Context, queryVec []float64, agentID string, limit int, reader GovernedReader) ([]ConversationSummary, error) {
+	if s == nil || s.db == nil {
+		return nil, fmt.Errorf("memory service offline")
+	}
 	if limit <= 0 {
 		limit = 3
 	}
 
 	vecStr := formatVector(queryVec)
-
+	read, args, next := ownerLaneClause("cv.metadata", reader, []any{vecStr, agentID}, 3)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT cs.id, cs.agent_id, cs.summary, cs.key_topics, cs.user_preferences,
 		       cs.personality_notes, cs.data_references, cs.message_count, cs.created_at,
@@ -119,9 +126,9 @@ func (s *Service) RecallConversations(ctx context.Context, queryVec []float64, a
 		WHERE cv.metadata->>'type' = 'conversation'
 		  AND cv.embedding IS NOT NULL
 		  AND ($2 = '' OR cv.metadata->>'agent_id' = $2)
+		  AND `+read+`
 		ORDER BY cv.embedding <=> $1::vector
-		LIMIT $3
-	`, vecStr, agentID, limit)
+		LIMIT $`+fmt.Sprint(next), append(args, limit)...)
 	if err != nil {
 		return nil, fmt.Errorf("recall conversations: %w", err)
 	}

@@ -20,6 +20,23 @@ func (s *AdminServer) searchService() *searchcap.Service {
 	return s.Search
 }
 
+// Search failures use the blocker envelope (MEM-LANES LOW); nothing was
+// searched in either case.
+const codeSearchFailed = "search_failed"
+
+var (
+	searchMemoryAccessBlocker = roleBlockerText{
+		User: blockerText{"Saved memory access could not be checked, so nothing was searched.",
+			"Try again in a moment. If it keeps happening, ask an admin to check the memory store."},
+		Admin: blockerText{Action: "Check the Core database and team membership lookups, then try again. Nothing was searched."},
+	}
+	searchFailedBlocker = roleBlockerText{
+		User: blockerText{"Search failed, so there are no results.",
+			"Try again in a moment. If it keeps happening, ask an admin to check the search provider."},
+		Admin: blockerText{Action: "Check the configured search provider and the Core logs, then try again."},
+	}
+)
+
 func (s *AdminServer) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		respondError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -34,13 +51,14 @@ func (s *AdminServer) HandleSearch(w http.ResponseWriter, r *http.Request) {
 	reader, err := s.memoryReader(r)
 	if err != nil {
 		log.Printf("search: memory access check failed: %v", err)
-		respondError(w, "Saved memory access could not be checked, so nothing was searched.", http.StatusServiceUnavailable)
+		respondBlockerText(w, r, http.StatusServiceUnavailable, codeServiceUnavailable, searchMemoryAccessBlocker, "memory access check failed: "+err.Error(), nil)
 		return
 	}
 	req.Reader = &reader
 	resp, err := s.searchService().Search(r.Context(), req)
 	if err != nil {
-		respondError(w, "search failed", http.StatusInternalServerError)
+		log.Printf("search: failed: %v", err)
+		respondBlockerText(w, r, http.StatusInternalServerError, codeSearchFailed, searchFailedBlocker, "search failed: "+err.Error(), nil)
 		return
 	}
 	respondJSON(w, map[string]any{

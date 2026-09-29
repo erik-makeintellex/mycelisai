@@ -134,7 +134,9 @@ Who sees a saved Deployment Context entry in the Memory list, entry actions, and
 
 Soma chat follows the same rule for saved Deployment Context entries. When you chat with Soma, the entries it reads for its answer, its **Sources** line, and its search of Deployment Context use only entries you can see. Team work and background work that no signed-in user started use org-wide entries only. If Soma cannot check your memory access, it answers without saved memory and says so in the reply. Promoting a customer-context entry into company knowledge works only when the person who confirms it can see that entry.
 
-> **Known limitation (2026-09-28):** facts Soma stores with its own remember tool, and summaries of past conversations, are not yet separated per user. Another user's Soma chat can recall them. Do not tell Soma anything in chat that other users of this deployment must not see; saved Deployment Context entries marked private are protected.
+Facts Soma remembers during your chat, summaries of your conversations, and Soma's temporary continuity notes from your chat belong to you. Soma recalls them, puts them in its prompt, and finds them in memory search only for you. Another user's Soma never sees them. A fact is shared with a team only when you ask Soma to share it with the team, and then only proven members of that team see it. A fact saved with global visibility is org-wide. Work that no signed-in user started does not see any user's facts or notes. If Soma cannot confirm who you are for memory, it saves nothing and says so. Facts and summaries saved before 2026-09-28 had no owner, so nobody sees them in recall unless they were already org-wide.
+
+> **Known limitation (2026-09-28):** SitReps (team activity summaries) are not yet filtered per user.
 
 Manual memory creation may appear through admin/runtime tooling where enabled, but it is not the default path for larger source documents. Stored facts or context are available to agents only within their allowed memory scope and trust boundary.
 

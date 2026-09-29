@@ -214,12 +214,22 @@ func TestSRUChatRealDB_DirectRequestsWithoutCoreTokenGetNoUserScope(t *testing.T
 	if len(forged.ContextSources) != 0 || !strings.Contains(forged.Text, "Saved memory context was unavailable") {
 		t.Fatalf("a forged token must withhold memory and say so: %+v", forged)
 	}
-	// A real token is single use: replaying it is a forged token.
-	token, release := swarm.RegisterRecallTurn(swarm.RecallAccess{User: true})
+	// A real token is single use: replaying it, even on its own subject and
+	// reply inbox (MEM-LANES binding), is a forged token.
+	inbox := nats.NewInbox()
+	token, release := swarm.RegisterRecallTurn(swarm.RecallAccess{User: true}, subject, inbox, time.Minute)
 	defer release()
-	send(token)
+	bound := func() swarm.ProcessResult {
+		msg := nats.NewMsg(subject)
+		msg.Data, msg.Reply = payload, inbox
+		msg.Header.Set(swarm.RecallTurnHeader, token)
+		return memlanesDecode(t, "bound", memlanesSpend(t, w.s.NC, msg))
+	}
+	if first := bound(); strings.Contains(first.Text, "Saved memory context was unavailable") {
+		t.Fatalf("the bound token must be honoured once: %+v", first)
+	}
 	w.provider.take()
-	if replay := send(token); !strings.Contains(replay.Text, "Saved memory context was unavailable") {
+	if replay := bound(); !strings.Contains(replay.Text, "Saved memory context was unavailable") {
 		t.Fatalf("a replayed token must not be honoured: %+v", replay)
 	}
 }
