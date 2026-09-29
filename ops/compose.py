@@ -4,7 +4,7 @@ from pathlib import Path
 from invoke import task, Collection
 
 from . import compose_cognitive_warm
-from . import compose_env
+from . import compose_env, compose_images
 from . import compose_probe
 from . import compose_storage, db_upgrade
 from . import compose_wsl_relay
@@ -503,6 +503,9 @@ def up(c, build=False, wait_timeout=180):
         app_cmd.append("--build")
     app_cmd.extend(["core", "interface"])
     _run_compose(app_cmd, env=_compose_runtime_env(env_values))
+    compose_images.ensure_current_after_up(
+        lambda svcs: _run_compose(_compose_command("up", "-d", "--force-recreate", "--no-deps", *svcs), env=_compose_runtime_env(env_values))
+    )
 
     _expect_stage(
         _wait_for_port,
@@ -550,12 +553,8 @@ def up(c, build=False, wait_timeout=180):
     )
 
     print()
-    _print_step(
-        4,
-        4,
-        "Compose stack ready.",
-        "Next expected checks: 'uv run inv compose.health' for deep runtime proof, then open http://localhost:3000.",
-    )
+    next_checks = "Next expected checks: 'uv run inv compose.health' for deep runtime proof, then open http://localhost:3000."
+    _print_step(4, 4, "Compose stack ready.", next_checks)
     status.body(None)
 
 
@@ -645,6 +644,7 @@ def health(c):
     _validate_compose_env(env_values)
     env_values = _prepare_wsl_ollama_host(env_values)
     print("=== Mycelis Compose Health ===\n")
+    compose_images.require_current("compose.health")
     compose_probe.run_health(
         env_values,
         http_getter=_http_get,
