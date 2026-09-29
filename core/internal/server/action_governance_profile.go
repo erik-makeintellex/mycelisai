@@ -98,13 +98,14 @@ func normalizeEscalationPreference(value any) string {
 	}
 }
 
+// userGovernanceProfileFromSettings builds the approval profile. Role (and so
+// RequiredApproverRole) comes only from the verified identity; the settings
+// file's "role" is never read here (AUTH-C1 A2). The other keys are
+// organization policy written only by root admin + governance:write.
 func userGovernanceProfileFromSettings(settings map[string]any, identityRole string) userGovernanceProfile {
 	profile := defaultUserGovernanceProfile(identityRole)
 	if settings == nil {
 		return profile
-	}
-	if role := normalizeGovernanceRole(fmt.Sprint(settings["role"])); role != "" {
-		profile.Role = role
 	}
 	profile.CostSensitivity = normalizeCostSensitivity(settings["cost_sensitivity"])
 	profile.ReviewStrictness = normalizeReviewStrictness(settings["review_strictness"])

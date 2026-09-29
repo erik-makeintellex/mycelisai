@@ -72,6 +72,9 @@ func TestLegSwarmCommandRouteNotRegistered(t *testing.T) {
 	nc := legStartTestNATS(t)
 
 	mux := http.NewServeMux()
+	// Sentinel: Soma mounts no routes since AUTH-C1 moved /api/swarm/teams to
+	// AdminServer, so the sanity check below needs a route of its own.
+	mux.HandleFunc("POST /leg-sentinel", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	core := &coreRuntime{NC: nc, Guard: &governance.Guard{}}
 	selection := &bootstrap.StartupSelection{Bundle: &bootstrap.TemplateBundle{ID: "leg-route-test"}}
 	registry := swarm.NewRegistry(t.TempDir())
@@ -96,12 +99,12 @@ func TestLegSwarmCommandRouteNotRegistered(t *testing.T) {
 
 	// Sanity check: a still-live route on the same mux keeps resolving, so the
 	// 404 above proves route absence rather than a mux that matches nothing.
-	resp2, err := http.Post(srv.URL+"/api/swarm/teams", "application/json", strings.NewReader(`{}`))
+	resp2, err := http.Post(srv.URL+"/leg-sentinel", "application/json", strings.NewReader(`{}`))
 	if err != nil {
-		t.Fatalf("POST /api/swarm/teams: %v", err)
+		t.Fatalf("POST /leg-sentinel: %v", err)
 	}
 	defer resp2.Body.Close()
-	if resp2.StatusCode == http.StatusNotFound {
-		t.Fatal("expected /api/swarm/teams to remain registered")
+	if resp2.StatusCode != http.StatusNoContent {
+		t.Fatalf("expected the sentinel route to resolve, got %d", resp2.StatusCode)
 	}
 }

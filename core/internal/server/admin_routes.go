@@ -37,6 +37,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
+	mux.HandleFunc("/api/swarm/teams", s.HandleSwarmTeams) // AUTH-C1: root admin; Soma mounts no raw spawn
 	mux.HandleFunc("DELETE /api/v1/teams/{id}", s.HandleDeleteTeam)
 	mux.HandleFunc("GET /api/v1/admin/runtime-teams/{teamID}/ownership", s.HandleTeamOwnership)
 	mux.HandleFunc("PUT /api/v1/admin/runtime-teams/{teamID}/ownership", s.HandleTeamOwnership)
@@ -78,7 +79,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/missions/{id}/agents/{name}", s.handleDeleteMissionAgent)
 	mux.HandleFunc("DELETE /api/v1/missions/{id}", s.handleDeleteMission)
 
-	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
 	mux.HandleFunc("/api/v1/registry/templates", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "GET" {
 			s.handleListTemplates(w, r)

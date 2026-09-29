@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -63,15 +62,11 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, user)
 }
 
-// HandleTeams returns the list of teams for the user or creates a new one
+// HandleTeams lists active team ids and names (GET) or spawns a runtime team
+// from a raw manifest (POST, root admin + groups:write; see spawnRuntimeTeam).
 func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
-	log.Printf("DEBUG: HandleTeams called. Method: %s. Soma: %v", r.Method, s.Soma)
-	if r.Method == "POST" {
-		if s.Soma != nil {
-			s.Soma.HandleCreateTeam(w, r)
-			return
-		}
-		http.Error(w, "Soma not initialized", http.StatusServiceUnavailable)
+	if r.Method == http.MethodPost {
+		s.spawnRuntimeTeam(w, r)
 		return
 	}
 
@@ -130,19 +125,7 @@ func (s *AdminServer) HandleUserSettings(w http.ResponseWriter, r *http.Request)
 	case http.MethodGet:
 		respondJSON(w, loadUserSettings())
 	case http.MethodPut:
-		var input map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			http.Error(w, "invalid JSON body", http.StatusBadRequest)
-			return
-		}
-
-		settings := mergeUserSettings(input)
-		if err := saveUserSettings(settings); err != nil {
-			http.Error(w, "failed to persist user settings", http.StatusInternalServerError)
-			return
-		}
-
-		respondJSON(w, settings)
+		s.putUserSettings(w, r)
 	default:
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
