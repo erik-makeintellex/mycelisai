@@ -93,6 +93,10 @@ func buildApprovalPolicy(profile userGovernanceProfile, planned []protocol.Plann
 	}
 
 	switch {
+	case profile.FailStrict: // unreadable settings: every tool action needs approval (AUTH-C1b)
+		policy.ApprovalRequired = true
+		policy.ApprovalMode = "required"
+		policy.ApprovalReason = approvalReasonSettingsUnavailable
 	case approvalRank(risk) >= 3:
 		policy.ApprovalRequired = true
 		policy.ApprovalMode = "required"

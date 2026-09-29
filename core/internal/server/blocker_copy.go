@@ -306,3 +306,26 @@ var settingsPolicyForbiddenCopy = roleBlockerText{
 	Admin: blockerText{"These settings are organization approval policy and need the permission named in required_scope. They were not changed.",
 		"Ask a root admin to grant required_scope; refused_keys lists what was not changed and preferences_saved says whether the rest of the request was saved."},
 }
+
+// AUTH-C1b: 503 settings_store_unavailable when the settings file can't be
+// read (corrupt, unreadable) or no settings path resolves; nothing was
+// written. 403 core_team_protected when DELETE /api/v1/teams/{id} names a
+// Core-owned team; refused for every caller, nothing was stopped.
+const (
+	codeSettingsStoreUnavailable = "settings_store_unavailable"
+	codeCoreTeamProtected        = "core_team_protected"
+)
+
+var settingsStoreUnavailableCopy = roleBlockerText{
+	User: blockerText{"Settings can't be saved right now. Nothing was changed.",
+		"Try again in a moment. If it keeps happening, ask an admin to check the saved settings."},
+	Admin: blockerText{"The saved settings file is unreadable or not valid JSON, or no settings path is configured. Nothing was changed.",
+		"Fix or remove the file at MYCELIS_USER_SETTINGS_PATH (default ~/.mycelis/user-settings.json), or set that path, then try again."},
+}
+
+var coreTeamProtectedCopy = roleBlockerText{
+	User: blockerText{"This is one of Soma's built-in teams, so it can't be removed. Nothing was stopped.",
+		"Remove a team you created instead."},
+	Admin: blockerText{"Core-owned standing teams (admin-core, council-core, genesis-core, telemetry-core) can't be stopped or deleted through the API. Nothing was stopped.",
+		"Core manages these teams; restart Core if one is unhealthy."},
+}
