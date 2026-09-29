@@ -39,7 +39,15 @@ func (a *Agent) processMessageStructuredWithPosture(input string, priorHistory [
 	return a.processMessageStructuredWithRequirement(input, priorHistory, planningOnly, nil)
 }
 
+// processMessageStructuredWithRequirement runs a turn with no requesting
+// user (team triggers, background work): governed recall is org-wide only.
 func (a *Agent) processMessageStructuredWithRequirement(input string, priorHistory []cognitive.ChatMessage, planningOnly bool, requirement *teamResultRequirement) ProcessResult {
+	return a.processTurn(RecallAccess{}, input, priorHistory, planningOnly, requirement)
+}
+
+// processTurn is one inference turn; access scopes its governed recall and
+// every memory tool it calls (SRU).
+func (a *Agent) processTurn(access RecallAccess, input string, priorHistory []cognitive.ChatMessage, planningOnly bool, requirement *teamResultRequirement) ProcessResult {
 	if a.brain == nil {
 		log.Printf("Agent [%s] has no brain. Skipping inference.", a.Manifest.ID)
 		return ProcessResult{Availability: &cognitive.ExecutionAvailability{
@@ -52,7 +60,7 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 		a.turnIndex = 0
 	}
 
-	req, profile, sources := a.buildInferRequest(input, priorHistory)
+	req, profile, sources := a.buildTurnInferRequest(access, input, priorHistory)
 	if requirement.active() {
 		req.Messages = append([]cognitive.ChatMessage{{Role: "system", Content: resultContractExecutionPrompt(requirement)}}, req.Messages...)
 	}
@@ -88,7 +96,7 @@ func (a *Agent) processMessageStructuredWithRequirement(input string, priorHisto
 		}
 	}
 
-	loop := a.runToolLoop(input, priorHistory, &req, resp, profile, planningOnly, requirement)
+	loop := a.runTurnToolLoop(access, input, priorHistory, &req, resp, profile, planningOnly, requirement)
 	loop.artifacts = reconcileToolBackedArtifacts(loop.artifacts, loop.toolEvidence, input)
 	loop.artifacts = dedupeAgentArtifacts(loop.artifacts)
 	responseText := stripToolCallJSON(loop.responseText)
@@ -241,6 +249,10 @@ func resultContractDegradedResponseText(requirement *teamResultRequirement) stri
 }
 
 func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string, []ContextSource) {
+	return a.buildTurnInferRequest(RecallAccess{}, input, priorHistory)
+}
+
+func (a *Agent) buildTurnInferRequest(access RecallAccess, input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string, []ContextSource) {
 	sys := a.Manifest.SystemPrompt
 	if sys == "" {
 		sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
@@ -249,7 +261,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	sys += runtimeResponseDirective()
 	var sources []ContextSource
 	if a.internalTools != nil {
-		runtimeContext, injected := a.internalTools.BuildContextWithSources(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
+		runtimeContext, injected := a.internalTools.BuildContextForTurn(access, a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
 		filtered := a.internalTools.withoutUndeclaredToolLines(runtimeContext, a.Manifest.Tools)
 		sys, sources = sys+filtered, keptContextSources(injected, filtered)
 	}

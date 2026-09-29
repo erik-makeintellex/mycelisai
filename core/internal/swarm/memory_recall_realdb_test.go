@@ -189,7 +189,10 @@ func TestSearchMemoryRealDB_ForgedScopeArgsDoNotWiden(t *testing.T) {
 	router := retainedStackRouter(&retainedStackProvider{reply: "ok"})
 	saveContext(t, db, router, deploymentcontext.IngestRequest{KnowledgeClass: "customer_context", Title: "Team A Plan", TeamID: "team-a", Visibility: "team", Content: "Weekend special rollout plan for team A."})
 	registry := NewInternalToolRegistry(InternalToolDeps{Brain: router, Mem: memory.NewServiceWithDB(db), DB: db})
-	ctx := WithToolInvocationContext(context.Background(), ToolInvocationContext{AgentID: "worker-b", TeamID: "team-b"})
+	// The requesting user is a proven team-a member (SRU), so only the agent
+	// scope can keep the row out of a team-b call.
+	member := RecallAccess{User: true, Reader: memory.GovernedReader{UserID: "user-a", TeamKeys: []string{memory.GovernedTeamKey("default", "team-a")}}}
+	ctx := WithToolInvocationContext(context.Background(), ToolInvocationContext{AgentID: "worker-b", TeamID: "team-b", Recall: member})
 	out, err := registry.handleSearchMemory(ctx, map[string]any{"query": "weekend special rollout", "team_id": "team-a", "agent_id": "lead-a"})
 	if err != nil {
 		t.Fatalf("keyword search_memory must work without embeddings: %v", err)
@@ -197,10 +200,15 @@ func TestSearchMemoryRealDB_ForgedScopeArgsDoNotWiden(t *testing.T) {
 	if strings.Contains(out, "Team A Plan") || strings.Contains(out, "rollout plan for team A") {
 		t.Fatalf("forged team_id widened scope: %s", out)
 	}
-	own := WithToolInvocationContext(context.Background(), ToolInvocationContext{AgentID: "lead-a", TeamID: "team-a"})
+	own := WithToolInvocationContext(context.Background(), ToolInvocationContext{AgentID: "lead-a", TeamID: "team-a", Recall: member})
 	out, err = registry.handleSearchMemory(own, map[string]any{"query": "weekend special rollout"})
 	if err != nil || !strings.Contains(out, "rollout plan for team A") || !strings.Contains(out, "keyword") {
 		t.Fatalf("team A must find its own row by keyword: %s err=%v", out, err)
+	}
+	// SRU: team work with no requesting user reads org-wide entries only.
+	noUser := WithToolInvocationContext(context.Background(), ToolInvocationContext{AgentID: "lead-a", TeamID: "team-a"})
+	if out, err = registry.handleSearchMemory(noUser, map[string]any{"query": "weekend special rollout"}); err != nil || strings.Contains(out, "rollout plan for team A") {
+		t.Fatalf("a team entry needs a requesting user who may read it: %s err=%v", out, err)
 	}
 }
 

@@ -87,7 +87,10 @@ func governedRecallOptions(agentID, teamID string, lead bool) memory.SemanticSea
 	return opts
 }
 
-func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agentID, teamID, currentInput string, lead bool) []ContextSource {
+// writeDeploymentContext injects governed sources the turn's requesting user
+// may read (SRU). A failed identity or membership lookup injects none and
+// says so; it never falls back to the unscoped set.
+func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, access RecallAccess, agentID, teamID, currentInput string, lead bool) []ContextSource {
 	if r.mem == nil || strings.TrimSpace(currentInput) == "" {
 		return nil
 	}
@@ -95,10 +98,17 @@ func (r *InternalToolRegistry) writeDeploymentContext(sb *strings.Builder, agent
 	if query == "" {
 		return nil
 	}
+	reader, err := access.governedReader()
+	if err != nil {
+		sb.WriteString("### Saved Memory\n" + recallUnavailableNote + " Do not claim saved memory you did not receive.\n\n")
+		return nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	opts := governedRecallOptions(agentID, teamID, lead)
+	opts.Reader = reader
 	// Semantic when an embedding engine works; PostgreSQL keyword ranking otherwise.
-	results, _, err := r.mem.RecallGoverned(ctx, r.brain, query, governedRecallOptions(agentID, teamID, lead))
+	results, _, err := r.mem.RecallGoverned(ctx, r.brain, query, opts)
 	if err != nil || len(results) == 0 {
 		return nil
 	}

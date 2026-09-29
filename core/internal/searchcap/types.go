@@ -3,6 +3,8 @@ package searchcap
 import (
 	"context"
 	"time"
+
+	"github.com/mycelis/core/internal/memory"
 )
 
 const (
@@ -45,6 +47,10 @@ type Request struct {
 	RunID          string   `json:"run_id,omitempty"`
 	Visibility     string   `json:"visibility,omitempty"`
 	Types          []string `json:"types,omitempty"`
+	// Reader is the caller's saved-memory read scope (MEM-LIST/SRU), set by
+	// Core from the request identity and never from JSON. Nil reads
+	// org-wide governed entries only.
+	Reader *memory.GovernedReader `json:"-"`
 }
 
 type Response struct {

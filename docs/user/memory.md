@@ -132,7 +132,7 @@ The user-facing distinction:
 
 Who sees a saved Deployment Context entry in the Memory list, entry actions, and memory search: everyone sees org-wide entries (company knowledge, Soma operating context, and anything saved with global visibility). There, private entries are visible only to the person who saved them, admins included. Team entries are visible to the person who saved them and to members of that team. Memory search follows the same rule. Only the saver can change their private or team entries; org-wide entries need an admin with `memory:write`. An entry you cannot see answers "This saved item no longer exists."
 
-> **Known limitation (2026-09-28):** Soma chat does not yet apply this rule. When another user chats with Soma, Soma's recall can include your private or team entries in its answer and in its **Sources** line, and Soma's memory tools can return their text. Until this is fixed, do not save material in Deployment Context that other users of this deployment must not see.
+Soma chat follows the same rule. When you chat with Soma, the saved memory it reads for its answer, its **Sources** line, its memory search and recall, and local-source search use only entries you can see. Team work and background work that no signed-in user started use org-wide entries only. If Soma cannot check your memory access, it answers without saved memory and says so in the reply. Promoting a customer-context entry into company knowledge works only when the person who confirms it can see that entry.
 
 Manual memory creation may appear through admin/runtime tooling where enabled, but it is not the default path for larger source documents. Stored facts or context are available to agents only within their allowed memory scope and trust boundary.
 

@@ -14,14 +14,21 @@ func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamIn
 }
 
 // BuildContextWithSources is BuildContext plus the governed context sources
-// it injected, so the reply can cite them.
+// it injected, so the reply can cite them. It has no requesting user, so
+// governed recall is org-wide only.
 func (r *InternalToolRegistry) BuildContextWithSources(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) (string, []ContextSource) {
+	return r.BuildContextForTurn(RecallAccess{}, agentID, teamID, role, teamInputs, teamDeliveries, currentInput)
+}
+
+// BuildContextForTurn is BuildContextWithSources under the requesting user's
+// saved-memory read scope (SRU).
+func (r *InternalToolRegistry) BuildContextForTurn(access RecallAccess, agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) (string, []ContextSource) {
 	var sb strings.Builder
 	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
 	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
 	r.writeAgentTopology(&sb, agentID, teamID, teamInputs, teamDeliveries)
 	if !r.isLeadAgent(agentID, teamID, role) {
-		sources := r.writeDeploymentContext(&sb, agentID, teamID, currentInput, false)
+		sources := r.writeDeploymentContext(&sb, access, agentID, teamID, currentInput, false)
 		writeScopedWorkerProtocol(&sb)
 		return sb.String(), sources
 	}
@@ -29,7 +36,7 @@ func (r *InternalToolRegistry) BuildContextWithSources(agentID, teamID, role str
 	r.writeCognitiveStatus(&sb)
 	r.writeMCPServers(&sb)
 	r.writeRecalledMemory(&sb, agentID, currentInput)
-	sources := r.writeDeploymentContext(&sb, agentID, teamID, currentInput, true)
+	sources := r.writeDeploymentContext(&sb, access, agentID, teamID, currentInput, true)
 	r.writeLeadTempMemory(&sb, agentID, teamID, role)
 	sb.WriteString("### Memory Boundaries\n")
 	sb.WriteString("- **SOMA_MEMORY**: Soma-owned continuity and durable orchestrator facts. Use `recall`, `search_memory`, and reviewed `remember` only for classified Soma continuity; admin-shaped `soma_operating_context` is a governed sublane, not casual chat memory.\n")

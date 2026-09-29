@@ -28,7 +28,13 @@ func (s *Service) searchLocalSources(ctx context.Context, req Request, resp Resp
 		return resp, nil
 	}
 	if s.mem != nil {
+		// Governed rows follow the caller's read scope; no scope is org-wide only.
+		reader := req.Reader
+		if reader == nil {
+			reader = &memory.GovernedReader{}
+		}
 		opts := memory.SemanticSearchOptions{
+			Reader:              reader,
 			Limit:               limitFor(req.MaxResults, s.cfg.MaxResults),
 			TenantID:            "default",
 			TeamID:              strings.TrimSpace(req.TeamID),

@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 )
@@ -66,6 +68,18 @@ func GovernedReadClause(meta string, reader GovernedReader, args []any, nextArg 
 		nextArg, nextArg+1, field("tenant_id"), nextArg+2)
 	args = append(args, userID, strings.TrimSpace(reader.Label), textArrayLiteral(keys))
 	return clause, args, nextArg + 3
+}
+
+// GovernedEntryReadable is the per-entry SQL form of GovernedReadClause for
+// callers without a request (the promote tool, SRU). An unknown id, an
+// artifact outside the governed store and an unreadable entry all report
+// false, so the answer is no existence oracle.
+func GovernedEntryReadable(ctx context.Context, db *sql.DB, artifactID string, reader GovernedReader) (bool, error) {
+	read, args, _ := GovernedReadClause("a.metadata", reader, []any{strings.TrimSpace(artifactID)}, 2)
+	var readable bool
+	err := db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM artifacts a WHERE a.id::text = $1
+		AND a.metadata->>'knowledge_store' = 'governed_context_store' AND `+read+`)`, args...).Scan(&readable)
+	return readable, err
 }
 
 // governedRecallClause keeps recall rows the reader may read: rows outside

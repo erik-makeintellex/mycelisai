@@ -25,7 +25,10 @@ func (s *AdminServer) requestChatAgent(parent context.Context, subject string, m
 	reqCtx, cancel := context.WithTimeout(parent, chatAgentRequestTimeout())
 	defer cancel()
 
-	msg, err := s.NC.RequestWithContext(reqCtx, subject, payload)
+	// SRU: the agent recalls saved memory as the requesting user.
+	request, release := s.recallTurnMsg(parent, subject, payload)
+	defer release()
+	msg, err := s.NC.RequestMsgWithContext(reqCtx, request)
 	if err != nil {
 		return chatAgentResult{}, err
 	}
