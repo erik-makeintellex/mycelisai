@@ -13,6 +13,10 @@ var CoreOwnedTeamIDs = []string{"admin-core", "council-core", "genesis-core", "t
 // ErrReservedTeamID reports a runtime attempt to register a Core-owned team ID.
 var ErrReservedTeamID = errors.New("team id is reserved for a Core-owned team")
 
+// ErrCoreOwnedTeam reports an attempt to stop a loaded Core-owned team
+// through StopTeamDurably; only Soma's own Shutdown stops those teams.
+var ErrCoreOwnedTeam = errors.New("team is Core-owned and cannot be stopped at runtime")
+
 // IsReservedTeamID matches trimmed and case-insensitively, since some callers
 // compare Core team IDs with EqualFold.
 func IsReservedTeamID(id string) bool {

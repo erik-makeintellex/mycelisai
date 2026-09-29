@@ -2,7 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -10,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // governanceSettingKeys feed the approval policy of every user (the settings
@@ -20,11 +24,22 @@ var governanceSettingKeys = []string{"automation_tolerance", "cost_sensitivity",
 
 const maxUserSettingsBodyBytes = 64 << 10
 
-// putUserSettings: identity, bounded decode, then personal keys save for any
-// signed-in user while a change to a governance key needs root admin +
-// governance:write. Without it the governance keys are refused (403) and the
-// personal keys in the same body still save. With it: audit (requested), write,
-// audit (result); an audit failure writes nothing.
+// userSettingsMu serializes every settings read-modify-write in this process
+// (AUTH-C1b), so a personal PUT and an admin policy PUT never lose each
+// other's change. Readers need no lock: writes replace the file atomically.
+var userSettingsMu sync.Mutex
+
+// errNoUserSettingsPath: neither MYCELIS_USER_SETTINGS_PATH nor a home
+// directory resolves, so nothing can be persisted.
+var errNoUserSettingsPath = errors.New("no user settings path resolves")
+
+// putUserSettings: identity, bounded decode, then (under userSettingsMu) one
+// read of the file; an unreadable/corrupt file or no path is a 503 blocker and
+// nothing is written. Personal keys save for any signed-in user while a change
+// to a governance key needs root admin + governance:write. Without it the
+// governance keys are refused (403) and the personal keys in the same body
+// still save. With it: audit (requested), write, audit (result); an audit
+// failure writes nothing.
 func (s *AdminServer) putUserSettings(w http.ResponseWriter, r *http.Request) {
 	identity := IdentityFromContext(r.Context())
 	if identity == nil {
@@ -36,8 +51,14 @@ func (s *AdminServer) putUserSettings(w http.ResponseWriter, r *http.Request) {
 		respondAPIError(w, "invalid JSON body", http.StatusBadRequest)
 		return
 	}
-	current := loadPersistedUserSettings()
-	next := mergeUserSettings(input)
+	userSettingsMu.Lock()
+	defer userSettingsMu.Unlock()
+	current, err := readPersistedUserSettings()
+	if err != nil {
+		respondSettingsStoreUnavailable(w, r, err)
+		return
+	}
+	next := mergeUserSettings(current, input)
 	changed := changedGovernanceSettings(current, next)
 	if len(changed) > 0 && (identity.Role != "admin" || !hasScope(identity, scopeGovernanceWrite)) {
 		refuseGovernanceSettings(w, r, input, current, changed)
@@ -94,7 +115,7 @@ func refuseGovernanceSettings(w http.ResponseWriter, r *http.Request, input, cur
 			personal[key] = value
 		}
 	}
-	next := mergeUserSettings(personal)
+	next := mergeUserSettings(current, personal)
 	saved := false
 	if !reflect.DeepEqual(persistedUserSettings(next), current) {
 		if err := saveUserSettings(next); err != nil {
@@ -148,12 +169,19 @@ func userSettingsPath() string {
 	return filepath.Join(home, ".mycelis", "user-settings.json")
 }
 
-func loadUserSettings() map[string]any {
-	return ResolveDeploymentContract().ApplyUserSettings(loadPersistedUserSettings())
+// respondSettingsStoreUnavailable is the 503 blocker for an unreadable or
+// corrupt settings file, or no settings path; nothing was written.
+func respondSettingsStoreUnavailable(w http.ResponseWriter, r *http.Request, err error) {
+	respondBlockerText(w, r, http.StatusServiceUnavailable, codeSettingsStoreUnavailable, settingsStoreUnavailableCopy, err.Error(), nil)
 }
 
-func mergeUserSettings(input map[string]any) map[string]any {
-	settings := loadPersistedUserSettings()
+// mergeUserSettings applies input over a copy of current (the one read of the
+// file for this request) and the deployment contract.
+func mergeUserSettings(current, input map[string]any) map[string]any {
+	settings := make(map[string]any, len(current))
+	for key, value := range current {
+		settings[key] = value
+	}
 	mergeStringSetting(settings, input, "theme")
 	mergeStringSetting(settings, input, "matrix_view")
 	if _, hasAssistantName := input["assistant_name"]; hasAssistantName {
@@ -168,21 +196,44 @@ func mergeUserSettings(input map[string]any) map[string]any {
 	return ResolveDeploymentContract().ApplyUserSettings(settings)
 }
 
-func loadPersistedUserSettings() map[string]any {
+// loadPersistedUserSettingsWithStatus is the read-only view (GET /me, the
+// approval policy). No path or no file yet is the defaults with a nil error.
+// An unreadable or corrupt file is logged and fails strict: the defaults with
+// the strictest approval-policy values, plus the read error so callers can
+// require approval and say so (AUTH-C1b). Writes refuse it outright.
+func loadPersistedUserSettingsWithStatus() (map[string]any, error) {
+	settings, err := readPersistedUserSettings()
+	if err == nil {
+		return settings, nil
+	}
+	settings = defaultPersistedUserSettings()
+	if errors.Is(err, errNoUserSettingsPath) {
+		return settings, nil
+	}
+	log.Printf("ERROR: [user-settings] %v; approval policy fails strict until it is fixed", err)
+	applyStrictGovernanceSettings(settings)
+	return settings, err
+}
+
+// readPersistedUserSettings reads the settings file once. A missing file is
+// the defaults (first boot); no path, an unreadable file, or content that is
+// not a JSON object is an error, never a silent default.
+func readPersistedUserSettings() (map[string]any, error) {
 	settings := defaultPersistedUserSettings()
 	path := userSettingsPath()
 	if path == "" {
-		return settings
+		return nil, errNoUserSettingsPath
 	}
-
 	data, err := os.ReadFile(path)
-	if err != nil {
-		return settings
+	if errors.Is(err, fs.ErrNotExist) {
+		return settings, nil
 	}
-
+	if err != nil {
+		return nil, fmt.Errorf("read user settings %s: %w", path, err)
+	}
 	var raw map[string]any
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return settings
+	if err := json.Unmarshal(data, &raw); err != nil || raw == nil {
+		return nil, fmt.Errorf("user settings %s is not a JSON object: %v", path, err)
 	}
 
 	mergeStringSetting(settings, raw, "theme")
@@ -197,7 +248,7 @@ func loadPersistedUserSettings() map[string]any {
 	settings["review_strictness"] = normalizeReviewStrictness(raw["review_strictness"])
 	settings["automation_tolerance"] = normalizeAutomationTolerance(raw["automation_tolerance"])
 	settings["escalation_preference"] = normalizeEscalationPreference(raw["escalation_preference"])
-	return settings
+	return settings, nil
 }
 
 func mergeStringSetting(settings, input map[string]any, key string) {
@@ -221,10 +272,13 @@ func mergeGovernanceSettings(settings, input map[string]any) {
 	}
 }
 
-func saveUserSettings(settings map[string]any) error {
+// saveUserSettings writes the file atomically (temp file in the same
+// directory, fsync, chmod 0644, rename), so a reader sees the old or the new
+// file, never a partial one. Callers hold userSettingsMu. No path is an error.
+func saveUserSettings(settings map[string]any) (err error) {
 	path := userSettingsPath()
 	if path == "" {
-		return nil
+		return errNoUserSettingsPath
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
@@ -233,7 +287,30 @@ func saveUserSettings(settings map[string]any) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, payload, 0o644)
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".user-settings-*.json.tmp")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			_ = os.Remove(tmp.Name())
+		}
+	}()
+	if _, err = tmp.Write(payload); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err = tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err = tmp.Close(); err != nil {
+		return err
+	}
+	if err = os.Chmod(tmp.Name(), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }
 
 func persistedUserSettings(settings map[string]any) map[string]any {

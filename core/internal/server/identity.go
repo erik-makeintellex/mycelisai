@@ -26,7 +26,16 @@ type User struct {
 	Scopes     []string        `json:"scopes"`
 	IsApprover bool            `json:"is_approver"`
 	Settings   json.RawMessage `json:"settings"`
-	CreatedAt  time.Time       `json:"created_at"`
+	// SettingsStatus is set only when the saved settings can't be read; the
+	// approval policy then fails strict (AUTH-C1b).
+	SettingsStatus *userSettingsStatus `json:"settings_status,omitempty"`
+	CreatedAt      time.Time           `json:"created_at"`
+}
+
+type userSettingsStatus struct {
+	Code           string `json:"code"`            // settings_store_unavailable
+	ApprovalPolicy string `json:"approval_policy"` // fail_strict
+	Detail         string `json:"detail,omitempty"`
 }
 
 // Team represents a team context
@@ -46,6 +55,7 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	settings, settingsErr := loadPersistedUserSettingsWithStatus()
 	user := User{
 		ID:            identity.UserID,
 		Username:      identity.Username,
@@ -56,8 +66,14 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 		BreakGlass:    identity.BreakGlass,
 		Scopes:        append([]string{}, identity.Scopes...),
 		IsApprover:    isApprover(identity),
-		Settings:      mustJSON(loadUserSettings()),
+		Settings:      mustJSON(ResolveDeploymentContract().ApplyUserSettings(settings)),
 		CreatedAt:     time.Now(),
+	}
+	if settingsErr != nil {
+		user.SettingsStatus = &userSettingsStatus{Code: codeSettingsStoreUnavailable, ApprovalPolicy: "fail_strict"}
+		if identity.Role == "admin" {
+			user.SettingsStatus.Detail = settingsErr.Error()
+		}
 	}
 	respondJSON(w, user)
 }
@@ -88,34 +104,55 @@ func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Soma Unavailable", http.StatusServiceUnavailable)
 }
 
-// HandleDeleteTeam stops and removes one active runtime team.
+// HandleDeleteTeam stops and durably removes one runtime team (AUTH-C1b):
+// root admin + groups:write (the runtime team spawn scope), refused before
+// anything else; a Core-owned team is refused for everyone (403, the attempt
+// is audited); otherwise audit (requested) first, stop, audit (result). An
+// audit failure stops nothing.
 func (s *AdminServer) HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireRootAdminScope(w, r, scopeRuntimeTeamSpawn); !ok {
+		return
+	}
 	if s.Soma == nil {
-		http.Error(w, "Soma Unavailable", http.StatusServiceUnavailable)
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeTeamServiceOffline, "", nil)
 		return
 	}
 	teamID := strings.TrimSpace(r.PathValue("id"))
 	if teamID == "" {
-		http.Error(w, "team id is required", http.StatusBadRequest)
+		respondAPIError(w, "team id is required", http.StatusBadRequest)
+		return
+	}
+	auditCtx := func(status string) map[string]any {
+		return map[string]any{"action": "runtime_team_delete", "team_id": teamID, "route": r.URL.Path, "result_status": status}
+	}
+	if swarm.IsReservedTeamID(teamID) || s.Soma.IsCoreOwnedTeam(teamID) {
+		s.auditGovernance(r, "runtime-team", "Core-owned team delete refused", auditCtx("refused_core_owned"))
+		respondBlockerText(w, r, http.StatusForbidden, codeCoreTeamProtected, coreTeamProtectedCopy, "", map[string]string{"team_id": teamID})
+		return
+	}
+	if s.auditGovernance(r, "runtime-team", "Runtime team delete requested", auditCtx("requested")) == "" {
+		respondBlocker(w, r, http.StatusServiceUnavailable, codeServiceUnavailable,
+			"The audit record could not be written, so the team was not stopped.", nil)
 		return
 	}
 	found, err := s.Soma.StopTeamDurably(teamID)
-	if err != nil {
-		if errors.Is(err, swarm.ErrRuntimeTeamOwnershipActive) {
-			respondAPIError(w, "Runtime team has active operator ownership; revoke it before deletion", http.StatusConflict)
-			return
-		}
-		http.Error(w, "failed to remove durable team state", http.StatusInternalServerError)
-		return
+	switch {
+	case errors.Is(err, swarm.ErrCoreOwnedTeam):
+		s.auditGovernance(r, "runtime-team", "Runtime team delete finished", auditCtx("refused_core_owned"))
+		respondBlockerText(w, r, http.StatusForbidden, codeCoreTeamProtected, coreTeamProtectedCopy, "", map[string]string{"team_id": teamID})
+	case errors.Is(err, swarm.ErrRuntimeTeamOwnershipActive):
+		s.auditGovernance(r, "runtime-team", "Runtime team delete finished", auditCtx("refused_ownership_active"))
+		respondAPIError(w, "Runtime team has active operator ownership; revoke it before deletion", http.StatusConflict)
+	case err != nil:
+		s.auditGovernance(r, "runtime-team", "Runtime team delete finished", auditCtx("failed"))
+		respondAPIError(w, "failed to remove durable team state", http.StatusInternalServerError)
+	case !found:
+		s.auditGovernance(r, "runtime-team", "Runtime team delete finished", auditCtx("not_found"))
+		respondAPIError(w, "team not found", http.StatusNotFound)
+	default:
+		s.auditGovernance(r, "runtime-team", "Runtime team delete finished", auditCtx("stopped"))
+		respondJSON(w, map[string]any{"status": "stopped", "team_id": teamID})
 	}
-	if !found {
-		http.Error(w, "team not found", http.StatusNotFound)
-		return
-	}
-	respondJSON(w, map[string]any{
-		"status":  "stopped",
-		"team_id": teamID,
-	})
 }
 
 // HandleUserSettings is the canonical settings contract.
@@ -123,7 +160,15 @@ func (s *AdminServer) HandleDeleteTeam(w http.ResponseWriter, r *http.Request) {
 func (s *AdminServer) HandleUserSettings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		respondJSON(w, loadUserSettings())
+		settings, err := readPersistedUserSettings()
+		if errors.Is(err, errNoUserSettingsPath) {
+			settings, err = defaultPersistedUserSettings(), nil // nothing saved anywhere: the defaults are the truth
+		}
+		if err != nil {
+			respondSettingsStoreUnavailable(w, r, err)
+			return
+		}
+		respondJSON(w, ResolveDeploymentContract().ApplyUserSettings(settings))
 	case http.MethodPut:
 		s.putUserSettings(w, r)
 	default:

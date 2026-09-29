@@ -141,7 +141,9 @@ func TestHandleTeams_POST_NilSoma(t *testing.T) {
 }
 
 func TestHandleDeleteTeam_RemovesRuntimeTeam(t *testing.T) {
-	s := newTestServer()
+	dbOpt, mock := withDB(t)
+	expectAudits(mock, 2) // AUTH-C1b: audited before and after
+	s := newTestServer(dbOpt)
 	s.Soma = swarm.NewTestSoma([]*swarm.TeamManifest{
 		{ID: "temp-team", Name: "Temporary Team"},
 		{ID: "kept-team", Name: "Kept Team"},
@@ -150,7 +152,7 @@ func TestHandleDeleteTeam_RemovesRuntimeTeam(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("DELETE /api/v1/teams/{id}", s.HandleDeleteTeam)
 
-	rr := doRequest(t, mux, http.MethodDelete, "/api/v1/teams/temp-team", "")
+	rr := doAuthenticatedRequest(t, mux, http.MethodDelete, "/api/v1/teams/temp-team", "")
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp map[string]any
@@ -166,13 +168,15 @@ func TestHandleDeleteTeam_RemovesRuntimeTeam(t *testing.T) {
 }
 
 func TestHandleDeleteTeam_NotFound(t *testing.T) {
-	s := newTestServer()
+	dbOpt, mock := withDB(t)
+	expectAudits(mock, 2)
+	s := newTestServer(dbOpt)
 	s.Soma = swarm.NewTestSoma([]*swarm.TeamManifest{{ID: "kept-team", Name: "Kept Team"}})
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("DELETE /api/v1/teams/{id}", s.HandleDeleteTeam)
 
-	rr := doRequest(t, mux, http.MethodDelete, "/api/v1/teams/missing-team", "")
+	rr := doAuthenticatedRequest(t, mux, http.MethodDelete, "/api/v1/teams/missing-team", "")
 	assertStatus(t, rr, http.StatusNotFound)
 }
 

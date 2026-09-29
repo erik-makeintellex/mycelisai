@@ -14,7 +14,14 @@ type userGovernanceProfile struct {
 	ReviewStrictness     string
 	AutomationTolerance  string
 	EscalationPreference string
+	// FailStrict is set when the settings file exists but can't be read or
+	// parsed (AUTH-C1b): every tool action then needs approval.
+	FailStrict bool
 }
+
+// approvalReasonSettingsUnavailable: the approval policy failed strict
+// because the saved settings could not be read (AUTH-C1b).
+const approvalReasonSettingsUnavailable = "settings_unavailable"
 
 type approvalThresholds struct {
 	MaxCost         float64
@@ -124,12 +131,27 @@ func (p userGovernanceProfile) snapshot() *protocol.GovernanceProfileSnapshot {
 	}
 }
 
+// userGovernanceProfileFromRequest reads the settings once; an unreadable or
+// corrupt file yields the strictest values and FailStrict (AUTH-C1b). The role
+// still comes only from the identity.
 func userGovernanceProfileFromRequest(r *http.Request) userGovernanceProfile {
 	identityRole := ""
 	if identity := IdentityFromContext(r.Context()); identity != nil {
 		identityRole = identity.Role
 	}
-	return userGovernanceProfileFromSettings(loadUserSettings(), identityRole)
+	settings, err := loadPersistedUserSettingsWithStatus()
+	profile := userGovernanceProfileFromSettings(settings, identityRole)
+	profile.FailStrict = err != nil
+	return profile
+}
+
+// applyStrictGovernanceSettings sets each approval-policy key to its strictest
+// value: high cost sensitivity, strict review, cautious automation, halt.
+func applyStrictGovernanceSettings(settings map[string]any) {
+	settings["cost_sensitivity"] = "high"
+	settings["review_strictness"] = "strict"
+	settings["automation_tolerance"] = "cautious"
+	settings["escalation_preference"] = "halt"
 }
 
 func auditUserLabelFromRequest(r *http.Request) string {

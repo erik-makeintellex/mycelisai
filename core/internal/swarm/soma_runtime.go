@@ -235,7 +235,8 @@ func (s *Soma) StopTeam(teamID string) bool {
 // StopTeamDurably removes the persisted manifest before stopping the runtime
 // instance so a storage failure cannot make a deleted team reappear on restart.
 // spawnMu serializes it with same-id spawns; the bounded durable delete runs
-// without holding s.mu so reads are never blocked behind storage.
+// without holding s.mu so reads are never blocked behind storage. A Core-owned
+// team is refused for every caller (ErrCoreOwnedTeam); Shutdown stops those.
 func (s *Soma) StopTeamDurably(teamID string) (bool, error) {
 	teamID = strings.TrimSpace(teamID)
 	s.spawnMu.Lock()
@@ -245,6 +246,9 @@ func (s *Soma) StopTeamDurably(teamID string) (bool, error) {
 	s.mu.RUnlock()
 	if !exists {
 		return false, nil
+	}
+	if team.coreOwned {
+		return true, ErrCoreOwnedTeam
 	}
 	if s.durableTeamStore != nil {
 		deleteCtx, cancel := context.WithTimeout(s.ctx, runtimeTeamPersistenceTimeout)

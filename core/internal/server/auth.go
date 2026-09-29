@@ -262,9 +262,11 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 			return
 		}
 
-		// Exempt: CORS preflight
-		if r.Method == "OPTIONS" {
-			next.ServeHTTP(w, r)
+		// CORS preflight (AUTH-C1b): answered here with an empty 200 and never
+		// passed to a handler, so an unauthenticated OPTIONS reads no data and
+		// changes nothing. CORS headers are set by the outer handler (cmd/server).
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 
