@@ -1,63 +1,23 @@
-# Gatekeeper Logic (Governance Middleware)
+# Gatekeeper Logic (Governance Guard)
 
 ## Overview
-The Gatekeeper is a middleware component in the Neural Core that intercepts messages before they reach the main Router. It enforces the rules defined in `core/policy/policy.yaml`.
+The Gatekeeper is the governance `Guard` (`core/internal/governance/guard.go`) run by the Core `Router` (`core/internal/router/router.go`). It evaluates bus envelopes against `core/config/policy.yaml` (see `docs/governance.md` and the Governance Policy rows in `docs/API_REFERENCE.md`).
 
-## Architecture
+The Router subscribes to `protocol.TopicSwarmWild` as an observer. NATS has already delivered every message to its direct subscribers, so the Gatekeeper decides only whether Core reacts to a message. It can neither hold nor release one.
 
-### 1. The Intercept Pipeline
-```go
-func (g *Gatekeeper) Intercept(msg *pb.MsgEnvelope) bool {
-    // 1. Identification
-    team := msg.TeamId
-    agent := msg.SourceAgentId
-    intent := msg.Payload.Event.EventType // Simplified extraction
+## The Intercept Pipeline
+`Guard.Intercept(msg) (proceed bool, action string)`:
 
-    // 2. Policy Evaluation
-    action := g.PolicyEngine.Evaluate(team, agent, intent, msg.Data)
+| Policy action | Core behavior |
+| --- | --- |
+| `ALLOW` | Proceed: registry refresh for canonical heartbeats, then the `swarm.audit.trace` re-publish for the Archivist. |
+| `DENY` | Do not proceed. Logged. |
+| `REQUIRE_APPROVAL` | Do not proceed. The Router writes one `policy_approval_required_observed` audit record (team, source agent, intent, subject, message id; `result_status=not_acted_on`), or logs `audit_unavailable` when the audit store is down. |
+| unknown | Fail closed as `DENY`. |
 
-    switch action {
-    case ALLOW:
-        return true // Proceed to Router
-    case DENY:
-        g.Logger.Warn("Blocked action", "intent", intent, "agent", agent)
-        return false // Drop
-    case REQUIRE_APPROVAL:
-        g.SuspendMessage(msg)
-        return false // Drop from Router, hold in Pending
-    }
-}
-```
+A nil or degraded Guard (no loaded policy) denies everything; the Router only refreshes already-registered agents from canonical heartbeats.
 
-### 2. Suspension & Alerting
-When `REQUIRE_APPROVAL` is triggered:
-1.  **Wrap**: Create an `ApprovalRequest` containing the original `MsgEnvelope` and the `reason`.
-2.  **Store**: Save to `PendingBuffer` (InMemory for V1, Redis for V2) keyed by `request_id`.
-3.  **Alert**: Publish `swarm.governance.request` so the "User Team" (or Admin UI) sees it.
+## No in-memory approval queue
+REQUIRE_APPROVAL does not park anything (C2-RETIRE, 2026-09-29, owner decision: retire with no alias). The former in-memory buffer, its list and resolve routes and legacy admin alias, the approval-needed bus publish and the re-publish of "approved" messages to a reconstructed `*.output` subject were removed. Approving a message the bus had already delivered could only report success that did not happen.
 
-### 3. Approval Signal Handling
-The Core subscribes to `swarm.governance.signal`.
-1.  **Validate**: Check `user_signature` (if enabled).
-2.  **Resume**:
-    *   If `approved == true`: Look up `request_id` in `PendingBuffer`. If found, Inject back into the **Router** (bypassing Gatekeeper to avoid loops, or re-evaluating with "Approved" context).
-    *   If `approved == false`: Delete from Buffer.
-
-## Data Structures
-
-### Policy Config (YAML)
-Loaded into:
-```go
-type PolicyRule struct {
-    Intent    string
-    Condition string // "amount > 50" (Parsed via simple expression engine)
-    Action    string // "ALLOW", "DENY", "REQUIRE_APPROVAL"
-}
-```
-
-### Pending Buffer
-```go
-type PendingBuffer struct {
-    Reqs map[string]*pb.ApprovalRequest
-    Mu   sync.RWMutex
-}
-```
+Real approval stays on the durable path: Soma proposals, confirm-action with approver tiers (`approvals:decide` for tier 2), and proposal approve/reject.

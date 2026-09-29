@@ -12,12 +12,6 @@ describe("ApprovalsTab audit section load error", () => {
   beforeEach(() => {
     fetchAuditLog.mockClear();
     useCortexStore.setState({
-      pendingApprovals: [],
-      isFetchingApprovals: false,
-      approvalsError: null,
-      resolveApprovalError: null,
-      fetchPendingApprovals: vi.fn().mockResolvedValue(undefined),
-      resolveApproval: vi.fn().mockResolvedValue(undefined),
       policyConfig: null,
       policyError: null,
       auditLog: [],

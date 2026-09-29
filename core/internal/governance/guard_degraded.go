@@ -1,10 +1,6 @@
 package governance
 
-import (
-	"log"
-
-	pb "github.com/mycelis/core/pkg/pb/swarm"
-)
+import "log"
 
 // PolicyUnavailableCode is the fixed, non-sensitive load-error code reported
 // while the Guard runs without a loaded policy. Raw load errors go to the log.
@@ -19,10 +15,7 @@ func NewDegradedGuard(reason error) *Guard {
 	log.Printf("WARN: Governance policy unavailable (%v). Core is running with governance DEGRADED: "+
 		"the Gatekeeper denies all non-heartbeat traffic and posture work requires approval. "+
 		"Fix core/config/policy.yaml and restart Core, or PUT a valid policy as an admin.", reason)
-	return &Guard{
-		Engine:        &Engine{},
-		PendingBuffer: make(map[string]*pb.ApprovalRequest),
-	}
+	return &Guard{Engine: &Engine{}}
 }
 
 // Degraded reports whether the Guard has no loaded policy. A nil Guard is

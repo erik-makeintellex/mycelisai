@@ -33,7 +33,6 @@ import type {
     MissionRun,
     MutationResult,
     MissionStatus,
-    PendingApproval,
     PolicyConfig,
     ProposalData,
     SensorNode,
@@ -186,11 +185,7 @@ export interface CortexGovernanceOpsContract {
     isFetchingTeamRoster: boolean;
     policyConfig: PolicyConfig | null;
     policyError: { code?: string; httpStatus?: number } | null;
-    pendingApprovals: PendingApproval[];
-    approvalsError: { code?: string; httpStatus?: number } | null;
-    resolveApprovalError: { code?: string; httpStatus?: number } | null;
     isFetchingPolicy: boolean;
-    isFetchingApprovals: boolean;
     auditLog: AuditLogEntry[];
     isFetchingAuditLog: boolean;
     auditLogError: { code?: string; httpStatus?: number } | null;
@@ -216,8 +211,6 @@ export interface CortexGovernanceOpsContract {
     fetchTeamDetails: () => Promise<void>;
     fetchPolicy: () => Promise<void>;
     updatePolicy: (config: PolicyConfig) => Promise<void>;
-    fetchPendingApprovals: () => Promise<void>;
-    resolveApproval: (id: string, approved: boolean) => Promise<void>;
     fetchAuditLog: () => Promise<void>;
     fetchCognitiveStatus: () => Promise<void>;
     fetchServicesStatus: () => Promise<ServiceHealthStatus[]>;

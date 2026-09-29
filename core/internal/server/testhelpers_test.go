@@ -14,7 +14,6 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/internal/registry"
-	pb "github.com/mycelis/core/pkg/pb/swarm"
 )
 
 var serverTestHTTPPort int32 = 23000 + int32(time.Now().UnixNano()%5000)
@@ -64,10 +63,7 @@ func withDB(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 // withGuard creates a governance Guard with the given policy config.
 func withGuard(cfg *governance.PolicyConfig) func(*AdminServer) {
 	return func(s *AdminServer) {
-		s.Guard = &governance.Guard{
-			Engine:        &governance.Engine{Config: cfg},
-			PendingBuffer: make(map[string]*pb.ApprovalRequest),
-		}
+		s.Guard = &governance.Guard{Engine: &governance.Engine{Config: cfg}}
 	}
 }
 

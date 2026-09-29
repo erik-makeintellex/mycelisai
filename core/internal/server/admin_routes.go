@@ -4,8 +4,6 @@ import "net/http"
 
 // RegisterRoutes adds handlers to the mux.
 func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/admin/approvals", s.handleApprovals)
-	mux.HandleFunc("/admin/approvals/", s.handleApprovalAction) // Trailing slash for ID parsing
 	mux.HandleFunc("/agents", s.handleAgents)
 	mux.HandleFunc("/healthz", s.handleHealth)
 
@@ -195,8 +193,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("GET /api/v1/governance/policy", s.handleGetPolicy)
 	mux.HandleFunc("PUT /api/v1/governance/policy", s.handleUpdatePolicy)
-	mux.HandleFunc("GET /api/v1/governance/pending", s.handleGetPendingApprovals)
-	mux.HandleFunc("POST /api/v1/governance/resolve/{id}", s.handleResolveApproval)
 
 	mux.HandleFunc("GET /api/v1/catalogue/agents", s.handleListCatalogue)
 	mux.HandleFunc("POST /api/v1/catalogue/agents", s.handleCreateCatalogue)

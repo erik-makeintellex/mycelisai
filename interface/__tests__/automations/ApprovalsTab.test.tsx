@@ -6,10 +6,6 @@ vi.mock("reactflow", async () => {
   return mock;
 });
 
-vi.mock("@/components/approvals/DecisionCard", () => ({
-  DecisionCard: () => <div data-testid="decision-card">DecisionCard</div>,
-}));
-
 vi.mock("@/components/dashboard/ManifestationPanel", () => ({
   __esModule: true,
   default: () => (
@@ -23,10 +19,6 @@ import { useCortexStore } from "@/store/useCortexStore";
 describe("ApprovalsTab", () => {
   beforeEach(() => {
     useCortexStore.setState({
-      pendingApprovals: [],
-      isFetchingApprovals: false,
-      fetchPendingApprovals: vi.fn().mockResolvedValue(undefined),
-      resolveApproval: vi.fn().mockResolvedValue(undefined),
       policyConfig: null,
       isFetchingPolicy: false,
       fetchPolicy: vi.fn().mockResolvedValue(undefined),

@@ -3,13 +3,13 @@ package server
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/mycelis/core/internal/governance"
+	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/pkg/protocol"
 	"gopkg.in/yaml.v3"
 )
@@ -27,11 +27,6 @@ const (
 	governancePolicyUnavailableCode = "governance_policy_unavailable"
 	governanceAuditUnavailableCode  = "governance_audit_unavailable"
 )
-
-// requireApprover gates approval decisions to root admins with approvals:decide.
-func requireApprover(w http.ResponseWriter, r *http.Request) (*RequestIdentity, bool) {
-	return requireRootAdminScope(w, r, scopeApprovalsDecide)
-}
 
 func respondGovernanceError(w http.ResponseWriter, status int, msg, code, action string) {
 	data := map[string]string{"code": code}
@@ -116,58 +111,35 @@ func (s *AdminServer) auditGovernance(r *http.Request, source, message string, c
 	return id
 }
 
-// resolveGuardApproval is the single decision path for Guard-parked messages,
-// shared by POST /api/v1/governance/resolve/{id} and the legacy
-// POST /admin/approvals/{id} alias. Callers have already passed requireApprover
-// and validated action as APPROVE or REJECT.
-func (s *AdminServer) resolveGuardApproval(w http.ResponseWriter, r *http.Request, reqID, action, route string) {
-	if s.Guard == nil || s.Router == nil {
-		respondGovernanceError(w, http.StatusServiceUnavailable, "Governance approvals are not available", "governance_unavailable", "")
-		return
+// wireRouterApprovalAudit makes this server's audit store the Router's sink
+// for REQUIRE_APPROVAL observations (C2-RETIRE). No Router, no wiring.
+func (s *AdminServer) wireRouterApprovalAudit() {
+	if s.Router != nil {
+		s.Router.SetApprovalAuditor(s.auditPolicyApprovalObserved)
 	}
-	pending, ok := s.Guard.PendingRequest(reqID)
-	if !ok {
-		respondAPIError(w, "Approval request not found", http.StatusNotFound)
-		return
-	}
-	auditCtx := map[string]any{"action": "governance_approval_resolved", "request_id": reqID, "decision": action, "route": route}
-	if msg := pending.GetOriginalMessage(); msg != nil {
-		auditCtx["team_id"] = msg.TeamId
-		auditCtx["source_agent"] = msg.SourceAgentId
-		if msg.GetEvent() != nil {
-			auditCtx["intent"] = msg.GetEvent().EventType
-		}
-	}
-	result := func(status string) map[string]any {
-		out := make(map[string]any, len(auditCtx)+1)
-		for k, v := range auditCtx {
-			out[k] = v
-		}
-		out["result_status"] = status
-		return out
-	}
-	auditID := s.auditGovernance(r, "governance-approval", "Governance approval decision requested", result("requested"))
-	if auditID == "" {
-		respondGovernanceError(w, http.StatusServiceUnavailable, "Audit is unavailable; the approval was not resolved", governanceAuditUnavailableCode, "Restore the audit store and retry")
-		return
-	}
-	approved := action == "APPROVE"
-	msg, err := s.Guard.Resolve(reqID, approved, auditUserLabelFromRequest(r))
-	if err != nil {
-		s.auditGovernance(r, "governance-approval", "Governance approval request not found", result("not_found"))
-		respondAPIError(w, "Approval request not found", http.StatusNotFound)
-		return
-	}
-	if approved && msg != nil {
-		if err := s.Router.PublishDirect(msg); err != nil {
-			log.Printf("governance: re-publish of approved request %s failed: %v", reqID, err)
-			s.auditGovernance(r, "governance-approval", "Governance approval re-publish failed", result("republish_failed"))
-			respondAPIError(w, "Approved but the message could not be re-published", http.StatusInternalServerError)
-			return
-		}
-	}
-	s.auditGovernance(r, "governance-approval", "Governance approval resolved", result("resolved"))
-	respondJSON(w, map[string]string{"status": "resolved", "request_id": reqID, "action": action, "audit_id": auditID})
+}
+
+// auditPolicyApprovalObserved records that a bus event matched a
+// REQUIRE_APPROVAL rule and that Core did not act on it. It is an observation,
+// not a request: there is no queue and nothing to approve here; governed work
+// is approved on the durable confirm-action/proposal path. The fields come
+// from the untrusted envelope and grant nothing. An empty id means the audit
+// store is unavailable, and the Router then logs instead.
+func (s *AdminServer) auditPolicyApprovalObserved(obs router.ApprovalObservation) (string, error) {
+	return s.createAuditEvent(protocol.TemplateChatToProposal, "governance-guard",
+		"Policy requires approval for a bus event; Core observed it and did not act on it",
+		map[string]any{
+			"action":        router.PolicyApprovalObservedAction,
+			"actor":         "governance-guard",
+			"user":          "system",
+			"subject":       obs.Subject,
+			"message_id":    obs.MessageID,
+			"team_id":       obs.TeamID,
+			"source_agent":  obs.SourceAgentID,
+			"intent":        obs.Intent,
+			"result_status": "not_acted_on",
+			"approval_path": "proposals",
+		})
 }
 
 // requiresApprover reports whether a confirm needs an approver: approval tier 2

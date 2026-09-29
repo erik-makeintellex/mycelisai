@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/pkg/protocol"
@@ -13,18 +12,6 @@ import (
 
 // defaultPolicyPath is the disk location for persisting policy changes.
 const defaultPolicyPath = "config/policy.yaml"
-
-// pendingApprovalJSON is the simplified JSON representation of a pending approval request.
-// It maps the complex proto ApprovalRequest into a cortex-friendly structure.
-type pendingApprovalJSON struct {
-	ID          string `json:"id"`
-	Reason      string `json:"reason"`
-	SourceAgent string `json:"source_agent"`
-	TeamID      string `json:"team_id"`
-	Intent      string `json:"intent"`
-	Timestamp   string `json:"timestamp"`
-	ExpiresAt   string `json:"expires_at"`
-}
 
 // handleGetPolicy returns the current governance policy configuration as JSON.
 // GET /api/v1/governance/policy (root admin, governance:read)
@@ -102,81 +89,4 @@ func (s *AdminServer) handleUpdatePolicy(w http.ResponseWriter, r *http.Request)
 	s.auditGovernance(r, "governance-policy", "Governance policy update applied", auditCtx("applied"))
 	log.Printf("Governance policy updated and persisted to %s (digest %s)", defaultPolicyPath, newDigest)
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]string{"status": "applied", "digest": newDigest, "audit_id": auditID}))
-}
-
-// handleGetPendingApprovals returns all pending approval requests in a simplified JSON format.
-// GET /api/v1/governance/pending (root admin, governance:read)
-func (s *AdminServer) handleGetPendingApprovals(w http.ResponseWriter, r *http.Request) {
-	if _, ok := requireRootAdminScope(w, r, scopeGovernanceRead); !ok {
-		return
-	}
-	if s.Guard == nil {
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, `{"error":"Governance engine not initialized"}`, http.StatusServiceUnavailable)
-		return
-	}
-
-	pending := s.Guard.ListPending()
-	result := make([]pendingApprovalJSON, 0, len(pending))
-
-	for _, req := range pending {
-		item := pendingApprovalJSON{
-			ID:     req.RequestId,
-			Reason: req.Reason,
-		}
-
-		// Extract fields from the original message if present
-		if msg := req.OriginalMessage; msg != nil {
-			item.SourceAgent = msg.SourceAgentId
-			item.TeamID = msg.TeamId
-			if msg.GetEvent() != nil {
-				item.Intent = msg.GetEvent().EventType
-			}
-			if msg.Timestamp != nil {
-				item.Timestamp = msg.Timestamp.AsTime().Format(time.RFC3339)
-			}
-		}
-
-		if req.ExpiresAt != nil {
-			item.ExpiresAt = req.ExpiresAt.AsTime().Format(time.RFC3339)
-		}
-
-		result = append(result, item)
-	}
-
-	respondJSON(w, result)
-}
-
-// handleResolveApproval resolves a pending approval request by approving or rejecting it.
-// POST /api/v1/governance/resolve/{id} (root admin, approvals:decide)
-func (s *AdminServer) handleResolveApproval(w http.ResponseWriter, r *http.Request) {
-	if _, ok := requireApprover(w, r); !ok {
-		return
-	}
-	reqID := r.PathValue("id")
-	if reqID == "" {
-		respondAPIError(w, "missing approval request ID", http.StatusBadRequest)
-		return
-	}
-	action, ok := decodeApprovalDecision(w, r)
-	if !ok {
-		return
-	}
-	s.resolveGuardApproval(w, r, reqID, action, "/api/v1/governance/resolve")
-}
-
-// decodeApprovalDecision accepts only {"action":"APPROVE"|"REJECT"}.
-func decodeApprovalDecision(w http.ResponseWriter, r *http.Request) (string, bool) {
-	var payload struct {
-		Action string `json:"action"`
-	}
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096)).Decode(&payload); err != nil {
-		respondAPIError(w, "invalid JSON body", http.StatusBadRequest)
-		return "", false
-	}
-	if payload.Action != "APPROVE" && payload.Action != "REJECT" {
-		respondAPIError(w, "action must be APPROVE or REJECT", http.StatusBadRequest)
-		return "", false
-	}
-	return payload.Action, true
 }

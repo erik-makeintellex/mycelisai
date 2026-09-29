@@ -10,7 +10,7 @@ import type { CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
 type TeamRosterResponse = Pick<TeamDetail, 'id' | 'name'> & { role?: string };
 
-// Same {code, httpStatus} shape as policyError/approvalsError, so the UI can
+// Same {code, httpStatus} shape as policyError/auditLogError, so the UI can
 // feed it to blockerCopy. Never invents a code: a body without one leaves it
 // undefined and the generic "request failed" copy applies.
 async function loadErrorFromResponse(res: Response) {
@@ -24,9 +24,7 @@ export function createCortexGovernanceSystemSlice(
     | 'fetchTeamDetails'
     | 'fetchPolicy'
     | 'updatePolicy'
-    | 'fetchPendingApprovals'
     | 'fetchAuditLog'
-    | 'resolveApproval'
     | 'fetchCognitiveStatus'
     | 'fetchServicesStatus'
 > {
@@ -107,25 +105,6 @@ export function createCortexGovernanceSystemSlice(
             }
         },
 
-        fetchPendingApprovals: async () => {
-            set({ isFetchingApprovals: true });
-            try {
-                const res = await fetch('/api/v1/governance/pending');
-                if (res.ok) {
-                    const data = await res.json();
-                    set({ pendingApprovals: Array.isArray(data) ? data : [], approvalsError: null, isFetchingApprovals: false });
-                } else {
-                    // A 403/503 is not "zero pending requests": don't render
-                    // "All Clear" for a blocker. Keep the list untouched and
-                    // surface the error instead.
-                    const body = await res.json().catch(() => ({}));
-                    set({ approvalsError: { code: body?.data?.code, httpStatus: res.status }, isFetchingApprovals: false });
-                }
-            } catch {
-                set({ approvalsError: { httpStatus: undefined }, isFetchingApprovals: false });
-            }
-        },
-
         fetchAuditLog: async () => {
             set({ isFetchingAuditLog: true });
             try {
@@ -142,31 +121,6 @@ export function createCortexGovernanceSystemSlice(
                 }
             } catch {
                 set({ auditLogError: { httpStatus: undefined }, isFetchingAuditLog: false });
-            }
-        },
-
-        resolveApproval: async (id: string, approved: boolean) => {
-            try {
-                const res = await fetch(`/api/v1/governance/resolve/${id}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: approved ? 'APPROVE' : 'REJECT' }),
-                });
-                if (res.ok) {
-                    set((s) => ({
-                        pendingApprovals: s.pendingApprovals.filter((item) => item.id !== id),
-                        resolveApprovalError: null,
-                    }));
-                } else {
-                    // Nothing changed: keep the card in the queue and tell
-                    // the admin why, instead of the card just staying put
-                    // with no explanation.
-                    const body = await res.json().catch(() => ({}));
-                    set({ resolveApprovalError: { code: body?.data?.code, httpStatus: res.status } });
-                }
-            } catch (err) {
-                console.error('[Governance] Resolve failed:', err);
-                set({ resolveApprovalError: { httpStatus: undefined } });
             }
         },
 

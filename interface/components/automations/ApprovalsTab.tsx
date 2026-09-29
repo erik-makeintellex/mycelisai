@@ -1,114 +1,48 @@
 "use client";
 
-import { useEffect, useCallback, useState } from "react";
-import { DecisionCard } from "@/components/approvals/DecisionCard";
-import { BadgeCheck, Loader2, ScrollText, ShieldAlert, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { BadgeCheck, Loader2, ScrollText, ShieldAlert } from "lucide-react";
 import { useCortexStore, type AuditLogEntry } from "@/store/useCortexStore";
 import ManifestationPanel from "@/components/dashboard/ManifestationPanel";
 import ScheduleAuditContext from "@/components/automations/ScheduleAuditContext";
 import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
 import PolicyTab from "@/components/automations/ApprovalsPolicyTab";
 
-type SubTab = "queue" | "policy" | "proposals" | "audit";
+// Proposals is the durable approval path, so it is the default view. The old
+// in-memory "Queue" was retired (C2-RETIRE): it could only report fake success.
+type SubTab = "proposals" | "policy" | "audit";
+
+const SUB_TABS: { id: SubTab; label: string }[] = [
+  { id: "proposals", label: "Proposals" },
+  { id: "policy", label: "Policy" },
+  { id: "audit", label: "Audit" },
+];
 
 export default function ApprovalsTab() {
-  const [subTab, setSubTab] = useState<SubTab>("queue");
+  const [subTab, setSubTab] = useState<SubTab>("proposals");
 
   return (
     <div className="h-full flex flex-col">
       <div className="px-6 pt-4 flex gap-4 border-b border-cortex-border/50">
-        <button
-          onClick={() => setSubTab("queue")}
-          className={`pb-2 text-xs font-medium border-b-2 transition-colors -mb-px ${subTab === "queue" ? "border-cortex-primary text-cortex-primary" : "border-transparent text-cortex-text-muted"}`}
-        >
-          Queue
-        </button>
-        <button
-          onClick={() => setSubTab("policy")}
-          className={`pb-2 text-xs font-medium border-b-2 transition-colors -mb-px ${subTab === "policy" ? "border-cortex-primary text-cortex-primary" : "border-transparent text-cortex-text-muted"}`}
-        >
-          Policy
-        </button>
-        <button
-          onClick={() => setSubTab("proposals")}
-          className={`pb-2 text-xs font-medium border-b-2 transition-colors -mb-px ${subTab === "proposals" ? "border-cortex-primary text-cortex-primary" : "border-transparent text-cortex-text-muted"}`}
-        >
-          Proposals
-        </button>
-        <button
-          onClick={() => setSubTab("audit")}
-          className={`pb-2 text-xs font-medium border-b-2 transition-colors -mb-px ${subTab === "audit" ? "border-cortex-primary text-cortex-primary" : "border-transparent text-cortex-text-muted"}`}
-        >
-          Audit
-        </button>
+        {SUB_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setSubTab(tab.id)}
+            className={`pb-2 text-xs font-medium border-b-2 transition-colors -mb-px ${subTab === tab.id ? "border-cortex-primary text-cortex-primary" : "border-transparent text-cortex-text-muted"}`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
       <div className="flex-1 overflow-y-auto">
-        {subTab === "queue" && <ApprovalsQueue />}
-        {subTab === "policy" && <PolicyTab />}
         {subTab === "proposals" && (
           <div className="p-6 max-w-3xl mx-auto">
             <ManifestationPanel />
           </div>
         )}
+        {subTab === "policy" && <PolicyTab />}
         {subTab === "audit" && <AuditTab />}
       </div>
-    </div>
-  );
-}
-
-function ApprovalsQueue() {
-  const pendingApprovals = useCortexStore((s) => s.pendingApprovals);
-  const isFetching = useCortexStore((s) => s.isFetchingApprovals);
-  const approvalsError = useCortexStore((s) => s.approvalsError);
-  const resolveApprovalError = useCortexStore((s) => s.resolveApprovalError);
-  const fetchPendingApprovals = useCortexStore((s) => s.fetchPendingApprovals);
-  const resolveApproval = useCortexStore((s) => s.resolveApproval);
-
-  useEffect(() => {
-    fetchPendingApprovals();
-    const interval = setInterval(fetchPendingApprovals, 5000);
-    return () => clearInterval(interval);
-  }, [fetchPendingApprovals]);
-
-  const handleResolve = useCallback(
-    (id: string, approved: boolean) => {
-      resolveApproval(id, approved);
-    },
-    [resolveApproval],
-  );
-
-  return (
-    <div className="p-6 max-w-3xl mx-auto space-y-4">
-      {!approvalsError && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-cortex-text-muted font-mono">
-            {pendingApprovals.length} pending request
-            {pendingApprovals.length !== 1 ? "s" : ""}
-          </p>
-          {isFetching && (
-            <Loader2 aria-hidden="true" size={12} className="text-cortex-text-muted animate-spin" />
-          )}
-        </div>
-      )}
-
-      {resolveApprovalError && (
-        <InlineBlockerNotice code={resolveApprovalError.code} httpStatus={resolveApprovalError.httpStatus} onRetry={fetchPendingApprovals} />
-      )}
-      {approvalsError ? (
-        <InlineBlockerNotice code={approvalsError.code} httpStatus={approvalsError.httpStatus} onRetry={fetchPendingApprovals} />
-      ) : pendingApprovals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-cortex-text-muted">
-          <ShieldCheck aria-hidden="true" size={48} className="mb-4 text-cortex-success/50" />
-          <h2 className="text-lg font-semibold text-cortex-text-main">Nothing waiting for approval</h2>
-          <p className="text-sm">New requests appear here as soon as someone needs an OK.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {pendingApprovals.map((a) => (
-            <DecisionCard key={a.id} approval={a} onResolve={handleResolve} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

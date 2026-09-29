@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -47,7 +45,7 @@ func main() {
 	time.Sleep(1 * time.Second)
 
 	// 3. Test 2: Require Approval (Payment > 50)
-	log.Println("\n🧪 Test 2: Park Request (payment.create > 50)")
+	log.Println("\n🧪 Test 2: Require approval (payment.create > 50) is observed, not parked")
 
 	// Construct complex context/data
 	// We need to match the Policy: 'amount > 50'
@@ -75,32 +73,12 @@ func main() {
 	}
 
 	send(nc, payEnv)
-	log.Println("   Sent 'payment.create' ($100). Expect Pending Approval.")
-	time.Sleep(2 * time.Second) // Give it time to process and park
+	log.Println("   Sent 'payment.create' ($100). Core records one policy_approval_required_observed audit row (or logs audit_unavailable); nothing is parked or published.")
 
-	// 4. Check API
-	log.Println("\n🧪 Test 3: Checking Admin API for Approvals...")
-	resp, err := http.Get("http://localhost:8081/admin/approvals")
-	if err != nil {
-		log.Fatalf("❌ API Failed: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		log.Fatalf("❌ API Returned %d", resp.StatusCode)
-	}
-
-	var approvals []interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&approvals); err != nil {
-		log.Fatalf("❌ Failed to decode JSON: %v", err)
-	}
-
-	log.Printf("✅ API Response: Found %d pending approvals.", len(approvals))
-	if len(approvals) > 0 {
-		log.Println("🎉 SUCCESS! Guard logic verified.")
-	} else {
-		log.Println("⚠️  WARNING: No approvals found. Guard might have allowed it or failed to park.")
-	}
+	// This command only publishes probes. It does not read Core's audit log or
+	// logs, so it certifies neither outcome: check the Core log and the Audit
+	// tab. Governed approval is proven on the confirm-action/proposal path.
+	log.Println("\nℹ️  Publish-only probe: verify DENY and the policy_approval_required_observed record in Core's log or Automations > Approvals > Audit.")
 }
 
 func send(nc *nats.Conn, env *pb.MsgEnvelope) {
@@ -113,5 +91,8 @@ func send(nc *nats.Conn, env *pb.MsgEnvelope) {
 	// machine telemetry lane so the probe never lands on an operator channel.
 	if err := nc.Publish(fmt.Sprintf(protocol.TopicTeamTelemetryFmt, env.TeamId), data); err != nil {
 		log.Fatalf("Publish failed: %v", err)
+	}
+	if err := nc.Flush(); err != nil {
+		log.Fatalf("Flush failed: %v", err)
 	}
 }

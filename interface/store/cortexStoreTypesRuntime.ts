@@ -198,16 +198,6 @@ export interface PolicyConfig {
     defaults: { default_action: string };
 }
 
-export interface PendingApproval {
-    id: string;
-    reason: string;
-    source_agent: string;
-    team_id: string;
-    intent: string;
-    timestamp: string;
-    expires_at: string;
-}
-
 export interface AuditLogEntry {
     id: string;
     template_id?: string;
