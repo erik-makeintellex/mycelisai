@@ -87,7 +87,7 @@ func tpdCaptureLog(t *testing.T) *tpdLogBuffer {
 func TestTPDRealDBRestartRedispatchIsReportedNotDropped(t *testing.T) {
 	db := f16cOpenDB(t)
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	p := tpdSeedPlan(t, db, team)
 	c := p.calls[0]
 	_, lane := tpdTeam(t, nc, db, team)

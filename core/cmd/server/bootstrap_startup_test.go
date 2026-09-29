@@ -17,8 +17,8 @@ func TestLoadStartupBundleRegistry(t *testing.T) {
 		t.Fatalf("mkdir templates: %v", err)
 	}
 
-	bundleYAML := `id: v8-migration-standing-team-bridge
-name: V8 Migration Standing-Team Bridge
+	bundleYAML := `id: fixture-startup-bundle
+name: Fixture Startup Bundle
 teams:
   - id: bridge-team
     name: Bridge Team
@@ -31,7 +31,7 @@ teams:
     deliveries:
       - swarm.team.bridge-team.signal.status
 `
-	if err := os.WriteFile(filepath.Join(templatesDir, "v8-migration-standing-team-bridge.yaml"), []byte(bundleYAML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(templatesDir, "fixture-startup-bundle.yaml"), []byte(bundleYAML), 0o644); err != nil {
 		t.Fatalf("write template bundle: %v", err)
 	}
 
@@ -42,7 +42,7 @@ teams:
 	if selected.Source != bootstrap.StartupSourceBundle {
 		t.Fatalf("expected %s source, got %q", bootstrap.StartupSourceBundle, selected.Source)
 	}
-	if selected.Bundle == nil || selected.Bundle.ID != "v8-migration-standing-team-bridge" {
+	if selected.Bundle == nil || selected.Bundle.ID != "fixture-startup-bundle" {
 		t.Fatalf("selected bundle = %+v", selected.Bundle)
 	}
 	if selected.Organization == nil {
@@ -181,10 +181,10 @@ func TestResolveStartupProviderRoutingUsesRuntimeOrganizationPolicy(t *testing.T
 			ProviderPolicy: swarm.ProviderPolicy{
 				Provider: "org-provider",
 				Teams: map[string]swarm.ProviderScope{
-					"prime-development": {Provider: "team-provider"},
+					"fixture-dev-team": {Provider: "team-provider"},
 				},
 				Agents: map[string]swarm.ProviderScope{
-					"prime-development-agent": {Provider: "agent-provider"},
+					"fixture-dev-agent": {Provider: "agent-provider"},
 				},
 			},
 		},
@@ -193,8 +193,8 @@ func TestResolveStartupProviderRoutingUsesRuntimeOrganizationPolicy(t *testing.T
 
 	routing := resolveStartupProviderRouting(
 		selection,
-		`{"prime-development":"legacy-team-provider"}`,
-		`{"prime-development-agent":"legacy-agent-provider"}`,
+		`{"fixture-dev-team":"legacy-team-provider"}`,
+		`{"fixture-dev-agent":"legacy-agent-provider"}`,
 	)
 	if routing.Source != "runtime_organization" {
 		t.Fatalf("routing source = %q", routing.Source)
@@ -202,11 +202,11 @@ func TestResolveStartupProviderRoutingUsesRuntimeOrganizationPolicy(t *testing.T
 	if routing.Policy.Provider != "org-provider" {
 		t.Fatalf("provider = %q", routing.Policy.Provider)
 	}
-	if routing.Policy.Teams["prime-development"].Provider != "team-provider" {
-		t.Fatalf("team provider = %q", routing.Policy.Teams["prime-development"].Provider)
+	if routing.Policy.Teams["fixture-dev-team"].Provider != "team-provider" {
+		t.Fatalf("team provider = %q", routing.Policy.Teams["fixture-dev-team"].Provider)
 	}
-	if routing.Policy.Agents["prime-development-agent"].Provider != "agent-provider" {
-		t.Fatalf("agent provider = %q", routing.Policy.Agents["prime-development-agent"].Provider)
+	if routing.Policy.Agents["fixture-dev-agent"].Provider != "agent-provider" {
+		t.Fatalf("agent provider = %q", routing.Policy.Agents["fixture-dev-agent"].Provider)
 	}
 	if !routing.IgnoredLegacyEnvMaps {
 		t.Fatal("expected legacy env maps to be ignored on bundle path")

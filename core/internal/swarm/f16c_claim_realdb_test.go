@@ -81,8 +81,8 @@ func f16cSeedLiveRun(t *testing.T, db *sql.DB, team string) f16cLive {
 // run finished 30 days ago and the proof expired, whatever door delivers it.
 func TestF16cRealDBClaimReplayAfterCompletion(t *testing.T) {
 	db := f16cOpenDB(t)
-	s := f16cSeedLiveRun(t, db, "prime-development")
-	agent := f16bAgent(t, "prime-development", db)
+	s := f16cSeedLiveRun(t, db, "fixture-dev-team")
+	agent := f16bAgent(t, "fixture-dev-team", db)
 	if agent.triggerPlanningOnly(s.ask("write the approved note", nil)) {
 		t.Fatal("live confirmed dispatch lost execution posture")
 	}
@@ -108,7 +108,7 @@ func TestF16cRealDBClaimReplayAfterCompletion(t *testing.T) {
 func TestF16cRealDBExpiredProofLiveRunKeepsPosture(t *testing.T) {
 	db := f16cOpenDB(t)
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	s := f16cSeedLiveRun(t, db, team)
 	f16cMustExec(t, db, `UPDATE intent_proofs SET confirmed_at=NOW()-interval '20 minutes', expires_at=NOW()-interval '5 minutes' WHERE id=$1`, s.proof)
 	f16cTeam(t, nc, team).commandReceipts = NewPostgresCommandReceiptStore(db)
@@ -132,7 +132,7 @@ func TestF16cRealDBExpiredProofLiveRunKeepsPosture(t *testing.T) {
 func TestF16cRealDBSecondUseDoesNotExecute(t *testing.T) {
 	db := f16cOpenDB(t)
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	s := f16cSeedLiveRun(t, db, team)
 	f16cTeam(t, nc, team).commandReceipts = NewPostgresCommandReceiptStore(db)
 	inbox := f16cAgentInbox(t, nc, team)

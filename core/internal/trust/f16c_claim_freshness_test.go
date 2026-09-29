@@ -38,7 +38,7 @@ func TestF16cVerifyExecutionClaimRequiresIdempotencyKey(t *testing.T) {
 type f16cSeed struct{ proof, run, contract, workItem, key string }
 
 func (s f16cSeed) claim() ExecutionClaim {
-	return ExecutionClaim{IntentProofID: s.proof, ContractID: s.contract, RunID: s.run, WorkItemID: s.workItem, TeamID: "prime-development", IdempotencyKey: s.key}
+	return ExecutionClaim{IntentProofID: s.proof, ContractID: s.contract, RunID: s.run, WorkItemID: s.workItem, TeamID: "fixture-dev-team", IdempotencyKey: s.key}
 }
 
 func f16cRealDB(t *testing.T) *sql.DB {
@@ -71,15 +71,15 @@ func f16cSeedLive(t *testing.T, db *sql.DB) f16cSeed {
 	outboxKey := "confirm-action:" + s.proof
 	s.key = ConfirmedCallDeliveryKey(outboxKey, s.workItem) // TPD: per-planned-call key
 	scope, _ := json.Marshal(map[string]any{"planned_tool_calls": []map[string]any{{"name": "delegate_task", "arguments": map[string]any{
-		"team_id": "prime-development", "task": "write the approved note", "context": map[string]any{
-			"team_id": "prime-development", "work_item_id": s.workItem, "intent_proof_id": s.proof, "run_id": s.run, "contract_id": s.contract, "idempotency_key": s.key,
+		"team_id": "fixture-dev-team", "task": "write the approved note", "context": map[string]any{
+			"team_id": "fixture-dev-team", "work_item_id": s.workItem, "intent_proof_id": s.proof, "run_id": s.run, "contract_id": s.contract, "idempotency_key": s.key,
 		}}}}})
 	f16cExec(t, db, `INSERT INTO intent_proofs (id, template_id, resolved_intent, status, scope_validation, confirmed_at, expires_at)
 		VALUES ($1,'chat-to-proposal','f16c','confirmed',$2::jsonb,NOW(),NOW()+interval '10 minutes')`, s.proof, string(scope))
 	f16cExec(t, db, `INSERT INTO mission_runs (id, mission_id, status) VALUES ($1,'f16c','running')`, s.run)
 	f16cExec(t, db, `INSERT INTO execution_contracts (id, intent_proof_id, run_id, template_id) VALUES ($1,$2,$3,'chat-to-proposal')`, s.contract, s.proof, s.run)
 	f16cExec(t, db, `INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, status, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
-		VALUES ($1,$2,'confirmed_action_team_plan','executing',$3,$4,$5,'prime-development',$6,'web_api','api.intent.confirm-action','command')`,
+		VALUES ($1,$2,'confirmed_action_team_plan','executing',$3,$4,$5,'fixture-dev-team',$6,'web_api','api.intent.confirm-action','command')`,
 		uuid.NewString(), outboxKey, s.run, s.proof, s.contract, s.workItem)
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM execution_dispatch_outbox WHERE intent_proof_id=$1`, s.proof)

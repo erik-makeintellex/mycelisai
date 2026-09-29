@@ -8,9 +8,9 @@ import (
 // Owner decision (H1 Q2): hand_off and read_handoff_input go to team leads
 // only. In the shipped config every team has at most one designated
 // team_lead; each lead that holds the handoff tools also holds
-// store_artifact; no non-lead holds them; and the standing work teams
+// store_artifact; no non-lead holds them; and the optional dev-swarm teams
 // (prime-architect, prime-development) each ship exactly one such lead in both
-// the team files and the bridge template.
+// the team files and the optional bundle.
 func TestShippedHandoffToolsAreDeclaredOnLeadsOnly(t *testing.T) {
 	type teamKey struct{ file, team string }
 	leads := map[teamKey]int{}
@@ -41,11 +41,26 @@ func TestShippedHandoffToolsAreDeclaredOnLeadsOnly(t *testing.T) {
 	}
 	for _, key := range []teamKey{
 		{"prime-architect.yaml", "prime-architect"}, {"prime-development.yaml", "prime-development"},
-		{"v8-migration-standing-team-bridge.yaml", "prime-architect"}, {"v8-migration-standing-team-bridge.yaml", "prime-development"},
+		{"mycelis-dev-swarm-optional.yaml", "prime-architect"}, {"mycelis-dev-swarm-optional.yaml", "prime-development"},
 	} {
 		if leads[key] != 1 || holders[key] != 1 {
 			t.Errorf("%s team %s: leads=%d handoff holders=%d, want exactly one lead holding the tools", key.file, key.team, leads[key], holders[key])
 		}
+	}
+	// BOOT-B: default boot (mycelis-runtime-core) ships no team lead, so
+	// hand_off has no shipped holder unless the optional bundle is selected.
+	runtimeCoreAgents := 0
+	for _, agent := range shippedAgents(t) {
+		if agent.file != "mycelis-runtime-core.yaml" {
+			continue
+		}
+		runtimeCoreAgents++
+		if slices.Contains(agent.tools, "hand_off") || slices.Contains(agent.tools, "read_handoff_input") {
+			t.Errorf("default boot bundle %s/%s declares handoff tools", agent.teamID, agent.id)
+		}
+	}
+	if runtimeCoreAgents == 0 {
+		t.Error("mycelis-runtime-core.yaml not found among shipped templates")
 	}
 }
 

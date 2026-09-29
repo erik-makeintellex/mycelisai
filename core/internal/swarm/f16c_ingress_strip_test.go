@@ -107,7 +107,7 @@ func TestF16cDelegateTaskDropsModelClaim(t *testing.T) {
 		SourceKind: protocol.SourceKindSystem, SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, "admin-core"), PayloadKind: protocol.PayloadKindCommand})
 	r := &InternalToolRegistry{nc: nc}
 	for name, build := range shapes {
-		team := "prime-" + name
+		team := "fixture-" + name
 		f16cTeam(t, nc, team)
 		inbox := f16cAgentInbox(t, nc, team)
 		if _, err := r.handleDelegateTask(agentCtx, build(team)); err != nil {
@@ -133,7 +133,7 @@ func TestF16cDelegateTaskDropsModelClaim(t *testing.T) {
 // correlation it built, and only for its own run.
 func TestF16cConfirmedDispatchDelegateKeepsCoreClaim(t *testing.T) {
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	f16cTeam(t, nc, team)
 	inbox := f16cAgentInbox(t, nc, team)
 	r := &InternalToolRegistry{nc: nc}
@@ -188,7 +188,7 @@ func TestF16cConfirmedDispatchDelegateKeepsCoreClaim(t *testing.T) {
 // layer the team decodes (normalizeCommandPayload).
 func TestF16cPublishSignalDropsClaim(t *testing.T) {
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	f16cTeam(t, nc, team)
 	inbox := f16cAgentInbox(t, nc, team)
 	askJSON, _ := json.Marshal(map[string]any{"goal": "EVIL unapproved goal", "context": f16cClaim(team)})
@@ -229,7 +229,7 @@ func (s *f16cReceiptStore) AcceptCommand(_ context.Context, c teamCommandCorrela
 // team that received the command, not on a team_id written in the payload.
 func TestF16cCommandReceiptBindsReceivingTeam(t *testing.T) {
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	store := &f16cReceiptStore{}
 	f16cTeam(t, nc, team).commandReceipts = store
 	inbox := f16cAgentInbox(t, nc, team)

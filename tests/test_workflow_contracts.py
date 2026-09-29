@@ -85,10 +85,10 @@ def test_user_workflow_specs_match_current_shared_trial_expectations():
 def test_soma_web_capability_contract_uses_governed_mycelis_search_and_fetch():
     admin = _read("core/config/teams/admin.yaml")
     council = _read("core/config/teams/council.yaml")
-    template = _read("core/config/templates/v8-migration-standing-team-bridge.yaml")
+    template = _read("core/config/templates/mycelis-runtime-core.yaml")
     chart_admin = _read("charts/mycelis-core/config/teams/admin.yaml")
     chart_council = _read("charts/mycelis-core/config/teams/council.yaml")
-    chart_template = _read("charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml")
+    chart_template = _read("charts/mycelis-core/config/templates/mycelis-runtime-core.yaml")
     library = _read("core/config/mcp-library.yaml")
     resources_doc = _read("docs/user/resources.md")
     soma_doc = _read("docs/user/soma-chat.md")

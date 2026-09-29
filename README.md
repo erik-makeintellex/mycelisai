@@ -291,7 +291,7 @@ uv run inv compose.status
 uv run inv compose.health
 ```
 
-Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle is present, and `MYCELIS_BOOTSTRAP_TEMPLATE_ID` must choose a bundle when more than one is mounted.
+Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle is present. Core ships two bundles: `mycelis-runtime-core` (the default when `MYCELIS_BOOTSTRAP_TEMPLATE_ID` is unset; boots only `admin-core` and `council-core`) and `mycelis-dev-swarm-optional` (off by default; adds `prime-architect`, `prime-development` and `agui-design-architect`). Any other mounted set needs `MYCELIS_BOOTSTRAP_TEMPLATE_ID` to choose one. Upgrade note: the `v8-migration-standing-team-bridge` bundle is retired with no alias, and Core refuses to start when a deployment still pins it; set `mycelis-runtime-core` (or leave the variable unset), or `mycelis-dev-swarm-optional` if you relied on the prime teams. `genesis-core` and `telemetry-core` no longer boot but stay reserved Core team IDs.
 
 ## Cross-Platform Setup
 

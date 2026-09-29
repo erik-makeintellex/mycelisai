@@ -15,7 +15,7 @@ import (
 type tpdPlan struct{ proof, run, contract, outboxKey, wi1, wi2 string }
 
 func (p tpdPlan) claim(workItem, key string) ExecutionClaim {
-	return ExecutionClaim{IntentProofID: p.proof, ContractID: p.contract, RunID: p.run, WorkItemID: workItem, TeamID: "prime-development", IdempotencyKey: key}
+	return ExecutionClaim{IntentProofID: p.proof, ContractID: p.contract, RunID: p.run, WorkItemID: workItem, TeamID: "fixture-dev-team", IdempotencyKey: key}
 }
 
 // tpdKey is the expected per-planned-call key format (TPD).
@@ -28,11 +28,11 @@ func tpdSeedTwoCalls(t *testing.T, plannedKey func(p tpdPlan, workItem string) s
 	p.outboxKey = "confirm-action:" + p.proof
 	planned := []map[string]any{}
 	for _, wi := range []string{p.wi1, p.wi2} {
-		ctx := map[string]any{"team_id": "prime-development", "work_item_id": wi, "intent_proof_id": p.proof, "run_id": p.run, "contract_id": p.contract}
+		ctx := map[string]any{"team_id": "fixture-dev-team", "work_item_id": wi, "intent_proof_id": p.proof, "run_id": p.run, "contract_id": p.contract}
 		if key := plannedKey(p, wi); key != "" {
 			ctx["idempotency_key"] = key
 		}
-		planned = append(planned, map[string]any{"name": "delegate_task", "arguments": map[string]any{"team_id": "prime-development", "context": ctx}})
+		planned = append(planned, map[string]any{"name": "delegate_task", "arguments": map[string]any{"team_id": "fixture-dev-team", "context": ctx}})
 	}
 	scope, _ := json.Marshal(map[string]any{"planned_tool_calls": planned})
 	f16cExec(t, db, `INSERT INTO intent_proofs (id, template_id, resolved_intent, status, scope_validation, confirmed_at, expires_at)
@@ -40,7 +40,7 @@ func tpdSeedTwoCalls(t *testing.T, plannedKey func(p tpdPlan, workItem string) s
 	f16cExec(t, db, `INSERT INTO mission_runs (id, mission_id, status) VALUES ($1,'tpd','running')`, p.run)
 	f16cExec(t, db, `INSERT INTO execution_contracts (id, intent_proof_id, run_id, template_id) VALUES ($1,$2,$3,'chat-to-proposal')`, p.contract, p.proof, p.run)
 	f16cExec(t, db, `INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, status, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
-		VALUES ($1,$2,'confirmed_action_team_plan','executing',$3,$4,$5,'prime-development',$6,'web_api','api.intent.confirm-action','command')`,
+		VALUES ($1,$2,'confirmed_action_team_plan','executing',$3,$4,$5,'fixture-dev-team',$6,'web_api','api.intent.confirm-action','command')`,
 		uuid.NewString(), p.outboxKey, p.run, p.proof, p.contract, p.wi1)
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM execution_dispatch_outbox WHERE intent_proof_id=$1`, p.proof)

@@ -45,8 +45,8 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 	callKey := ConfirmedCallDeliveryKey("confirm-action:"+proofID, workItem) // TPD
 	scope, _ := json.Marshal(map[string]any{"planned_tool_calls": []map[string]any{{
 		"name": "delegate_task",
-		"arguments": map[string]any{"team_id": "prime-development", "context": map[string]any{
-			"team_id": "prime-development", "work_item_id": workItem, "intent_proof_id": proofID, "run_id": runID, "contract_id": contractID, "idempotency_key": callKey,
+		"arguments": map[string]any{"team_id": "fixture-dev-team", "context": map[string]any{
+			"team_id": "fixture-dev-team", "work_item_id": workItem, "intent_proof_id": proofID, "run_id": runID, "contract_id": contractID, "idempotency_key": callKey,
 		}},
 	}}})
 	for _, stmt := range []struct {
@@ -57,7 +57,7 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 		{`INSERT INTO mission_runs (id, mission_id, status) VALUES ($1, 'f16b', 'running')`, []any{runID}},
 		{`INSERT INTO execution_contracts (id, intent_proof_id, run_id, template_id) VALUES ($1, $2, $3, 'chat-to-proposal')`, []any{contractID, proofID, runID}},
 		{`INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, status, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
-		  VALUES ($1, $2, 'confirmed_action_team_plan', 'executing', $3, $4, $5, 'prime-development', $6, 'web_api', 'api.intent.confirm-action', 'command')`,
+		  VALUES ($1, $2, 'confirmed_action_team_plan', 'executing', $3, $4, $5, 'fixture-dev-team', $6, 'web_api', 'api.intent.confirm-action', 'command')`,
 			[]any{uuid.NewString(), "confirm-action:" + proofID, runID, proofID, contractID, workItem}},
 	} {
 		if _, err := db.ExecContext(ctx, stmt.q, stmt.args...); err != nil {
@@ -70,7 +70,7 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM mission_runs WHERE id = $1`, runID)
 		_, _ = db.Exec(`DELETE FROM intent_proofs WHERE id = $1`, proofID)
 	})
-	good := ExecutionClaim{IntentProofID: proofID, ContractID: contractID, RunID: runID, WorkItemID: workItem, TeamID: "prime-development", IdempotencyKey: callKey}
+	good := ExecutionClaim{IntentProofID: proofID, ContractID: contractID, RunID: runID, WorkItemID: workItem, TeamID: "fixture-dev-team", IdempotencyKey: callKey}
 	if err := VerifyExecutionClaim(ctx, db, good); err != nil {
 		t.Fatalf("confirmed dispatched proof rejected: %v", err)
 	}

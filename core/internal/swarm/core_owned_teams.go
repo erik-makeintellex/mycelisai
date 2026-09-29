@@ -8,6 +8,9 @@ import (
 // CoreOwnedTeamIDs are the team IDs reserved for Core's standing teams. Only
 // the boot registry may register them (and marks them Core-owned); create_team,
 // SpawnTeam, and durable restore refuse them whether or not the team is loaded.
+// genesis-core and telemetry-core no longer boot (BOOT-B: the default bundle
+// starts only admin-core and council-core) but stay reserved so nothing can
+// impersonate them.
 var CoreOwnedTeamIDs = []string{"admin-core", "council-core", "genesis-core", "telemetry-core"}
 
 // ErrReservedTeamID reports a runtime attempt to register a Core-owned team ID.

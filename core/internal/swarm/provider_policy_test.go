@@ -8,10 +8,10 @@ import (
 
 func TestProviderPolicyResolveManifestOrganizationDefaultApplies(t *testing.T) {
 	manifest := &TeamManifest{
-		ID:   "prime-development",
+		ID:   "fixture-dev-team",
 		Name: "Prime Development",
 		Members: []protocol.AgentManifest{
-			{ID: "prime-development-agent", Role: "coder"},
+			{ID: "fixture-dev-agent", Role: "coder"},
 		},
 	}
 
@@ -80,14 +80,14 @@ func TestProviderPolicyResolveManifestTeamOverrideApplies(t *testing.T) {
 		Provider:         "org-provider",
 		AllowedProviders: []string{"org-provider", "team-provider"},
 		Teams: map[string]ProviderScope{
-			"prime-development": {Provider: "team-provider"},
+			"fixture-dev-team": {Provider: "team-provider"},
 		},
 	}
 	manifest := &TeamManifest{
-		ID:   "prime-development",
+		ID:   "fixture-dev-team",
 		Name: "Prime Development",
 		Members: []protocol.AgentManifest{
-			{ID: "prime-development-agent", Role: "coder"},
+			{ID: "fixture-dev-agent", Role: "coder"},
 		},
 	}
 

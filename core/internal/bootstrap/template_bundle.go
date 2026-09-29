@@ -19,6 +19,7 @@ type TemplateBundle struct {
 	Description     string                `yaml:"description,omitempty"`
 	TemplateVersion string                `yaml:"template_version,omitempty"`
 	SourceKind      string                `yaml:"source_kind,omitempty"`
+	Extends         string                `yaml:"extends,omitempty"`
 	Kernel          TemplateKernel        `yaml:"kernel,omitempty"`
 	Council         TemplateCouncil       `yaml:"council,omitempty"`
 	ProviderPolicy  swarm.ProviderPolicy  `yaml:"provider_policy,omitempty"`
@@ -46,6 +47,13 @@ type StartupSelection struct {
 
 const (
 	StartupSourceBundle = "bundle"
+
+	// DefaultStartupBundleID boots when MYCELIS_BOOTSTRAP_TEMPLATE_ID is unset
+	// and more than one bundle is mounted: admin-core and council-core only.
+	DefaultStartupBundleID = "mycelis-runtime-core"
+	// OptionalDevSwarmBundleID extends the default with prime-architect,
+	// prime-development and agui-design-architect; it boots only when selected.
+	OptionalDevSwarmBundleID = "mycelis-dev-swarm-optional"
 )
 
 func NewTemplateLoader(path string) *TemplateLoader {
@@ -84,6 +92,9 @@ func (l *TemplateLoader) LoadBundles() ([]*TemplateBundle, error) {
 		bundles = append(bundles, bundle)
 	}
 
+	if err := resolveBundleExtends(bundles); err != nil {
+		return nil, err
+	}
 	return bundles, nil
 }
 
@@ -176,6 +187,11 @@ func SelectStartupBundle(bundles []*TemplateBundle, requestedID string) (*Templa
 		if len(bundles) == 1 {
 			return bundles[0], nil
 		}
+		for _, bundle := range bundles {
+			if bundle.ID == DefaultStartupBundleID {
+				return bundle, nil
+			}
+		}
 		return nil, fmt.Errorf("multiple bootstrap template bundles available; set MYCELIS_BOOTSTRAP_TEMPLATE_ID")
 	}
 
@@ -189,6 +205,9 @@ func SelectStartupBundle(bundles []*TemplateBundle, requestedID string) (*Templa
 }
 
 func ResolveStartupSelection(templatesPath, requestedID string) (*StartupSelection, error) {
+	if err := rejectRetiredBundleID(requestedID); err != nil {
+		return nil, err
+	}
 	templateLoader := NewTemplateLoader(templatesPath)
 	bundles, err := templateLoader.LoadBundles()
 	if err != nil {
@@ -206,6 +225,9 @@ func ResolveStartupSelection(templatesPath, requestedID string) (*StartupSelecti
 	selected, err := SelectStartupBundle(bundles, requestedID)
 	if err != nil {
 		return nil, fmt.Errorf("select startup bootstrap template bundle: %w", err)
+	}
+	if err := rejectRetiredBundleID(selected.ID); err != nil {
+		return nil, err
 	}
 
 	org, err := selected.InstantiateRuntimeOrganization()

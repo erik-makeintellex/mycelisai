@@ -118,7 +118,7 @@ func TestNormalizeDelegateTaskArgs_LegacyStringUpgradesToStructuredAsk(t *testin
 
 func TestNormalizeDelegateTaskArgs_StructuredAskInput(t *testing.T) {
 	teamID, ask, err := normalizeDelegateTaskArgs(map[string]any{
-		"team_id": "prime-development",
+		"team_id": "fixture-dev-team",
 		"ask": map[string]any{
 			"ask_kind":          "validation",
 			"lane_role":         "validator",
@@ -130,7 +130,7 @@ func TestNormalizeDelegateTaskArgs_StructuredAskInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("normalize error: %v", err)
 	}
-	if teamID != "prime-development" {
+	if teamID != "fixture-dev-team" {
 		t.Fatalf("teamID = %q", teamID)
 	}
 	raw, marshalErr := json.Marshal(ask)

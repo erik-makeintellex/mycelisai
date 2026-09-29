@@ -273,7 +273,7 @@ Target posture for slice B of the neutral durability gate: the production Runs s
 
 Runtime bootstrap follows the runtime architecture and settings sections of the [Mycelis Canonical PRD](../architecture-library/MYCELIS_CANONICAL_PRD.md): template inputs become instantiated organizations through inheritance, precedence, and policy checks.
 
-Startup should select a valid bundle, instantiate the runtime organization from it, fail closed if no valid bundle is available, and require `MYCELIS_BOOTSTRAP_TEMPLATE_ID` when multiple bundles are mounted. `lifecycle.up` ensures the `cortex` database exists before Core starts.
+Startup should select a valid bundle, instantiate the runtime organization from it, and fail closed if no valid bundle is available. `MYCELIS_BOOTSTRAP_TEMPLATE_ID` chooses the bundle; unset, Core boots `mycelis-runtime-core` (`admin-core` and `council-core` only), and `mycelis-dev-swarm-optional` (which `extends` it with `prime-architect`, `prime-development` and `agui-design-architect`) boots only when selected. Operator upgrade note: `v8-migration-standing-team-bridge` is retired with no alias; Core refuses to start while it is pinned and names both replacements, and `genesis-core`/`telemetry-core` stay reserved but no longer boot. `lifecycle.up` ensures the `cortex` database exists before Core starts.
 
 ## V. Testing Strategy
 
