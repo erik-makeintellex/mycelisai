@@ -77,7 +77,7 @@ func TestLegSwarmCommandRouteNotRegistered(t *testing.T) {
 	mux.HandleFunc("POST /leg-sentinel", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	core := &coreRuntime{NC: nc, Guard: &governance.Guard{}}
 	selection := &bootstrap.StartupSelection{Bundle: &bootstrap.TemplateBundle{ID: "leg-route-test"}}
-	registry := swarm.NewRegistry(t.TempDir())
+	registry := swarm.NewRegistryFromRuntimeOrganization(nil)
 	services := productServices{}
 
 	soma := startSomaRuntime(t.Context(), mux, core, selection, registry, services)

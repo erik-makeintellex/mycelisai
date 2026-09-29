@@ -22,7 +22,7 @@ func TestAuthC1SomaRuntimeMountsNoRawTeamSpawn(t *testing.T) {
 	mux.HandleFunc("GET /authc1-sentinel", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	core := &coreRuntime{NC: nc, Guard: &governance.Guard{}}
 	selection := &bootstrap.StartupSelection{Bundle: &bootstrap.TemplateBundle{ID: "authc1-route-test"}}
-	soma := startSomaRuntime(t.Context(), mux, core, selection, swarm.NewRegistry(t.TempDir()), productServices{})
+	soma := startSomaRuntime(t.Context(), mux, core, selection, swarm.NewRegistryFromRuntimeOrganization(nil), productServices{})
 	if soma == nil {
 		t.Fatal("expected Soma to start with a live NATS connection")
 	}

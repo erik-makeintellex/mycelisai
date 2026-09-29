@@ -149,7 +149,7 @@ export function createCortexMissionChatSlice(
                         proposal_status: envelope.payload?.proposal ? 'active' : undefined,
                     };
 
-                    setMissionChatSuccess(set, get, chatMsg, isSomaRoute);
+                    setMissionChatSuccess(set, chatMsg, isSomaRoute);
                     return;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : `${routeLabel} failed`;

@@ -62,6 +62,24 @@ func TestNormalizeSourceInputRejectsWildcardIngress(t *testing.T) {
 	}
 }
 
+// CONS-C3 M1: the ingress guard derives its family from the protocol
+// constant; only a concrete subject inside that family is accepted.
+func TestSafeIngressSubjectUsesGlobalInputFamily(t *testing.T) {
+	for subject, want := range map[string]bool{
+		"swarm.global.input.factory-feed":   true,
+		"swarm.global.input.":               false,
+		"swarm.global.input":                false,
+		"swarm.team.alpha.internal.command": false,
+		"swarm.global.input.a b":            false,
+		"swarm.global.input.*":              false,
+		"swarm.global.broadcast":            false,
+	} {
+		if got := safeIngressSubject(subject); got != want {
+			t.Errorf("safeIngressSubject(%q) = %v, want %v", subject, got, want)
+		}
+	}
+}
+
 func TestServiceRejectsDuplicateIngressSubject(t *testing.T) {
 	service := NewService()
 	ctx := context.Background()

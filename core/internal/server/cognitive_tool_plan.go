@@ -119,16 +119,6 @@ func deterministicGovernedMutationResult(latestRequest string, mutTools []string
 	return deterministicConfigMutationResult(planned, mutTools)
 }
 
-func countUserChatMessages(messages []chatRequestMessage) int {
-	count := 0
-	for _, message := range messages {
-		if strings.EqualFold(strings.TrimSpace(message.Role), "user") && strings.TrimSpace(message.Content) != "" {
-			count++
-		}
-	}
-	return count
-}
-
 func mergeMissingPlannedToolArguments(primary, fallback protocol.PlannedToolCall) protocol.PlannedToolCall {
 	if primary.Arguments == nil {
 		primary.Arguments = map[string]any{}

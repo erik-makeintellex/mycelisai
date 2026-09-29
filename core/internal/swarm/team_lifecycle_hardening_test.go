@@ -18,7 +18,7 @@ import (
 func newLifecycleSoma(t *testing.T, store DurableTeamStore) (*Soma, *nats.Conn) {
 	t.Helper()
 	_, nc := startTestNATS(t)
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	if store != nil {
 		soma.SetDurableTeamStore(store)
 	}

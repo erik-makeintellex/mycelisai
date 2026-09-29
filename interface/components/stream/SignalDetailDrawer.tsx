@@ -23,7 +23,6 @@ function typeColor(type?: string): { badge: string; dot: string } {
         case 'ERROR':
             return { badge: 'bg-cortex-danger/15 text-cortex-danger', dot: 'bg-cortex-danger' };
         case 'governance':
-        case 'governance_halt':
             return { badge: 'bg-cortex-warning/15 text-cortex-warning', dot: 'bg-cortex-warning' };
         case 'memory':
             return { badge: 'bg-cortex-primary/15 text-cortex-primary', dot: 'bg-cortex-primary' };

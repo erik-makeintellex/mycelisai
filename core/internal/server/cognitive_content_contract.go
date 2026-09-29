@@ -222,10 +222,6 @@ func gameProofRequirements() []string {
 	}
 }
 
-func gameValidationSummary() string {
-	return "Retained as a self-contained browser adventure with movement, collision, hazards, enemies, key, door, win/fail states, restart, matching generated music/action audio, documented winning route, play-tested route proof from start to win, Soma-mediated repair notes for any discovered defect, and a direct launch path for the user or another agent."
-}
-
 func applicationPackageAcceptanceCriteria() []string {
 	return []string{
 		"direct open or launch path is provided in chat and retained output metadata",

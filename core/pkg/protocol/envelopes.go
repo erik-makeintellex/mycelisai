@@ -16,7 +16,6 @@ const (
 	SignalTaskFailed        SignalType = "task_failed"
 	SignalError             SignalType = "error"
 	SignalHeartbeat         SignalType = "heartbeat"
-	SignalGovernanceHalt    SignalType = "governance_halt"
 	SignalSensorData        SignalType = "sensor_data"
 	SignalChatResponse      SignalType = "chat_response"
 	SignalBlueprintProposal SignalType = "blueprint_proposal" // CE-1: proposal with confirm token
@@ -48,13 +47,6 @@ type CTSEnvelope struct {
 	Mode       ExecutionMode `json:"mode,omitempty"`
 	// V7 Event Spine link to the persistent audit record in mission_events.
 	MissionEventID string `json:"mission_event_id,omitempty"`
-}
-
-// HasTrustScore returns true if the envelope carries an explicit trust rating.
-// Zero-value (0.0) is treated as "unscored" — the Governance Valve should
-// apply the node-category default rather than blocking.
-func (e *CTSEnvelope) HasTrustScore() bool {
-	return e.TrustScore > 0
 }
 
 // Validate enforces the Zero-Trust schema contract.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 func main() {
@@ -106,10 +108,10 @@ func send(nc *nats.Conn, env *pb.MsgEnvelope) {
 	if err != nil {
 		log.Fatalf("Marshal failed: %v", err)
 	}
-	// Publish to a topic that triggers the router interception?
-	// Router subscribes to "swarm.>"
-	// We send to "swarm.smoke.test"
-	if err := nc.Publish("swarm.smoke.test", data); err != nil {
+	// The router subscribes to every product subject (protocol.TopicSwarmWild)
+	// and runs the governance guard on it; publish on the envelope team's
+	// machine telemetry lane so the probe never lands on an operator channel.
+	if err := nc.Publish(fmt.Sprintf(protocol.TopicTeamTelemetryFmt, env.TeamId), data); err != nil {
 		log.Fatalf("Publish failed: %v", err)
 	}
 }

@@ -36,7 +36,7 @@ func inheritingBrain() *cognitive.Router {
 func TestRestartThenIdenticalRetryIsIdempotent(t *testing.T) {
 	store := newLockedDurableTeamStore()
 	_, nc := startTestNATS(t)
-	first := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), inheritingBrain(), nil, nil, nil)
+	first := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), inheritingBrain(), nil, nil, nil)
 	first.SetDurableTeamStore(store)
 	if err := first.SpawnTeamContext(context.Background(), providerInheritingManifest()); err != nil {
 		t.Fatalf("first spawn: %v", err)
@@ -47,7 +47,7 @@ func TestRestartThenIdenticalRetryIsIdempotent(t *testing.T) {
 		t.Fatalf("persisted manifest is not the approved pre-start form: %#v", persisted)
 	}
 
-	restarted := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), inheritingBrain(), nil, nil, nil)
+	restarted := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), inheritingBrain(), nil, nil, nil)
 	restarted.SetDurableTeamStore(store)
 	if err := restarted.Start(); err != nil {
 		t.Fatalf("restart: %v", err)
@@ -137,7 +137,7 @@ func TestActivateBlueprintAndSpawnSameIDNeverOrphanATeam(t *testing.T) {
 	}}}
 	baseline := nc.NumSubscriptions()
 	for i := 0; i < 30; i++ {
-		soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+		soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() { defer wg.Done(); soma.ActivateBlueprint(bp, nil) }()

@@ -18,8 +18,6 @@ export function createCortexGraphUiSlice(
     | 'setInspectedMessage'
     | 'approveArtifact'
     | 'rejectArtifact'
-    | 'setTrustThreshold'
-    | 'fetchTrustThreshold'
     | 'toggleBlueprintDrawer'
     | 'toggleAdvancedMode'
     | 'toggleRailCollapsed'
@@ -158,29 +156,6 @@ export function createCortexGraphUiSlice(
                 pendingArtifacts: s.pendingArtifacts.filter((item) => item.id !== id),
                 selectedArtifact: s.selectedArtifact?.id === id ? null : s.selectedArtifact,
             }));
-        },
-
-        setTrustThreshold: (value: number) => {
-            set({ trustThreshold: value, isSyncingThreshold: true });
-            fetch('/api/v1/trust/threshold', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ threshold: value }),
-            })
-                .catch((err) => console.error('[TRUST] Failed to sync threshold:', err))
-                .finally(() => set({ isSyncingThreshold: false }));
-        },
-
-        fetchTrustThreshold: async () => {
-            try {
-                const res = await fetch('/api/v1/trust/threshold');
-                if (res.ok) {
-                    const data = await res.json();
-                    set({ trustThreshold: data.threshold });
-                }
-            } catch {
-                // degraded mode — use local default
-            }
         },
 
         toggleBlueprintDrawer: () => {

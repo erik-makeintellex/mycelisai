@@ -11,7 +11,7 @@ import (
 
 func TestHandleCreateTeamRejectsCallerSuppliedWorkerProfileLineage(t *testing.T) {
 	_, nc := startTestNATS(t)
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 
 	for _, body := range []string{
 		`{"id":"forged-ref","name":"Forged Ref","members":[{"id":"worker","profile_ref":"custom.builder"}]}`,

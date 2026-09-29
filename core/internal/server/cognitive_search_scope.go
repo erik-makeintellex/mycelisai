@@ -12,11 +12,6 @@ func hasConcreteSearchRequest(lower string) bool {
 	return ok
 }
 
-func directSearchQuery(text string) (string, bool) {
-	request, ok := directSearchRequestFromText(text)
-	return request.Query, ok
-}
-
 func directSearchRequestFromText(text string) (directSearchRequest, bool) {
 	trimmed := strings.TrimSpace(text)
 	lower := strings.ToLower(strings.Join(strings.Fields(trimmed), " "))

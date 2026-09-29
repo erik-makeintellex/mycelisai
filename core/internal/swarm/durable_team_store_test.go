@@ -86,7 +86,7 @@ func TestPostgresDurableTeamLoaderQuarantinesCorruptRows(t *testing.T) {
 
 func TestSomaRecordsLoaderRestorationDegradations(t *testing.T) {
 	_, nc := startTestNATS(t)
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	soma.SetDurableTeamLoader(reportingLoader{
 		manifests: []*TeamManifest{manifestRevision("kept-team", "1.0.0", "sha256:profile-a")},
 		degraded:  []DurableTeamRestoreDegradation{{TeamID: "bad-team", Reason: "unsupported schema"}},
@@ -163,7 +163,7 @@ func TestPostgresDurableTeamStoreIsIdempotentAndRejectsReplacement(t *testing.T)
 func TestSomaSpawnAndStopOwnDurableManifest(t *testing.T) {
 	_, nc := startTestNATS(t)
 	store := &memoryDurableTeamStore{}
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	soma.SetDurableTeamStore(store)
 	manifest := completeDurableManifest()
 	if err := soma.SpawnTeam(manifest); err != nil {
@@ -184,7 +184,7 @@ func TestSomaSpawnAndStopOwnDurableManifest(t *testing.T) {
 func TestDeactivateMissionDeletesDurableManifests(t *testing.T) {
 	_, nc := startTestNATS(t)
 	store := &memoryDurableTeamStore{}
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	soma.SetDurableTeamStore(store)
 	for _, teamID := range []string{"mission-7.builder", "mission-7.reviewer", "other.builder"} {
 		if err := soma.SpawnTeam(manifestRevision(teamID, "1.0.0", "sha256:profile-a")); err != nil {
@@ -203,7 +203,7 @@ func TestDeactivateMissionDeletesDurableManifests(t *testing.T) {
 func TestDurableProfilesRemainProspectiveAcrossActivationAndRollback(t *testing.T) {
 	_, nc := startTestNATS(t)
 	store := &memoryDurableTeamStore{}
-	first := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	first := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	first.SetDurableTeamStore(store)
 
 	teamA := manifestRevision("team-before-b", "1.0.0", "sha256:profile-a")
@@ -216,7 +216,7 @@ func TestDurableProfilesRemainProspectiveAcrossActivationAndRollback(t *testing.
 	}
 	first.Shutdown()
 
-	restarted := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, nil)
+	restarted := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, nil)
 	restarted.SetDurableTeamStore(store)
 	if err := restarted.Start(); err != nil {
 		t.Fatalf("restart Soma: %v", err)

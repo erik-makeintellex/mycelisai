@@ -18,7 +18,7 @@ func TestPheAxonProcessSignal_NoTeamResolvedReturnsHonestError(t *testing.T) {
 	defer s.Shutdown()
 	defer nc.Close()
 
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistry("."), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(nil), nil, nil, nil, nil)
 	// Do not start Soma or register any team: "genesis" is not running.
 
 	axon := NewAxon(nc, soma, nil)
@@ -56,7 +56,7 @@ func TestPheAxonProcessSignal_ResolvedTeamRoutes(t *testing.T) {
 	defer s.Shutdown()
 	defer nc.Close()
 
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistry("."), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(nil), nil, nil, nil, nil)
 	soma.teams["genesis"] = NewTeam(&TeamManifest{ID: "genesis", Name: "Genesis", Type: TeamTypeAction}, nc, nil, nil)
 
 	axon := NewAxon(nc, soma, nil)

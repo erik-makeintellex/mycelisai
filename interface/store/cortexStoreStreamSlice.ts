@@ -75,22 +75,6 @@ export function createCortexStreamSlice(
                         patch.pendingArtifacts = [envelope, ...get().pendingArtifacts];
                     }
 
-                    if (signal.type === 'governance_halt' && signal.source) {
-                        const envelope: CTSEnvelope = {
-                            id: `gov-${signal.source}-${signal.timestamp ?? Date.now()}`,
-                            source: signal.source,
-                            signal: 'governance_halt',
-                            timestamp: signal.timestamp ?? new Date().toISOString(),
-                            trust_score: signal.payload?.trust_score ?? signal.trust_score,
-                            payload: {
-                                content: 'Trust score below threshold. Awaiting human approval.',
-                                content_type: 'text',
-                                title: `Governance Halt: ${signal.source}`,
-                            },
-                        };
-                        patch.pendingArtifacts = [envelope, ...get().pendingArtifacts];
-                    }
-
                     set(patch);
                     rememberEventId(event.lastEventId);
                 } catch (error) {

@@ -8,7 +8,7 @@
 - Budget wiring in `core/internal/server/token_budgets.go` and `cognitive_profile_overrides.go` belongs to `mycelis-core-execution` (lead decision 2026-09-28: the B1 tail "Budget metering" target), not this package.
 
 ## Contracts
-- `Router.InferWithContract` (`router.go`) is the single budget choke point: every inference call (Soma turn, council consult, team agents, D2 draft, agentry, memory recall, archivist, provisioning, architect) must go through it. Do not add a second inference entry point.
+- `Router.InferWithContract` (`router.go`) is the single budget choke point: every inference call (Soma turn, council consult, team agents, D2 draft, memory recall, archivist, provisioning, architect) must go through it. Do not add a second inference entry point.
 - [`B1_TOKEN_BUDGETS_CONTRACT.md`](../../../docs/architecture-library/B1_TOKEN_BUDGETS_CONTRACT.md) is the authority for budget/reservation/ledger behavior around this choke point.
 - `finalizeInferenceResponse` (`router.go`) records provider-reported usage; `openai.go`, `anthropic.go` and `google.go` all map provider usage into `PromptTokens`/`CompletionTokens`/`TokensUsed` (verified on dev `38e74c3f`; the anthropic/google gap from the original B1 review is closed). A new provider adapter must do the same, or budgets under-count.
 - Local-only data boundaries never fail over to a remote provider; no silent remote inference.

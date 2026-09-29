@@ -52,27 +52,6 @@ describe('DeliverablesTray', () => {
         expect(screen.getByText('2')).toBeDefined();
     });
 
-    it('shows governance halt state for governance_halt signals', () => {
-        useCortexStore.setState({
-            pendingArtifacts: [
-                makeEnvelope('gov-001', {
-                    signal: 'governance_halt',
-                    trust_score: 0.3,
-                    payload: {
-                        content: 'Trust score below threshold. Awaiting human approval.',
-                        content_type: 'text',
-                        title: 'Governance Halt: agent-alpha',
-                    },
-                }),
-            ],
-        });
-
-        render(<DeliverablesTray />);
-
-        expect(screen.getByText('Governance Halt: agent-alpha')).toBeDefined();
-        expect(screen.getByText('Pending Deliverables')).toBeDefined();
-    });
-
     it('returns null (renders nothing) when no deliverables exist', () => {
         useCortexStore.setState({ pendingArtifacts: [] });
 

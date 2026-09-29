@@ -22,7 +22,7 @@ func TestSoma_Integration(t *testing.T) {
 	// It checks size/prefix. So &Guard{} is fine.
 
 	// Registry
-	reg := NewRegistry(".") // Empty path, no manifests load
+	reg := NewRegistryFromRuntimeOrganization(nil) // Empty path, no manifests load
 
 	// 4. Init Soma
 	soma := NewSoma(nc, guard, reg, nil, nil, nil, nil) // brain, stream, mcpExec, internalTools are nil for this test
@@ -69,7 +69,7 @@ func TestSoma_DoesNotRouteRegisteredServiceInputAsOperatorIntent(t *testing.T) {
 	defer s.Shutdown()
 	defer nc.Close()
 
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistry("."), nil, nil, nil, nil)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(nil), nil, nil, nil, nil)
 	if err := soma.Start(); err != nil {
 		t.Fatalf("Soma start failed: %v", err)
 	}

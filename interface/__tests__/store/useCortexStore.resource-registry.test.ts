@@ -247,26 +247,11 @@ describe('useCortexStore resource registry', () => {
     });
 
     describe('trust and governance state', () => {
-        it('fetchTrustThreshold stores threshold from API', async () => {
-            mockFetch.mockResolvedValue({
-                ok: true,
-                json: async () => ({ threshold: 0.85 }),
-            });
-
-            await useCortexStore.getState().fetchTrustThreshold();
-
-            expect(useCortexStore.getState().trustThreshold).toBe(0.85);
-        });
-
-        it('setTrustThreshold updates store and calls API', async () => {
-            mockFetch.mockResolvedValue({ ok: true });
-
-            useCortexStore.getState().setTrustThreshold(0.9);
-
-            expect(useCortexStore.getState().trustThreshold).toBe(0.9);
-            expect(mockFetch).toHaveBeenCalledWith('/api/v1/trust/threshold', expect.objectContaining({
-                method: 'PUT',
-            }));
+        it('carries no V7 Overseer trust-threshold state or actions (CONS-C3)', () => {
+            const state = useCortexStore.getState() as unknown as Record<string, unknown>;
+            for (const key of ['trustThreshold', 'isSyncingThreshold', 'setTrustThreshold', 'fetchTrustThreshold']) {
+                expect(key in state, key).toBe(false);
+            }
         });
 
         it('toggleSensorGroup adds group to subscribed list', () => {

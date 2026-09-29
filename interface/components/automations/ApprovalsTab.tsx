@@ -4,7 +4,6 @@ import { useEffect, useCallback, useState } from "react";
 import { DecisionCard } from "@/components/approvals/DecisionCard";
 import { BadgeCheck, Loader2, ScrollText, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useCortexStore, type AuditLogEntry } from "@/store/useCortexStore";
-import TrustSlider from "@/components/workspace/TrustSlider";
 import ManifestationPanel from "@/components/dashboard/ManifestationPanel";
 import ScheduleAuditContext from "@/components/automations/ScheduleAuditContext";
 import InlineBlockerNotice from "@/components/shared/InlineBlockerNotice";
@@ -80,10 +79,6 @@ function ApprovalsQueue() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-4">
-      <div className="bg-cortex-surface border border-cortex-border rounded-xl overflow-hidden">
-        <TrustSlider />
-      </div>
-
       {!approvalsError && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-cortex-text-muted font-mono">

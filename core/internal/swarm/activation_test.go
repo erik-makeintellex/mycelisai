@@ -38,7 +38,7 @@ func newTestSomaForActivation(t *testing.T) *Soma {
 	t.Cleanup(nc.Close)
 
 	guard := &governance.Guard{}
-	reg := NewRegistry(".")
+	reg := NewRegistryFromRuntimeOrganization(nil)
 	return NewSoma(nc, guard, reg, nil, nil, nil, nil)
 }
 

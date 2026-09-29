@@ -8,74 +8,64 @@ import (
 	"github.com/mycelis/core/internal/state"
 )
 
-func TestUpdateHeartbeat_Teams(t *testing.T) {
-	reg := state.NewRegistry()
+// consC3TeamCount counts active agents on a team through the production read path.
+func consC3TeamCount(reg *state.Registry, teamID string) int {
+	count := 0
+	for _, agent := range reg.GetActiveAgents() {
+		if agent.TeamID == teamID {
+			count++
+		}
+	}
+	return count
+}
 
-	// 1. Register agents joined to teams
+func TestUpdateHeartbeat_Teams(t *testing.T) {
+	reg := &state.Registry{}
+
 	reg.UpdateHeartbeat("agent-a", "marketing", "swarm:base", state.StatusIdle)
 	reg.UpdateHeartbeat("agent-b", "sensors", "ros2:lidar", state.StatusBusy)
 	reg.UpdateHeartbeat("agent-c", "marketing", "swarm:llm", state.StatusIdle)
 
-	// 2. Query Marketing Team
-	teamMkt := reg.GetAgentsByTeam("marketing")
-	if len(teamMkt) != 2 {
-		t.Errorf("Expected 2 agents in marketing, got %d", len(teamMkt))
+	if got := consC3TeamCount(reg, "marketing"); got != 2 {
+		t.Errorf("Expected 2 agents in marketing, got %d", got)
+	}
+	if got := consC3TeamCount(reg, "sensors"); got != 1 {
+		t.Errorf("Expected 1 agent in sensors, got %d", got)
+	}
+	if b, _ := reg.Get("agent-b"); b.SourceURI != "ros2:lidar" {
+		t.Errorf("Expected SourceURI 'ros2:lidar', got %s", b.SourceURI)
 	}
 
-	// 3. Query Sensors Team
-	teamSens := reg.GetAgentsByTeam("sensors")
-	if len(teamSens) != 1 {
-		t.Errorf("Expected 1 agent in sensors, got %d", len(teamSens))
-	}
-	if teamSens[0].SourceURI != "ros2:lidar" {
-		t.Errorf("Expected SourceURI 'ros2:lidar', got %s", teamSens[0].SourceURI)
-	}
-
-	// 4. Update an agent's team (Migration)
-	// Move agent-a to 'engineering'
+	// Moving agent-a to engineering updates its team.
 	reg.UpdateHeartbeat("agent-a", "engineering", "swarm:base", state.StatusIdle)
-
-	newMkt := reg.GetAgentsByTeam("marketing")
-	if len(newMkt) != 1 {
-		t.Errorf("Expected 1 agent remaining in marketing, got %d", len(newMkt))
+	if got := consC3TeamCount(reg, "marketing"); got != 1 {
+		t.Errorf("Expected 1 agent remaining in marketing, got %d", got)
+	}
+	if got := consC3TeamCount(reg, "engineering"); got != 1 {
+		t.Errorf("Expected 1 agent in engineering, got %d", got)
 	}
 
-	eng := reg.GetAgentsByTeam("engineering")
-	if len(eng) != 1 {
-		t.Errorf("Expected 1 agent in engineering, got %d", len(eng))
-	}
-
-	// 5. Partial Update (Verify Metadata Persistence)
-	// Sending empty team/source should NOT clear existing values
+	// A partial heartbeat (empty team/source) keeps the existing values.
 	reg.UpdateHeartbeat("agent-b", "", "", state.StatusIdle)
-
-	teamSensRefreshed := reg.GetAgentsByTeam("sensors")
-	if len(teamSensRefreshed) != 1 {
+	b, ok := reg.Get("agent-b")
+	if !ok || b.TeamID != "sensors" {
 		t.Error("Agent should persist in team on partial heartbeat")
 	}
-	if teamSensRefreshed[0].SourceURI != "ros2:lidar" {
-		t.Errorf("SourceURI should persist. Got %s", teamSensRefreshed[0].SourceURI)
+	if b.SourceURI != "ros2:lidar" {
+		t.Errorf("SourceURI should persist. Got %s", b.SourceURI)
 	}
 }
 
 func TestActiveThreshold(t *testing.T) {
-	// Optional: verify timeout logic still works with teams
-	reg := state.NewRegistry()
+	reg := &state.Registry{}
 	reg.UpdateHeartbeat("ghost", "shadow", "void", state.StatusIdle)
-
-	// Manually age the record (requires accessing map or waiting,
-	// for unit test we rely on public API availability or simple check)
-	// Since we can't easily mock time in simple version, we skip complex time manip
-	// unless we inject a clock.
-
-	agents := reg.GetAgentsByTeam("shadow")
-	if len(agents) != 1 {
+	if got := consC3TeamCount(reg, "shadow"); got != 1 {
 		t.Error("Should see active agent")
 	}
 }
 
 func TestRefreshKnownNeverCreatesOrRewrites(t *testing.T) {
-	reg := state.NewRegistry()
+	reg := &state.Registry{}
 	if reg.RefreshKnown("unknown") || reg.RefreshKnown("") {
 		t.Fatal("refresh must not succeed for an unknown or empty agent")
 	}
@@ -98,7 +88,7 @@ func TestRefreshKnownNeverCreatesOrRewrites(t *testing.T) {
 }
 
 func TestRefreshKnownConcurrent(t *testing.T) {
-	reg := state.NewRegistry()
+	reg := &state.Registry{}
 	reg.UpdateHeartbeat("known", "alpha", "swarm:base", state.StatusIdle)
 	var wg sync.WaitGroup
 	for i := 0; i < 16; i++ {

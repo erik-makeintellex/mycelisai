@@ -5,7 +5,6 @@ import {
 } from "@/lib/missionChatFailure";
 import type { ChatMessage } from "@/store/cortexStoreTypes";
 import type { CortexGet, CortexSet } from "@/store/cortexStoreSliceTypes";
-import type { CortexState } from "@/store/cortexStoreState";
 
 interface ChatRouteConfig {
     isSomaRoute: boolean;
@@ -223,8 +222,7 @@ function normalizeForGuidanceCompare(value: string): string {
         .trim();
 }
 
-export function setMissionChatSuccess(set: CortexSet, get: CortexGet, chatMsg: ChatMessage, isSomaRoute: boolean) {
-    const govMode = resolveGovernanceMode(get().trustThreshold);
+export function setMissionChatSuccess(set: CortexSet, chatMsg: ChatMessage, isSomaRoute: boolean) {
     set((s) => ({
         isMissionChatting: false,
         missionChat: [...s.missionChat, chatMsg],
@@ -234,7 +232,6 @@ export function setMissionChatSuccess(set: CortexSet, get: CortexGet, chatMsg: C
         activeBrain: chatMsg.brain ?? null,
         activeMode: chatMsg.mode || "answer",
         activeRole: chatMsg.source_node || "",
-        governanceMode: govMode,
         ...(chatMsg.proposal ? {
             pendingProposal: chatMsg.proposal,
             activeConfirmToken: chatMsg.proposal.confirm_token,
@@ -243,10 +240,4 @@ export function setMissionChatSuccess(set: CortexSet, get: CortexGet, chatMsg: C
             activeConfirmToken: null,
         }),
     }));
-}
-
-function resolveGovernanceMode(trustThreshold: number): CortexState["governanceMode"] {
-    if (trustThreshold >= 0.8) return "strict";
-    if (trustThreshold >= 0.5) return "active";
-    return "passive";
 }

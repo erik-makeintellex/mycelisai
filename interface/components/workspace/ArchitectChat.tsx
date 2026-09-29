@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Send, Loader2, Bot, User, FileJson } from 'lucide-react';
 import { useCortexStore, type ChatMessage } from '@/store/useCortexStore';
-import TrustSlider from './TrustSlider';
 import { WORKSPACE_LABELS } from '@/lib/labels';
 
 function MessageBubble({ msg }: { msg: ChatMessage }) {
@@ -83,9 +82,6 @@ export default function ArchitectChat() {
                     </button>
                 </div>
             </div>
-
-            {/* Trust Economy — Autonomy Threshold */}
-            <TrustSlider />
 
             {/* Error bar */}
             {error && (

@@ -43,7 +43,7 @@ func TestHandleCreateTeamActivatedProfileHonorsConfirmationDeadline(t *testing.T
 		WillReturnRows(activeProfileRows("22222222-2222-2222-2222-222222222222", document, digest))
 
 	registry := NewInternalToolRegistry(InternalToolDeps{NC: nc, Catalogue: catalogue.NewService(db)})
-	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromManifests(nil), nil, nil, nil, registry)
+	soma := NewSoma(nc, &governance.Guard{}, NewRegistryFromRuntimeOrganization(&RuntimeOrganization{}), nil, nil, nil, registry)
 	store := &contextBlockingDurableTeamStore{saveStarted: make(chan struct{})}
 	soma.SetDurableTeamStore(store)
 	t.Cleanup(soma.Shutdown)

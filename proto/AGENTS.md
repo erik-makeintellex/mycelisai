@@ -4,7 +4,7 @@
 
 ## Owns / does not own
 - `proto/envelope.proto` (the `scip.SignalEnvelope` message) and `proto/swarm/v1/swarm.proto` -> `mycelis-core-execution` (lead decision 2026-09-28: the wire shape is an execution contract, and its Go consumers are the swarm/router/governance/bootstrap/state runtime this role already owns).
-- Generated Go output lands in `core/pkg/scip/envelope.pb.go` (consumed by `core/internal/scip`, envelope validation) and `core/pkg/pb/swarm/swarm.pb.go` (consumed by `core/internal/{swarm,router,governance,bootstrap,state}` plus `core/cmd/{server,probe,smoke}`; `core/internal/server` uses it only in `_test.go` files — verified on dev `38e74c3f`).
+- Generated Go output lands in `core/pkg/scip/envelope.pb.go` (no Go consumer since CONS-C3 removed the unused `core/internal/scip` validator; it is still regenerated because the Python SDK uses `envelope.proto`) and `core/pkg/pb/swarm/swarm.pb.go` (consumed by `core/internal/{swarm,router,governance,bootstrap}` plus `core/cmd/{server,smoke}`; `core/internal/server` uses it only in `_test.go` files — verified on `feature/cons-c3`).
 - Generated Python output (`sdk/python/src/relay/proto/swarm/v1/swarm_pb2.py`, `sdk/python/src/scip/proto/envelope_pb2.py`) is regenerated alongside the Go stubs; see [`sdk/AGENTS.md`](../sdk/AGENTS.md) (owned by `mycelis-platform-ops`, lead decision 2026-09-28) — coordinate with core-execution whenever the regenerated output changes.
 
 ## Contracts

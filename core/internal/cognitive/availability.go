@@ -28,10 +28,6 @@ const (
 	DefaultExecutionProfileName = "chat"
 )
 
-func (r *Router) profileAvailability(profile string) ExecutionAvailability {
-	return r.ExecutionAvailability(profile, "")
-}
-
 type executionProviderResolution struct {
 	Profile         string
 	ProviderID      string
@@ -165,17 +161,8 @@ func (r *Router) providerConfiguredForExecution(providerID string) bool {
 	return r.Adapters[providerID] != nil
 }
 
-func (r *Router) resolveExecutionProvider(profile string, explicitProvider string) executionProviderResolution {
-	if r == nil || r.Config == nil {
-		return r.resolveExecutionProviderLocked(profile, explicitProvider)
-	}
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	return r.resolveExecutionProviderLocked(profile, explicitProvider)
-}
-
-// resolveExecutionProviderLocked is resolveExecutionProvider for a caller
-// that already holds r.mu (read or write).
+// resolveExecutionProviderLocked resolves a profile's executable provider
+// for a caller that already holds r.mu (read or write).
 func (r *Router) resolveExecutionProviderLocked(profile string, explicitProvider string) executionProviderResolution {
 	resolution := executionProviderResolution{
 		Profile: strings.TrimSpace(profile),

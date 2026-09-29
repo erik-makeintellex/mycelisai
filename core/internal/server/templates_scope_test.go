@@ -7,6 +7,13 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// buildScopeFromBlueprint classifies a blueprint for the default governance
+// profile. Test-only since CONS-C3: production always passes the caller's
+// profile to buildScopeFromBlueprintFor.
+func buildScopeFromBlueprint(bp *protocol.MissionBlueprint) *protocol.ScopeValidation {
+	return buildScopeFromBlueprintFor(bp, defaultUserGovernanceProfile(""))
+}
+
 func TestBuildExecutionAuditDetailsForTool_DelegateTaskIncludesStructuredSummary(t *testing.T) {
 	details := buildExecutionAuditDetailsForTool(protocol.PlannedToolCall{
 		Name: "delegate_task",
