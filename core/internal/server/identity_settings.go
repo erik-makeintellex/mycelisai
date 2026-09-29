@@ -3,10 +3,110 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
+	"strconv"
 	"strings"
 )
+
+// governanceSettingKeys feed the approval policy of every user (the settings
+// file is global) or claim an approval role, so changing them is organization
+// policy: root admin + governance:write, audited first (AUTH-C1 A2). Sorted, so
+// refused_keys is stable.
+var governanceSettingKeys = []string{"automation_tolerance", "cost_sensitivity", "escalation_preference", "review_strictness", "role"}
+
+const maxUserSettingsBodyBytes = 64 << 10
+
+// putUserSettings: identity, bounded decode, then personal keys save for any
+// signed-in user while a change to a governance key needs root admin +
+// governance:write. Without it the governance keys are refused (403) and the
+// personal keys in the same body still save. With it: audit (requested), write,
+// audit (result); an audit failure writes nothing.
+func (s *AdminServer) putUserSettings(w http.ResponseWriter, r *http.Request) {
+	identity := IdentityFromContext(r.Context())
+	if identity == nil {
+		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+	var input map[string]any
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxUserSettingsBodyBytes)).Decode(&input); err != nil {
+		respondAPIError(w, "invalid JSON body", http.StatusBadRequest)
+		return
+	}
+	current := loadPersistedUserSettings()
+	next := mergeUserSettings(input)
+	changed := changedGovernanceSettings(current, next)
+	if len(changed) > 0 && (identity.Role != "admin" || !hasScope(identity, scopeGovernanceWrite)) {
+		refuseGovernanceSettings(w, r, input, current, changed)
+		return
+	}
+	if len(changed) > 0 {
+		previous, proposed := map[string]any{}, map[string]any{}
+		for _, key := range changed {
+			previous[key], proposed[key] = current[key], next[key]
+		}
+		auditCtx := func(status string) map[string]any {
+			return map[string]any{"action": "governance_settings_update", "changed_keys": changed,
+				"previous": previous, "new": proposed, "result_status": status}
+		}
+		if s.auditGovernance(r, "user-settings", "Organization approval settings update requested", auditCtx("requested")) == "" {
+			respondBlocker(w, r, http.StatusServiceUnavailable, codeServiceUnavailable,
+				"The audit record could not be written, so no setting was changed.", nil)
+			return
+		}
+		if err := saveUserSettings(next); err != nil {
+			s.auditGovernance(r, "user-settings", "Organization approval settings update failed", auditCtx("failed"))
+			respondAPIError(w, "failed to persist user settings", http.StatusInternalServerError)
+			return
+		}
+		s.auditGovernance(r, "user-settings", "Organization approval settings update applied", auditCtx("applied"))
+		respondJSON(w, next)
+		return
+	}
+	if err := saveUserSettings(next); err != nil {
+		respondAPIError(w, "failed to persist user settings", http.StatusInternalServerError)
+		return
+	}
+	respondJSON(w, next)
+}
+
+// changedGovernanceSettings lists the governance keys whose normalized value
+// in next differs from current. Echoing an unchanged value is not a change.
+func changedGovernanceSettings(current, next map[string]any) []string {
+	var changed []string
+	for _, key := range governanceSettingKeys {
+		if fmt.Sprint(current[key]) != fmt.Sprint(next[key]) {
+			changed = append(changed, key)
+		}
+	}
+	return changed
+}
+
+// refuseGovernanceSettings saves only the non-governance keys of input (when
+// they change anything) and writes the 403 settings_policy_forbidden blocker.
+func refuseGovernanceSettings(w http.ResponseWriter, r *http.Request, input, current map[string]any, changed []string) {
+	personal := make(map[string]any, len(input))
+	for key, value := range input {
+		if !slices.Contains(governanceSettingKeys, key) {
+			personal[key] = value
+		}
+	}
+	next := mergeUserSettings(personal)
+	saved := false
+	if !reflect.DeepEqual(persistedUserSettings(next), current) {
+		if err := saveUserSettings(next); err != nil {
+			respondAPIError(w, "failed to persist user settings", http.StatusInternalServerError)
+			return
+		}
+		saved = true
+	}
+	respondBlockerText(w, r, http.StatusForbidden, codeSettingsPolicyForbidden, settingsPolicyForbiddenCopy, "",
+		map[string]string{"required_scope": scopeGovernanceWrite, "refused_keys": strings.Join(changed, ","),
+			"preferences_saved": strconv.FormatBool(saved)})
+}
 
 func defaultPersistedUserSettings() map[string]any {
 	return map[string]any{

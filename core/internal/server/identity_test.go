@@ -136,7 +136,7 @@ func TestHandleTeams_NilSoma(t *testing.T) {
 
 func TestHandleTeams_POST_NilSoma(t *testing.T) {
 	s := newTestServer()
-	rr := doRequest(t, http.HandlerFunc(s.HandleTeams), "POST", "/api/v1/teams", `{"name":"test"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleTeams), "POST", "/api/v1/teams", `{"name":"test"}`)
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
 
@@ -209,7 +209,7 @@ func TestHandleUserSettings_GET(t *testing.T) {
 func TestHandleUpdateSettings(t *testing.T) {
 	s := newTestServer()
 	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
-	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"theme":"midnight-cortex"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"theme":"midnight-cortex"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	var settings map[string]any
@@ -223,7 +223,7 @@ func TestHandleUpdateSettings_AssistantNamePersists(t *testing.T) {
 	s := newTestServer()
 	t.Setenv("MYCELIS_USER_SETTINGS_PATH", t.TempDir()+"/user-settings.json")
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"assistant_name":"Mycelis Prime"}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"assistant_name":"Mycelis Prime"}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
@@ -247,7 +247,7 @@ func TestHandleUpdateSettings_DoesNotPersistDeploymentContractOwnedFields(t *tes
 	t.Setenv("MYCELIS_USER_SETTINGS_PATH", settingsPath)
 
 	body := `{"theme":"midnight-cortex","access_management_tier":"enterprise","product_edition":"hosted_control_plane","identity_mode":"federated","shared_agent_specificity_owner":"delegated_owner"}`
-	rr := doRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", body)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", body)
 	assertStatus(t, rr, http.StatusOK)
 
 	var settings map[string]any

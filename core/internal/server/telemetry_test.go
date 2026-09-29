@@ -48,9 +48,11 @@ func TestHandleTrustThreshold_GET(t *testing.T) {
 
 func TestHandleTrustThreshold_PUT(t *testing.T) {
 	ov := overseer.NewEngine(nil)
-	s := newTestServer(func(s *AdminServer) { s.Overseer = ov })
+	dbOpt, mock := withDB(t)
+	expectAudits(mock, 2) // AUTH-C1: root admin + governance:write, audited
+	s := newTestServer(dbOpt, func(s *AdminServer) { s.Overseer = ov })
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", `{"threshold":0.5}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", `{"threshold":0.5}`)
 	assertStatus(t, rr, http.StatusOK)
 
 	// Verify the threshold was actually updated
@@ -64,11 +66,11 @@ func TestHandleTrustThreshold_OutOfRange(t *testing.T) {
 	s := newTestServer(func(s *AdminServer) { s.Overseer = ov })
 
 	// Above 1.0
-	rr := doRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", `{"threshold":1.5}`)
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", `{"threshold":1.5}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 
 	// Below 0.0
-	rr = doRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", `{"threshold":-0.1}`)
+	rr = doAuthenticatedRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", `{"threshold":-0.1}`)
 	assertStatus(t, rr, http.StatusBadRequest)
 }
 
@@ -82,6 +84,6 @@ func TestHandleTrustThreshold_InvalidJSON(t *testing.T) {
 	ov := overseer.NewEngine(nil)
 	s := newTestServer(func(s *AdminServer) { s.Overseer = ov })
 
-	rr := doRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", "not-json")
+	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleTrustThreshold), "PUT", "/api/v1/trust/threshold", "not-json")
 	assertStatus(t, rr, http.StatusBadRequest)
 }

@@ -12,7 +12,11 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-// HandleCreateTeam processes POST and GET requests for swarm teams.
+// HandleCreateTeam spawns a runtime team from a raw manifest (POST) or lists
+// teams (GET). It checks no identity or scope: never mount it directly. The
+// only HTTP entry is server.AdminServer.spawnRuntimeTeam / HandleSwarmTeams,
+// which require root admin + groups:write (groups:read to list) and audit
+// before calling it (AUTH-C1 A1).
 func (s *Soma) HandleCreateTeam(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		s.HandleListTeams(w, r)

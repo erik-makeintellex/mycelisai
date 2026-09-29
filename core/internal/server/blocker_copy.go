@@ -292,3 +292,17 @@ var teamAskForbiddenCopy = roleBlockerText{
 	Admin: blockerText{"This account lacks the permission to ask teams for work. Nothing was sent.",
 		"Grant the scope named in required_scope to the account, then try again."},
 }
+
+// AUTH-C1 A2: 403 when a settings PUT changes a key that feeds the approval
+// policy (role, cost, review, automation, escalation) without root admin +
+// governance:write. Those keys were not changed; data.refused_keys lists them
+// and data.preferences_saved says whether the personal keys in the same body
+// were saved.
+const codeSettingsPolicyForbidden = "settings_policy_forbidden"
+
+var settingsPolicyForbiddenCopy = roleBlockerText{
+	User: blockerText{"Only an admin can change approval and review settings. Those settings were not changed.",
+		"Your other preferences in this request were kept. Ask an admin if approval or review settings should change."},
+	Admin: blockerText{"These settings are organization approval policy and need the permission named in required_scope. They were not changed.",
+		"Ask a root admin to grant required_scope; refused_keys lists what was not changed and preferences_saved says whether the rest of the request was saved."},
+}
