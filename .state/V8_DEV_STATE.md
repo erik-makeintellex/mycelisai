@@ -317,6 +317,31 @@ Dated checkpoints from 2026-09-24 to 2026-09-27 (C2a, salvage slices, S6c/S6d/A2
 - Capped docs (`TESTING.md`, `OPERATIONS.md`) need a single owner per wave.
 - `lifecycle.first-boot-proof --isolated` can flake at the first fixture `psql` exec; retry once before diagnosing.
 
+## Task Queue By Target And Priority (2026-09-29, dev `1280aad2`)
+Priorities: **P0** blocked or owner-gated, needed before the MVP push; **P1** MVP capability or truthfulness; **P2** hardening and LOW follow-ups; **P3** hygiene. Teams follow "Delivery Targets And Teams" (at most 3 agents per target).
+
+| Pri | Target | Task | State | Who | Blocker / next step |
+|---|---|---|---|---|---|
+| P0 | Target-aligned consolidation | CONS-C4: remove agents/, the relay SDK, the legacy env aliases (fail loud) and the media adapter; move engine.yaml to core/config | Blocked about 40% (worktree `cons-c4`, unmerged) | platform-ops | The session permission check denied the deletions; the owner runs `git rm -r agents sdk cognitive/src cognitive/config tests/test_media_gateway.py` in the worktree, or allows them |
+| P0 | E2E suite green | 3 U1-owned specs (focused-team label, the retry confirm mock, "Operational alert"), then a full chromium re-run | Waiting | owner (U1), then e2e-proof | U1 merge |
+| P0 | U1 lane (owner specs) | settings-access.md policy text; the StatusDrawer/CapabilityReadinessGateCard governanceMode (no source since the Overseer removal); TriggerRulesTab/ScheduleRulesTab render triggerRulesError; FRONTEND.md "approval queues"; reconcile TESTING.md and quality_legacy_caps.txt | Specs recorded | owner | U1 merge |
+| P0 | Comms inbound `user` lane | Decide: route to genesis-core, or reject provider `user` (currently rejected by default) | Waiting | owner | decision |
+| P1 | Run ownership (new) | Persist the run owner (mission_runs owner column) and a run-owner reader, so confirmed team runs read team-scoped memory, keep temp notes, and stop cross-run AutoSummarize reach | Queued | schema + core-execution + security-qa | none |
+| P1 | Work item identity | Core mints and canonicalizes work item ids for confirmed delegate calls (TPD-QA S2/S3), honest legacy-plan status (P6), and the restart-status wording (P5) | Queued | core-execution + security-qa | after Run ownership, or in parallel on disjoint files |
+| P1 | Team plan delivery | Probe journey J11: a confirmed team plan executes live with verified posture (today the probe never dispatches a team plan) | Queued | platform-ops | none |
+| P1 | Live proof tooling | Warm the MCP package (npm) cache in the core image, so the first filesystem MCP install after a container recreate does not fail (the J10 cold-cache 502) | Queued | platform-ops | none |
+| P1 | Owner-approved new slices | Copy a built-in template into operator scope (one ConfigDocument pipeline); an admin-only runtime-team view on /api/v1/work/running | Queued | architect + core-execution + interface | none |
+| P1 | Budget metering (B1 tail) | `council_consult` meter kind and ledger retention | Queued | core-execution + schema + security-qa | none |
+| P1 | Consolidation PORT | P2: mocked-MVP CI lane; P3: Core reachability signal | Queued | platform-ops / interface | P2 after E2E green; P3 after U1 |
+| P2 | Transport security | NATS client authentication (recall tokens are bearer tokens on the bus; raw publishers can bypass team receipts) | Queued | platform-ops + core-authority + security-qa | architecture decision |
+| P2 | Memory hardening tail | Optimistic version on PATCH; size caps (save and edit); 400 for NUL/control characters; UI success only on the envelope; retire the local-user label fallback; team-id minting amplification; save-side write authority; chr(31) ids; the recipe list filter-after-fetch; the 70-user token pool | Queued | core-execution + interface + security-qa | none |
+| P2 | Settings | A per-user settings store (the lock is single-process); fail strict for a missing or wrong-typed file on the host filesystem | Queued | core-authority | none |
+| P2 | MCP hardening tail | G1-G4 launch shapes and evasions, F4, F1, the is_approver UI hint | Queued | core-authority + interface + security-qa | none |
+| P2 | Governance | Rate-limit or aggregate `policy_approval_required_observed` audits; remove the unused `pb.ApprovalRequest` | Queued | core-execution | none |
+| P2 | Test reliability | core.test flake: 10 NATS-backed internal/server team tests fail under parallel load (likely an embedded NATS port collision) | Queued | platform-ops | none |
+| P3 | Consolidation hygiene | 22 remaining test-only Go functions; inert core/config/teams/*.yaml; a chart value to select the optional bundle; remove probe/signal_gen from ops docs; fix the core.smoke docstring and a stale requireApprover comment; merge the help manifests (M6); A8/A9 and clean.wsl-handoff after U1; compose_images names from `docker compose ps` | Queued | per area | some after U1 |
+| P3 | Harness alignment (owner review) | Align with the global standard (~/.claude/CLAUDE.md): a footprint ledger, one `verify` entry point, the brief/handoff/reviewer formats | Proposed | lead | owner approval |
+
 ## Delivery Targets And Teams
 At most 3 agents live per target (AGENTS.md); the lead is not counted. Continuations reuse the row's team. Roles come from the local `.claude/agents/` roster; tiers follow AGENTS.md "Development Model Routing".
 | Target | Status | Team (≤3 roles, tier) | Notes |
