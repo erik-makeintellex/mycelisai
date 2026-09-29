@@ -20,7 +20,7 @@ Agents may write the code, tests, migrations, documentation, and supporting arti
 
 Require evidence.
 
-Validate components independently. Validate their contracts at integration boundaries. Test failure paths, not only happy paths. Preserve architectural invariants. Challenge assumptions with independent review. When evidence contradicts the plan, change the plan rather than rationalizing the implementation.
+Validate components independently. Validate their contracts at integration boundaries. Test failure paths, not only happy paths. Preserve architectural invariants. Challenge assumptions with independent review. Verify that a check can fail before trusting its pass. When evidence contradicts the plan, change the plan rather than rationalizing the implementation.
 
 Do not optimize for lines written, prompts completed, or agent activity. Optimize for **verified system capability**.
 
@@ -37,6 +37,7 @@ How this doctrine maps onto this repository:
 | Minimum context and authority | At most 3 agents per delivery target; one worktree per writer; git is read-only for agents; disjoint file ownership between concurrent writers; no sub-agents from agents. |
 | Validate components independently | Fail-first tests; real-database tests for persistence and authority; a mutation proof for every security layer (revert it, and its test fails). |
 | Validate contracts at integration | Fatal merge gates on the merged tree (`go vet`, `uv run inv core.test`, docs and task-name tests, `uv run inv quality.max-lines`, `git diff --check`), then a rebuilt stack and the live journey probe (`uv run inv test.probe`). |
+| Verify that a check can fail | Before trusting a green result, show the check can go red. Use a mutation proof for code; plant a bad value to see a docs or task gate catch it (as `92a22081` did for area AGENTS.md); confirm a log source or container exists (`docker inspect`) before reading zero matches as "none"; and use `set -o pipefail` so a `\| tail` cannot hide a failing command. A count of zero from a target that does not exist is not evidence. |
 | Test failure paths | Fail-closed authority, honest blockers, and no placeholder or fake success (rule 12). A silent drop of approved work is a defect, not an edge case. |
 | Independent review | Security and authority slices get an adversarial QA agent that did not write the code, with a GO / CONDITIONAL / NO-GO verdict. A target closes only on GO, and each condition becomes its own tracked item. |
 | Change the plan, not the story | When QA, a probe, or a gate contradicts a claim, the lead records the correction in the scoreboard and the commit (or a git note) and re-plans; earlier success claims are never left standing. |
