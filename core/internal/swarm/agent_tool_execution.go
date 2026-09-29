@@ -51,6 +51,7 @@ func (a *Agent) executeToolIteration(i int, iterationLimit int, input string, re
 	toolCtx := WithToolInvocationContext(a.ctx, ToolInvocationContext{
 		RunID: a.runID, TeamID: a.TeamID, AgentID: a.Manifest.ID, AgentRole: a.Manifest.Role, SourceKind: protocol.SourceKindSystem,
 		SourceChannel: fmt.Sprintf(protocol.TopicTeamInternalTrigger, a.TeamID), PayloadKind: protocol.PayloadKindCommand, PlanningOnly: planningOnly,
+		Recall: result.recall,
 	})
 	serverID, _, err := a.toolExecutor.FindToolByName(toolCtx, toolCall.Name)
 	if IsToolNotPermitted(err) {

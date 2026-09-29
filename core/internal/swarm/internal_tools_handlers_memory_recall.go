@@ -66,8 +66,10 @@ func recallStructuredMemories(ctx context.Context, db *sql.DB, query, category s
 	return results
 }
 
-func recallVectorMemories(ctx context.Context, brain *cognitive.Router, mem *memory.Service, query string, limit int, scope memoryScope) []memoryResult {
-	if mem == nil {
+// recallVectorMemories admits governed rows only through reader (SRU); a nil
+// reader would be unscoped, so it recalls nothing.
+func recallVectorMemories(ctx context.Context, brain *cognitive.Router, mem *memory.Service, query string, limit int, scope memoryScope, reader *memory.GovernedReader) []memoryResult {
+	if mem == nil || reader == nil {
 		return nil
 	}
 	// Semantic when an embedding engine works; PostgreSQL keyword ranking otherwise.
@@ -79,6 +81,7 @@ func recallVectorMemories(ctx context.Context, brain *cognitive.Router, mem *mem
 		RunID:               scope.RunID,
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
+		Reader:              reader,
 	})
 	if err != nil {
 		return nil

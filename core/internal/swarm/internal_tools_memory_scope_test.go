@@ -82,7 +82,8 @@ func TestHandleSearchMemory_UsesInvocationTeamScope(t *testing.T) {
 
 	// The 2-dim fake engine cannot serve the 768-dim store, so recall is keyword.
 	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
-		WithArgs("default", "alpha", "lead-alpha", "planning memory", 5).
+		// SRU: a call with no requesting user reads with the empty reader.
+		WithArgs("default", "alpha", "lead-alpha", "", "", "{}", "planning memory", 5).
 		WillReturnRows(nowRows)
 
 	registry := NewInternalToolRegistry(InternalToolDeps{
@@ -222,6 +223,10 @@ func TestHandlePromoteDeploymentContext_PromotesCustomerContextToCompanyKnowledg
 
 	mem := memory.NewServiceWithDB(db)
 	sourceMeta := `{"knowledge_class":"customer_context","source_label":"customer brief","source_kind":"user_document","visibility":"global","sensitivity_class":"role_scoped","trust_class":"user_provided","tags":["deployment","security"]}`
+	// SRU: the requesting user must be able to read the source first.
+	mock.ExpectQuery(`SELECT EXISTS \(SELECT 1 FROM artifacts a WHERE a.id::text = \$1`).
+		WithArgs("ctx-1", "owner-user-id", "owner-user", "{}").
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 	mock.ExpectQuery("SELECT title, content, metadata FROM artifacts WHERE id::text = \\$1").
 		WithArgs("ctx-1").
 		WillReturnRows(sqlmock.NewRows([]string{"title", "content", "metadata"}).
@@ -237,6 +242,7 @@ func TestHandlePromoteDeploymentContext_PromotesCustomerContextToCompanyKnowledg
 		TeamID:    "alpha",
 		AgentID:   "lead-alpha",
 		UserLabel: "owner-user",
+		Recall:    RecallAccess{User: true, Reader: memory.GovernedReader{UserID: "owner-user-id", Label: "owner-user"}},
 	})
 
 	out, err := registry.handlePromoteDeploymentContext(ctx, map[string]any{
@@ -264,7 +270,7 @@ func TestBuildContext_IncludesDeploymentContextRecall(t *testing.T) {
 	mem := memory.NewServiceWithDB(db)
 	// The 2-dim fake engine cannot serve the 768-dim store, so recall is keyword.
 	mock.ExpectQuery(`SELECT id, content, metadata, ts_rank_cd\(`).
-		WithArgs("default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", "Summarize our MCP security posture.", 5).
+		WithArgs("default", "customer_context", "company_knowledge", "soma_operating_context", "user_private_context", "reflection_synthesis", "alpha", "lead-alpha", "", "", "{}", "Summarize our MCP security posture.", 5).
 		WillReturnRows(sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
 			AddRow("vec-ctx", "[customer_context] secure web access via MCP policy gates", `{"artifact_title":"Security Brief","source_label":"operator brief","visibility":"global","knowledge_class":"customer_context"}`, 0.93, time.Now()).
 			AddRow("vec-company", "[company_knowledge] approved deployment playbook", `{"artifact_title":"Deployment Playbook","source_label":"approved company guide","visibility":"global","knowledge_class":"company_knowledge"}`, 0.9, time.Now()).

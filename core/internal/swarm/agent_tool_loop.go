@@ -28,10 +28,17 @@ type agentToolLoopResult struct {
 	// retained-output progress; the loop ends and the contract gate reports
 	// what is still missing.
 	inferenceStopped bool
+	// recall is the turn's saved-memory read scope, carried into every tool
+	// call's invocation context (SRU).
+	recall RecallAccess
 }
 
 func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
-	result := agentToolLoopResult{resp: resp, responseText: resp.Text}
+	return a.runTurnToolLoop(RecallAccess{}, input, priorHistory, req, resp, profile, planningOnly, requirement)
+}
+
+func (a *Agent) runTurnToolLoop(access RecallAccess, input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string, planningOnly bool, requirement *teamResultRequirement) agentToolLoopResult {
+	result := agentToolLoopResult{resp: resp, responseText: resp.Text, recall: access}
 	if a.toolExecutor == nil || len(a.Manifest.Tools) == 0 {
 		return result
 	}

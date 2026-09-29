@@ -34,6 +34,9 @@ type ToolInvocationContext struct {
 	// a model-selected tool call. Internal tools may use it to return complete
 	// evidence without expanding ordinary model-visible tool output.
 	RuntimeOwned bool
+	// Recall is the requesting user's saved-memory read scope (SRU). Core
+	// sets it from the request identity; the zero value reads org-wide only.
+	Recall RecallAccess
 }
 
 // WithToolInvocationContext stores invocation metadata in context.

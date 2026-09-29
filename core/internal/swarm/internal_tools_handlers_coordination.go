@@ -244,6 +244,10 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 	if l, ok := args["limit"].(float64); ok && l > 0 {
 		limit = int(l)
 	}
+	reader, err := recallAccessFromContext(ctx).governedReader() // SRU: the requesting user's read scope
+	if err != nil {
+		return "", fmt.Errorf("search_memory unavailable: %w", err)
+	}
 	scope := resolveMemoryScope(ctx, args)
 	searchTypes := stringSlice(args["types"])
 	if singleType := stringValue(args["type"]); singleType != "" {
@@ -261,6 +265,7 @@ func (r *InternalToolRegistry) handleSearchMemory(ctx context.Context, args map[
 		AllowGlobal:         true,
 		AllowLegacyUnscoped: scope.TeamID == "" && scope.AgentID == "",
 		GoalSets:            goalSetArg(args["goal_set"]),
+		Reader:              reader,
 	})
 	if err != nil {
 		return "", fmt.Errorf("search_memory failed: %w", err)

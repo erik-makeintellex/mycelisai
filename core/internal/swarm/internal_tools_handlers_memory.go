@@ -150,6 +150,9 @@ func (r *InternalToolRegistry) handlePromoteDeploymentContext(ctx context.Contex
 	if sourceArtifactID == "" {
 		return "", fmt.Errorf("promote_deployment_context requires 'source_artifact_id'")
 	}
+	if err := r.requirePromotableSource(ctx, sourceArtifactID); err != nil {
+		return "", err
+	}
 
 	scope := resolveMemoryScope(ctx, args)
 	result, err := svc.Promote(ctx, deploymentcontext.PromoteRequest{
@@ -197,9 +200,13 @@ func (r *InternalToolRegistry) handleRecall(ctx context.Context, args map[string
 		limit = int(l)
 	}
 
+	reader, err := recallAccessFromContext(ctx).governedReader()
+	if err != nil {
+		return "", fmt.Errorf("recall unavailable: %w", err)
+	}
 	scope := resolveMemoryScope(ctx, args)
 	results := recallStructuredMemories(ctx, r.db, query, category, limit, scope)
-	results = append(results, recallVectorMemories(ctx, r.brain, r.mem, query, limit, scope)...)
+	results = append(results, recallVectorMemories(ctx, r.brain, r.mem, query, limit, scope, reader)...)
 	if results == nil {
 		results = []memoryResult{}
 	}

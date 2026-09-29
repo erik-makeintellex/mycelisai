@@ -16,7 +16,13 @@ func (r *InternalToolRegistry) handleWebSearch(ctx context.Context, args map[str
 		resp, _ := searchcap.NewService(searchcap.Config{Provider: searchcap.ProviderDisabled}, nil, nil).Search(ctx, searchcap.Request{Query: query})
 		return webSearchResult(resp)
 	}
+	// SRU: local sources follow the requesting user's saved-memory read scope.
+	reader, err := recallAccessFromContext(ctx).governedReader()
+	if err != nil {
+		return "", fmt.Errorf("web_search unavailable: %w", err)
+	}
 	req := searchcap.Request{
+		Reader:      reader,
 		Query:       query,
 		SourceID:    stringValue(args["source_id"]),
 		SourceScope: stringValue(args["source_scope"]),
@@ -28,9 +34,9 @@ func (r *InternalToolRegistry) handleWebSearch(ctx context.Context, args map[str
 		Visibility:  stringValue(args["visibility"]),
 		Types:       stringSlice(args["types"]),
 	}
-	resp, err := r.search.Search(ctx, req)
-	if err != nil {
-		return "", fmt.Errorf("web_search failed: %w", err)
+	resp, searchErr := r.search.Search(ctx, req)
+	if searchErr != nil {
+		return "", fmt.Errorf("web_search failed: %w", searchErr)
 	}
 	return webSearchResult(resp)
 }

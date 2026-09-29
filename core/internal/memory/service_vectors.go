@@ -41,8 +41,9 @@ type SemanticSearchOptions struct {
 	// they intersect; rows without target_goal_sets are unaffected.
 	GoalSets []string
 	// Reader, when set, admits governed-store rows only if that viewer may read
-	// their saved entry (MEM-LIST). User-facing recall sets it; agent recall
-	// leaves it nil.
+	// their saved entry (MEM-LIST). Every governed recall sets it: user-facing
+	// routes from the request, agent recall from the turn's requesting user
+	// (SRU; the empty reader when there is none). Nil is unscoped.
 	Reader *GovernedReader
 }
 

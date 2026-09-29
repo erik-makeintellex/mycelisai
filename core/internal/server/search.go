@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/mycelis/core/internal/searchcap"
@@ -29,6 +30,14 @@ func (s *AdminServer) HandleSearch(w http.ResponseWriter, r *http.Request) {
 		respondError(w, "invalid search request", http.StatusBadRequest)
 		return
 	}
+	// Local sources return only saved memory the caller may read (SRU).
+	reader, err := s.memoryReader(r)
+	if err != nil {
+		log.Printf("search: memory access check failed: %v", err)
+		respondError(w, "Saved memory access could not be checked, so nothing was searched.", http.StatusServiceUnavailable)
+		return
+	}
+	req.Reader = &reader
 	resp, err := s.searchService().Search(r.Context(), req)
 	if err != nil {
 		respondError(w, "search failed", http.StatusInternalServerError)
