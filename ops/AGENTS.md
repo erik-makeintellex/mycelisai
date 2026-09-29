@@ -4,12 +4,12 @@
 
 ## Owns / does not own
 - `ops/**`, `tasks.py`, `docker-compose.yml`, `deploy/**`, `charts/**`, `.github/workflows/**`, `pyproject.toml`/`uv.lock` (only when a slice needs it) -> `mycelis-platform-ops` (`.claude/agents/`, local-only and gitignored).
-- `tasks.py`, `ops/*.py`, `README.md`, `ops/README.md`, `docs/TESTING.md`, and `docs/architecture/OPERATIONS.md` are under active change by the "Task runner tightening" delivery target (see `.state/V8_DEV_STATE.md` "Delivery Targets And Teams" for the current status) — do not edit them from another slice without checking that target's current state first.
+- The "Task runner tightening" delivery target is CLOSED (see `.state/V8_DEV_STATE.md` "Delivery Targets And Teams"). Task-name or behavior changes to `tasks.py`, `ops/*.py`, `README.md`, `ops/README.md`, `docs/TESTING.md`, and `docs/architecture/OPERATIONS.md` follow the docs-sync rule in the root `AGENTS.md` "Task Runner Contract".
 - `ops/db*.py` is schema-installer territory and is shared with `mycelis-schema` only where installer behavior is involved.
 - `.github/workflows/**` is never edited by a non-lead agent regardless of role (root `AGENTS.md` worktree safety rule extends here: CI workflow changes are a lead-only action in practice even though the role file lists the path).
 
 ## Contracts
-- Task runner contract (root `AGENTS.md` "Task Runner Contract"): `uv run inv ...` only, no new Invoke aliases, keep the registered task surface at or below the cap in force. **The exact current task count and the full task list are a moving target while "Task runner tightening" is active (see `.state/V8_DEV_STATE.md` "Delivery Targets And Teams") — get the live count and names from `uv run inv -l` (or `uvx --from invoke inv -l` as a compatibility probe only) rather than from this file or any other document.**
+- Task runner contract (root `AGENTS.md` "Task Runner Contract"): `uv run inv ...` only, no new Invoke aliases, keep the registered task surface within the budget pinned in `tests/test_tasks_root.py` (`test_root_task_surface_stays_within_operator_budget`; lower it whenever tasks are removed). **Get the live count and names from `uv run inv -l` (or `uvx --from invoke inv -l` as a compatibility probe only) rather than from this file or any other document.** Windows is only a host (Ollama); every task runs from the WSL `dev` checkout, and no task drives a second checkout or publishes raw to `swarm.*` subjects.
 - Committed config (`.env.compose`, Compose/Helm values) uses secret references only; `.env` remains the sole secret store and is never printed or committed.
 - Destructive proof only through `lifecycle.first-boot-proof --isolated`; never delete retained volumes, data-plane state, or external containers (vLLM, Open WebUI, NATS, PostgreSQL data plane) from a slice.
 

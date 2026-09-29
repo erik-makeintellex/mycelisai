@@ -8,7 +8,7 @@ Use this file for local setup and runtime choices; use [Operations](architecture
 - [Prerequisites](#prerequisites)
 - [Deployment Method Selection](#deployment-method-selection)
 - [Configuration Reference](#configuration-reference)
-- [WSL/Linux Proof Checkout Handoff](#wsllinux-proof-checkout-handoff)
+- [Single Development Surface](#single-development-surface)
 - [Quick Start Paths](#quick-start-paths)
 - [First-Time Setup](#first-time-setup)
 - [Daily Startup Sequence](#daily-startup-sequence)
@@ -117,7 +117,7 @@ The deployed Core image resolves those files from `/core/config`; the Helm chart
 
 ## Recommended Host Paths
 
-Use separate generated dependency/runtime roots per host: Windows editing checkout for source/review/git, WSL proof checkout for release-style validation, Compose data/output under `workspace/docker-compose/...`, and repo-local tool/cache roots visible through `uv run inv cache.status`. Do not share `.venv`, `interface/node_modules`, `.next`, or generated runtime state across Windows and WSL.
+Keep every generated dependency and runtime root inside the WSL checkout on the native Linux filesystem: `.venv`, `interface/node_modules`, `.next`, Compose data/output under `workspace/docker-compose/...`, and the repo-local tool/cache roots visible through `uv run inv cache.status`. Do not point them at `/mnt/*`.
 
 For source development, set `MYCELIS_WORKSPACE=./workspace` and `MYCELIS_ARTIFACT_ROOT=./workspace/artifacts` in `.env` so operators know where generated packages, workspace files, browser outputs, and artifact downloads land. Keep legacy `DATA_DIR` aligned with `MYCELIS_ARTIFACT_ROOT`; `System -> Deployments` reports both runtime roots for proof.
 
@@ -129,24 +129,18 @@ The Docker `pgvector/pgvector:pg16` service is the sole development PostgreSQL s
 
 When another locally developed service shares the NATS host, keep that broker running and assign explicit service identities and subjects. Mycelis external ingress uses concrete registered `swarm.global.input.{source}` subjects; one registered source owns each subject, unknown subjects are ignored, and wildcard registrations are rejected. A Core process connects to one configured NATS host. Connecting another host requires a separately configured Core/bridge deployment rather than an implicit cross-host subscription.
 
-## WSL/Linux Proof Checkout Handoff
+## Single Development Surface
 
-Windows is the edit/review/git surface. WSL is the guarded Compose proof surface; Rancher Desktop K3s is the Windows local Kubernetes proof surface.
-Guarded sequence:
-
-```bash
-uv run inv wsl.status
-uv run inv wsl.refresh
-uv run inv wsl.validate --lane=release
-```
+The WSL checkout `~/Projects/mycelisai` on branch `dev` is the only development and proof surface: edit, build, test, Compose, and live GUI proof all run there. Feature work uses `feature/*` worktrees under `~/Projects/mycelisai-worktrees/`.
 
 Rules:
-- refresh the proof checkout from git
-- do not copy source trees across the host boundary
-- keep destructive source cleanup scoped to the dedicated WSL proof checkout
+- Windows is only a host. Editors may open the WSL files through `\\wsl.localhost\...`, and Windows runs Ollama; there is no Windows checkout to edit, refresh, or sync.
+- Docker runs inside WSL. Docker Desktop is not used.
+- the owner runs `git push`; agents and tasks never push
+- run `uv run inv ...` from the WSL checkout, and keep destructive source cleanup scoped to that checkout
 - use the Windows browser at `http://localhost:3000` when proving a WSL-hosted stack on the same machine
-- use `uv run inv wsl.validate --lane=release --headed-browser` when release evidence needs visible live-window Playwright proof against the Compose-delivered UI
-- use platform tooling, not Invoke, when the WSL distro or desktop container runtime itself needs shutdown, reset, or repair
+- use `uv run inv interface.e2e --headed --live-backend` when release evidence needs visible live-window Playwright proof against the Compose-delivered UI
+- use platform tooling, not Invoke, when the WSL distro or container runtime itself needs shutdown, reset, or repair
 
 ## Quick Start Paths
 
@@ -264,28 +258,19 @@ uv run inv cognitive.status
 
 Treat `compose.health` as product availability proof: the text cognitive engine must be reachable before browser proof is valid.
 
-For day-to-day Windows development, keep the Windows repo as the edit/review/push surface.
-
-Use this as the guarded WSL Compose deployment-mimic proof path when Windows editing is ready for build, API, UI, runtime, or release-style validation:
+Release-style validation runs from the same WSL checkout, on a clean committed `dev`:
 
 ```bash
-uv run inv wsl.status
-uv run inv wsl.refresh --branch <name>
-uv run inv wsl.validate
-uv run inv wsl.validate --lane=release --headed-browser
-uv run inv wsl.cycle --branch <name>
 uv run inv ci.release-preflight --lane=release
 ```
 
-These tasks keep the WSL proof checkout git-backed and disposable instead of turning it into a second editing worktree. Always keep the WSL `mycelis-root` deployment checkout git-backed and disposable for Compose deployment-mimic proof; use Rancher Desktop K3s when the proof target is local Kubernetes/Helm parity.
-
-Guarded commands: `uv run inv wsl.status`, `uv run inv wsl.refresh --branch <name>`, `uv run inv wsl.validate`, `uv run inv wsl.validate --headed-browser`, `uv run inv wsl.cycle --branch <name>`.
+Use Rancher Desktop K3s or k3d when the proof target is local Kubernetes/Helm parity.
 
 ## Troubleshooting
 
 - NATS, Soma, or team responses disappear: run `uv run inv lifecycle.status`, then restart with `uv run inv lifecycle.restart --frontend`.
 - Compose readiness times out on a first build: rerun with `uv run inv compose.up --build --wait-timeout=240`.
-- Windows host has no native `docker`: the Compose task may use Docker inside WSL; set `MYCELIS_WSL_DISTRO` if the default distro is not the Docker host.
+- Docker runs inside WSL: set `MYCELIS_WSL_DISTRO` if the default distro is not the Docker host.
 - Windows-hosted Ollama from WSL/Docker: keep `MYCELIS_COMPOSE_OLLAMA_HOST` pointed at the intended Windows service address; the task layer may relay it through WSL.
 - Disk pressure: run `uv run inv cache.guard`, `uv run inv cache.status`, and `uv run inv clean.disk-status`.
 - Stale local services: stop with `uv run inv lifecycle.down` before runtime or integration proof.

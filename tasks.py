@@ -16,7 +16,6 @@ from ops import mycelis_api
 from ops import proto_relay
 from ops import quality
 from ops import test
-from ops import wsl_runtime
 
 ns = Collection()
 
@@ -84,5 +83,4 @@ ns.add_collection(db.ns)
 ns.add_collection(ci.ns)
 ns.add_collection(cognitive.ns)
 ns.add_collection(lifecycle.ns)
-ns.add_collection(wsl_runtime.ns)
 

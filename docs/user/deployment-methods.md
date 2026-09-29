@@ -212,7 +212,7 @@ Guidance:
 
 ## Developer Source Mode
 
-Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior. This is the default development lane on the Windows host. Rancher Desktop's Docker engine runs only PostgreSQL and NATS; Core and Interface run locally from source. Full application Compose, WSL, and Kubernetes remain proof/deployment lanes.
+Use the source-run lifecycle path when you are changing code, debugging, or iterating on UI/backend behavior. This is the default development lane, run from the WSL `dev` checkout. Docker inside WSL runs only PostgreSQL and NATS; Core and Interface run locally from source. Full application Compose and Kubernetes remain proof/deployment lanes.
 
 Recommended path:
 
@@ -229,9 +229,9 @@ uv run inv lifecycle.health
 Developer source mode is not a deployment method. It is the implementation lane for changing the product before Compose, WSL, Rancher, or Helm proof.
 
 Windows host note:
-- edit, review, test, and push from the Windows checkout
+- edit, review, and test in the WSL `dev` checkout; Windows is only the host, and the owner runs `git push`
 - use the Windows browser against `http://127.0.0.1:3000` for same-machine source proof
-- keep WSL as a guarded Compose proof checkout after commit/push, not as the default source-edit surface
+- Docker runs inside WSL; Docker Desktop is not used for development
 - use Rancher Desktop K3s only when Helm/Kubernetes parity is the current risk
 
 ## AI Endpoint Rules

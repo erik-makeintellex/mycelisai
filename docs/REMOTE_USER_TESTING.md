@@ -44,7 +44,7 @@ Record:
 | Kubernetes | Helm, ingress, storage, secret, and clustered-runtime proof |
 | Remote operator | Real hostname/IP/ingress from another browser or device |
 
-WSL is used only when it provides distinct release evidence. It is not the normal source-development application host.
+Source development and release proof both run in the WSL `dev` checkout; the Windows browser is only the operator-facing client for a WSL-hosted stack.
 
 ## Preflight
 
@@ -269,13 +269,7 @@ Run the committed release candidate through:
 uv run inv ci.release-preflight --lane=release
 ```
 
-Use WSL only when it supplies distinct deployment-mimic evidence. Keep the Windows root repo as the dev/staging worktree and use a clean WSL deployment-mimic checkout refreshed from git as the validation host. The guarded tasks are:
-
-```powershell
-uv run inv wsl.status
-uv run inv wsl.refresh --branch <name>
-uv run inv wsl.validate --lane=release
-```
+Run it from a clean committed `dev` in the WSL checkout, which is the single development and validation host.
 
 For a same-machine WSL or Compose proof, verify `http://localhost:3000` from the Windows side with both a simple HTTP probe and a real browser launch. If the first request warms a cold runtime, classify it as `cold_start_first_request` instead of a clean first-pass success. Do not silently relabel the run as a clean first-pass success. Record whether the issue is a `cold_start_first_request`, a steady-state regression, or an environment/setup gap.
 

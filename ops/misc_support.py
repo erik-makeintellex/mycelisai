@@ -71,31 +71,6 @@ WORKTREE_AREA_RULES = (
     },
 )
 
-def architecture_sync_directives():
-    messages = {
-        "prime-architect": "Architecture directive: preserve the stable Workspace -> Outcome hierarchy while closing the current release gate. "
-        "Require concrete Ask -> Approve -> Execute -> Deliver -> Trust -> Recover proof before advancement, "
-        "coordinate development and AGUI work around one bounded Outcome, and reply with a concise execution brief. "
-        "Do not use tools for this sync. Respond in plain text with at most 6 short lines.",
-        "prime-development": "Development directive: close the approved execution-to-deliverable handoff without adding a parallel runtime. "
-        "Use the existing NATS execution spine, enforce the requested result contract, retain validated output, "
-        "and degrade with a concrete recovery action when delivery is incomplete. Reply with the top implementation and proof priorities. "
-        "Go remains the runtime language; do not use tools for this sync. "
-        "Respond in plain text with at most 5 short lines.",
-        "agui-design-architect": "AGUI directive: keep the Soma thread conversational while making asynchronous work truthful. "
-        "Show one concise start state, never claim completion before validated output, and return a short delivery summary, "
-        "direct open action, or clear recovery instruction. Keep runtime internals behind Inspect. "
-        "Reply with the top UI proof priorities. Do not use tools for this sync. "
-        "Respond in plain text with at most 5 short lines.",
-    }
-    return {
-        team_id: {
-            "command_subject": f"swarm.team.{team_id}.internal.command",
-            "reply_subjects": (f"swarm.team.{team_id}.signal.status", f"swarm.team.{team_id}.signal.result"),
-            "message": message,
-        }
-        for team_id, message in messages.items()
-    }
 def repo_relative(path: Path, root_dir: Path) -> str:
     try:
         return str(path.resolve().relative_to(root_dir.resolve())).replace("\\", "/")
@@ -254,7 +229,6 @@ def build_worktree_triage(status_output: str):
 
 def print_worktree_triage(
     triage,
-    windows_host: bool,
     review_targets=WORKTREE_REVIEW_TARGETS,
     baseline_installs=WORKTREE_BASELINE_INSTALLS,
 ) -> None:
@@ -268,10 +242,6 @@ def print_worktree_triage(
     print("\nDependency reset:")
     for command in baseline_installs:
         print(f"  - {command}")
-
-    if windows_host:
-        print("\nWindows host note:")
-        print("  - treat this checkout as source-only and run heavy validation from the WSL checkout.")
 
     print("\nPriority install checks:")
     if triage["priority_installs"]:

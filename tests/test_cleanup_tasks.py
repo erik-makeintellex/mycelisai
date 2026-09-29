@@ -116,13 +116,10 @@ def test_remove_repo_targets_retries_readonly_cache_files(tmp_path):
     assert not cache_dir.exists()
 
 
-def test_clean_generated_adds_windows_source_only_reminder_on_windows(monkeypatch, tmp_path, capsys):
-    """`clean.windows-dev-residue` was merged into `clean.generated` (MYC-TASKS
-    tightening): same target set, same removal logic, only the Windows-only
-    reminder differed. `clean.generated` now prints that reminder itself
-    when run on Windows instead of requiring a separate task."""
+def test_clean_generated_removes_targets_without_a_windows_reminder(monkeypatch, tmp_path, capsys):
+    """WSL `dev` is the single development surface (CONS-SURFACE), so
+    `clean.generated` prints no Windows source-only reminder."""
     monkeypatch.setattr(misc, "ROOT_DIR", tmp_path)
-    monkeypatch.setattr(misc, "is_windows", lambda: True)
     targets = (
         tmp_path / ".venv",
         tmp_path / "interface" / "node_modules",
@@ -136,21 +133,9 @@ def test_clean_generated_adds_windows_source_only_reminder_on_windows(monkeypatc
     misc.clean_generated.body(Context())
 
     output = capsys.readouterr().out
-    assert "Windows source-only reminder:" in output
-    assert "run install/build/test/compose from the WSL checkout" in output
+    assert "Windows" not in output
     for target in targets:
         assert not target.exists()
-
-
-def test_clean_generated_omits_windows_reminder_off_windows(monkeypatch, tmp_path, capsys):
-    monkeypatch.setattr(misc, "ROOT_DIR", tmp_path)
-    monkeypatch.setattr(misc, "is_windows", lambda: False)
-    monkeypatch.setattr(misc, "_generated_artifact_targets", lambda _root: ())
-
-    misc.clean_generated.body(Context())
-
-    output = capsys.readouterr().out
-    assert "Windows source-only reminder:" not in output
 
 
 def test_clean_wsl_handoff_skips_active_python_environment(monkeypatch, tmp_path, capsys):
@@ -196,6 +181,6 @@ def test_clean_disk_status_reports_repo_total_and_vhd_guidance(monkeypatch, tmp_
     assert ".venv: present" in output
     assert "workspace/tool-cache: present" in output
     assert "Repo-local generated total:" in output
-    assert "Windows should stay source-only" in output
+    assert "Heavy artifacts live in the WSL checkout" in output
     assert "WSL VHD slack space are outside repo cleanup" in output
     assert "wsl --shutdown" in output
