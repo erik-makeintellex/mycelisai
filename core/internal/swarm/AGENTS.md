@@ -4,7 +4,7 @@
 
 ## Owns / does not own
 - Agent dispatch, tool execution/scope resolution, team-work lifecycle, ReAct loop control.
-- Owner: `mycelis-core-execution` (`.claude/agents/`, local-only and gitignored), alongside `core/internal/dispatchoutbox/**`, `core/internal/outputvalidation/**`, `core/internal/runs/**`, and the matching `core/internal/server` dispatch/templates files (see `core/internal/server/AGENTS.md`).
+- Owner: `mycelis-core-execution` (`.claude/agents/`, tracked roster), alongside `core/internal/dispatchoutbox/**`, `core/internal/outputvalidation/**`, `core/internal/runs/**`, and the matching `core/internal/server` dispatch/templates files (see `core/internal/server/AGENTS.md`).
 - Tool-scope/toolset authority (`tool_scope.go`, `tool_executor.go`) is dual-relevant to MCP configuration: coordinate with `mycelis-core-authority` through the lead before changing how `mcp:` refs are resolved, since [`MCPA_MCP_CONFIGURATION_AUTHORITY_CONTRACT.md`](../../../docs/architecture-library/MCPA_MCP_CONFIGURATION_AUTHORITY_CONTRACT.md) governs the toolset write path in `core/internal/server`.
 
 ## Contracts

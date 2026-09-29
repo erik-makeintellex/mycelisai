@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../AGENTS.md)
 
 ## Owns / does not own
-- `tests/**` is a shared Python test/contract area; ownership follows the code area each file exercises, not one roster role (`.claude/agents/`, local-only and gitignored). Precedence: the more specific prefix wins over a general one.
+- `tests/**` is a shared Python test/contract area; ownership follows the code area each file exercises, not one roster role (`.claude/agents/`, tracked roster). Precedence: the more specific prefix wins over a general one.
   - `test_docs_links.py`, `test_documentation_layout_contract.py`, `test_canonical_workspace_docs.py`, `test_trusted_outcome_docs.py`, `test_user_help_docs.py` -> `mycelis-docs-steward`.
   - `test_db_*.py` and other schema-integrity/installer-compatibility tests -> `mycelis-schema` (wins over the `test_*_tasks.py` default below).
   - `test_cognitive_*.py`, `test_litellm_config_contract.py` -> `mycelis-ai-runtime` (wins over the `test_*_tasks.py` default below).

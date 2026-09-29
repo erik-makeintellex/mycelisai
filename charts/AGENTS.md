@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../AGENTS.md) | [Deploy AGENTS.md](../deploy/AGENTS.md)
 
 ## Owns / does not own
-- `charts/mycelis-core/**` (the Helm chart: templates, values, `Chart.lock`) -> `mycelis-platform-ops` (`.claude/agents/`, local-only and gitignored).
+- `charts/mycelis-core/**` (the Helm chart: templates, values, `Chart.lock`) -> `mycelis-platform-ops` (`.claude/agents/`, tracked roster).
 - `charts/mycelis-core/config/cognitive.yaml` specifically must stay coordinated with `mycelis-ai-runtime`, since it mirrors `core/config/cognitive.yaml` and the architecture-transition hygiene gate requires packaged runtime config copies to be byte-identical to their canonical source.
 - See [`deploy/AGENTS.md`](../deploy/AGENTS.md) for the Compose counterpart of packaging; the two are cross-linked because a topology change to one usually needs the same change reasoned through for the other.
 

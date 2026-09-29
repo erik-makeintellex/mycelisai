@@ -4,7 +4,7 @@
 
 ## Owns / does not own
 - HTTP handlers, route registration (`admin_routes.go`), request/response envelopes, and the blocker pattern for this 500+ file package.
-- Split by roster role (`.claude/agents/`, local-only and gitignored), not one writer. Lead ownership decisions, 2026-09-28:
+- Split by roster role (`.claude/agents/`, tracked roster), not one writer. Lead ownership decisions, 2026-09-28:
   - `auth*.go`, `identity*.go`, `groups_auth*.go`, `team_ownership*.go`, `invocations*.go`, `admin_routes.go` (auth wiring only), `mcp*.go`, `organization*.go`, `groups*.go` (non-auth), `deployment*.go` -> `mycelis-core-authority`. Every MCP slice to date (MCPS W1, MCPA-H, MCPA W1, RED, MCPL W1) was core-authority, and these files are the scope/authority gates; organization/groups/deployment are ownership and deployment-context authority (M1/M2) and pair with `team_ownership*`/`groups_auth*`.
   - `*dispatch*`, `templates_confirm_action*.go`, `templates_worker_execution*.go`, `templates_execution*.go`, `worker_event_projection*.go`, `framework_worker_authority*.go`, `team_work_*`, `cognitive*.go` (the 50+ Soma-turn/proposal files, not `cognitive_status_*`/`cognitive_config_*` below), `soma*.go`, `mission*.go`, `outcome*.go`, `review*.go`, `qa*.go`, `output*.go`, `workspace*.go`, `artifacts*.go`, `memory*.go`, `token_budgets.go` -> `mycelis-core-execution`. These are Soma-turn, proposal, execution-request and budget paths (MEM and the B1 tail "Budget metering" targets are both core-execution).
   - `brains*.go`, `cognitive_status_*.go`, `cognitive_config_*.go`, `capabilities.go` -> `mycelis-ai-runtime` for provider/config semantics; `mycelis-core-execution` writes handler plumbing only when routing changes, never provider posture.

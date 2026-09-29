@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../AGENTS.md) | [Interface README](README.md)
 
 ## Owns / does not own
-- `interface/app/**`, `interface/components/**`, `interface/store/**`, `interface/lib/**`, `interface/proxy.ts`, `interface/__tests__/**`, `interface/types/**` -> `mycelis-interface` (`.claude/agents/`, local-only and gitignored).
+- `interface/app/**`, `interface/components/**`, `interface/store/**`, `interface/lib/**`, `interface/proxy.ts`, `interface/__tests__/**`, `interface/types/**` -> `mycelis-interface` (`.claude/agents/`, tracked roster).
 - `interface/e2e/**` and `interface/playwright.config.ts` -> `mycelis-e2e-proof`; not this area's writer. See [`interface/e2e/AGENTS.md`](e2e/AGENTS.md) for its distinct rules.
 - `interface/lib/docsManifest.ts` *entries* (which docs are exposed) are proposed by `mycelis-docs-steward`; `mycelis-interface` applies them when asked, not unilaterally.
 - `mycelis-ux-reviewer` is read-only here: it advises on PRD human-first/UX fit, it never edits.

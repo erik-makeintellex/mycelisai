@@ -4,7 +4,7 @@
 
 ## Owns / does not own
 - Provider/profile routing, model configuration resolution, and the inference choke point.
-- Owner: `mycelis-ai-runtime` (`.claude/agents/`, local-only and gitignored) for provider-routing Go here plus `core/config/**` and `charts/mycelis-core/config/cognitive.yaml` (coordinate `cognitive.yaml` with platform-ops, since the chart copy must stay byte-identical to the source per the architecture-transition hygiene gate).
+- Owner: `mycelis-ai-runtime` (`.claude/agents/`, tracked roster) for provider-routing Go here plus `core/config/**` and `charts/mycelis-core/config/cognitive.yaml` (coordinate `cognitive.yaml` with platform-ops, since the chart copy must stay byte-identical to the source per the architecture-transition hygiene gate).
 - Budget wiring in `core/internal/server/token_budgets.go` and `cognitive_profile_overrides.go` belongs to `mycelis-core-execution` (lead decision 2026-09-28: the B1 tail "Budget metering" target), not this package.
 
 ## Contracts

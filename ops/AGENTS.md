@@ -3,7 +3,7 @@
 > Navigation: [Repo AGENTS.md](../AGENTS.md) | [Ops README](README.md)
 
 ## Owns / does not own
-- `ops/**`, `tasks.py`, `docker-compose.yml`, `deploy/**`, `charts/**`, `.github/workflows/**`, `pyproject.toml`/`uv.lock` (only when a slice needs it) -> `mycelis-platform-ops` (`.claude/agents/`, local-only and gitignored).
+- `ops/**`, `tasks.py`, `docker-compose.yml`, `deploy/**`, `charts/**`, `.github/workflows/**`, `pyproject.toml`/`uv.lock` (only when a slice needs it) -> `mycelis-platform-ops` (`.claude/agents/`, tracked roster).
 - The "Task runner tightening" delivery target is CLOSED (see `.state/V8_DEV_STATE.md` "Delivery Targets And Teams"). Task-name or behavior changes to `tasks.py`, `ops/*.py`, `README.md`, `ops/README.md`, `docs/TESTING.md`, and `docs/architecture/OPERATIONS.md` follow the docs-sync rule in the root `AGENTS.md` "Task Runner Contract".
 - `ops/db*.py` is schema-installer territory and is shared with `mycelis-schema` only where installer behavior is involved.
 - `.github/workflows/**` is never edited by a non-lead agent regardless of role (root `AGENTS.md` worktree safety rule extends here: CI workflow changes are a lead-only action in practice even though the role file lists the path).
