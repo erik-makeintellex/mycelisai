@@ -200,7 +200,7 @@ uv run inv install
 
 4. Choose one runtime lane from [Deployment Method Selection](#deployment-method-selection), then run the matching quick start.
 
-Startup now instantiates the runtime organization only through a selected bundle. Core fails closed when no valid bundle exists in `core/config/templates/`. Use `MYCELIS_BOOTSTRAP_TEMPLATE_ID` when multiple bundles are mounted; no-bundle operation is not a normal startup path.
+Startup now instantiates the runtime organization only through a selected bundle. Core fails closed when no valid bundle exists in `core/config/templates/`; no-bundle operation is not a normal startup path. With `MYCELIS_BOOTSTRAP_TEMPLATE_ID` unset, Core boots `mycelis-runtime-core` (`admin-core` and `council-core` only). Set `MYCELIS_BOOTSTRAP_TEMPLATE_ID=mycelis-dev-swarm-optional` to also boot `prime-architect`, `prime-development` and `agui-design-architect`, for example to exercise team `hand_off`. The retired `v8-migration-standing-team-bridge` ID stops startup with an error naming both bundles.
 
 ## Daily Startup Sequence
 

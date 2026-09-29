@@ -14,9 +14,9 @@ import (
 func TestTPDCorrelateGivesEachPlannedCallItsOwnDeliveryKey(t *testing.T) {
 	const proofID = "22222222-2222-4222-8222-222222222222"
 	scope := &protocol.ScopeValidation{PlannedToolCalls: []protocol.PlannedToolCall{
-		{Name: "delegate_task", Arguments: map[string]any{"team_id": "prime-development", "task": "first"}},
+		{Name: "delegate_task", Arguments: map[string]any{"team_id": "fixture-dev-team", "task": "first"}},
 		{Name: "write_file", Arguments: map[string]any{"path": "draft.md"}},
-		{Name: "delegate_task", Arguments: map[string]any{"team_id": "prime-development", "task": "second"}},
+		{Name: "delegate_task", Arguments: map[string]any{"team_id": "fixture-dev-team", "task": "second"}},
 		{Name: "delegate_task", Arguments: map[string]any{"team_id": "admin-core", "task": "third", "work_item_id": "dup-wi"}},
 		{Name: "delegate_task", Arguments: map[string]any{"team_id": "admin-core", "task": "fourth", "context": map[string]any{"work_item_id": "dup-wi"}}},
 	}}

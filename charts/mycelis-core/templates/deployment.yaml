@@ -187,8 +187,10 @@ spec:
                 path: policy.yaml
               - key: homepage.yaml
                 path: homepage.yaml
-              - key: v8-migration-standing-team-bridge.yaml
-                path: templates/v8-migration-standing-team-bridge.yaml
+              - key: mycelis-runtime-core.yaml
+                path: templates/mycelis-runtime-core.yaml
+              - key: mycelis-dev-swarm-optional.yaml
+                path: templates/mycelis-dev-swarm-optional.yaml
               - key: admin.yaml
                 path: teams/admin.yaml
               - key: agui-design-architect.yaml

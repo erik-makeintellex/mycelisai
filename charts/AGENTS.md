@@ -17,5 +17,5 @@
 - `uv run inv quality.max-lines` covers `charts/**` `.yaml`/`.tpl` files.
 
 ## Gotchas
-- `charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml` is capped at 533 lines in `ops/quality_legacy_caps.txt` (matching the `core/config/templates/` copy); don't grow it further, and don't "fix" the cap without also fixing the `core/config/` sibling.
+- `charts/mycelis-core/config/templates/` holds byte-identical copies of the `core/config/templates/` boot bundles (`mycelis-runtime-core.yaml`, the default, and `mycelis-dev-swarm-optional.yaml`), enforced by `tests/test_k8s_config_parity.py`; change both copies together. The chart sets no `MYCELIS_BOOTSTRAP_TEMPLATE_ID`, so Core's default selects `mycelis-runtime-core`. `mycelis-runtime-core.yaml` is at 383 of 385 lines: a new standing team needs its own bundle, not growth there.
 - Kubernetes cluster enforcement is not certified; do not treat a passing chart render as proof the policy holds live.

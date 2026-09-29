@@ -14,8 +14,8 @@ func TestResolveStartupSelectionUsesBundleWhenPresent(t *testing.T) {
 		t.Fatalf("mkdir templates: %v", err)
 	}
 
-	bundleYAML := `id: v8-migration-standing-team-bridge
-name: V8 Migration Standing-Team Bridge
+	bundleYAML := `id: fixture-startup-bundle
+name: Fixture Startup Bundle
 teams:
   - id: bridge-team
     name: Bridge Team
@@ -28,7 +28,7 @@ teams:
     deliveries:
       - swarm.team.bridge-team.signal.status
 `
-	if err := os.WriteFile(filepath.Join(templatesDir, "v8-migration-standing-team-bridge.yaml"), []byte(bundleYAML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(templatesDir, "fixture-startup-bundle.yaml"), []byte(bundleYAML), 0o644); err != nil {
 		t.Fatalf("write template bundle: %v", err)
 	}
 
@@ -39,7 +39,7 @@ teams:
 	if selection.Source != StartupSourceBundle {
 		t.Fatalf("expected bundle source, got %q", selection.Source)
 	}
-	if selection.Bundle == nil || selection.Bundle.ID != "v8-migration-standing-team-bridge" {
+	if selection.Bundle == nil || selection.Bundle.ID != "fixture-startup-bundle" {
 		t.Fatalf("unexpected selected bundle: %+v", selection.Bundle)
 	}
 	if selection.Organization == nil {

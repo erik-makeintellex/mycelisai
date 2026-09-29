@@ -174,7 +174,7 @@ func tpdDeliverPlan(t *testing.T, db *sql.DB, nc *nats.Conn, p tpdPlan) map[stri
 func TestTPDRealDBTwoDelegatesSameTeamBothDelivered(t *testing.T) {
 	db := f16cOpenDB(t)
 	_, nc := startTestNATS(t)
-	const team = "prime-development"
+	const team = "fixture-dev-team"
 	p := tpdSeedPlan(t, db, team, team)
 	inbox := tpdDeliverPlan(t, db, nc, p)[team]
 
@@ -208,13 +208,13 @@ func TestTPDRealDBTwoDelegatesSameTeamBothDelivered(t *testing.T) {
 func TestTPDRealDBThreeCallsAcrossTwoTeams(t *testing.T) {
 	db := f16cOpenDB(t)
 	_, nc := startTestNATS(t)
-	p := tpdSeedPlan(t, db, "prime-development", "admin-core", "prime-development")
+	p := tpdSeedPlan(t, db, "fixture-dev-team", "admin-core", "fixture-dev-team")
 	tpdDeliverPlan(t, db, nc, p)
-	// A call planned for admin-core never verifies at prime-development.
+	// A call planned for admin-core never verifies at fixture-dev-team.
 	cross := p.calls[1]
 	raw, _ := json.Marshal(protocol.TeamAsk{Goal: "EVIL", Context: p.args(cross, "")["context"].(map[string]any)})
-	if !f16bAgent(t, "prime-development", db).triggerPlanningOnly(raw) {
-		t.Error("TPD admin-core's planned call verified at prime-development")
+	if !f16bAgent(t, "fixture-dev-team", db).triggerPlanningOnly(raw) {
+		t.Error("TPD admin-core's planned call verified at fixture-dev-team")
 	}
 }
 

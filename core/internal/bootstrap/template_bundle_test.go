@@ -13,8 +13,8 @@ func TestTemplateLoader_LoadBundles(t *testing.T) {
 		t.Fatalf("mkdir templates: %v", err)
 	}
 
-	bundleYAML := `id: v8-migration-standing-team-bridge
-name: V8 Migration Standing-Team Bridge
+	bundleYAML := `id: fixture-startup-bundle
+name: Fixture Startup Bundle
 source_kind: standing_team_migration_input
 teams:
   - id: legacy-team
@@ -28,7 +28,7 @@ teams:
     deliveries:
       - swarm.team.legacy-team.signal.status
 `
-	if err := os.WriteFile(filepath.Join(templatesDir, "v8-migration-standing-team-bridge.yaml"), []byte(bundleYAML), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(templatesDir, "fixture-startup-bundle.yaml"), []byte(bundleYAML), 0o644); err != nil {
 		t.Fatalf("write template bundle: %v", err)
 	}
 
@@ -40,8 +40,8 @@ teams:
 	if len(bundles) != 1 {
 		t.Fatalf("expected 1 bundle, got %d", len(bundles))
 	}
-	if bundles[0].ID != "v8-migration-standing-team-bridge" {
-		t.Fatalf("expected v8-migration-standing-team-bridge, got %s", bundles[0].ID)
+	if bundles[0].ID != "fixture-startup-bundle" {
+		t.Fatalf("expected fixture-startup-bundle, got %s", bundles[0].ID)
 	}
 	if bundles[0].TemplateVersion != "v1alpha1" {
 		t.Fatalf("expected default template version, got %s", bundles[0].TemplateVersion)
@@ -79,21 +79,19 @@ teams:
 	}
 }
 
-func TestTemplateLoader_LoadStandingMigrationBridgeBundle(t *testing.T) {
+func TestTemplateLoader_LoadShippedBootBundles(t *testing.T) {
 	loader := NewTemplateLoader(filepath.Join("..", "..", "config", "templates"))
 	bundles, err := loader.LoadBundles()
 	if err != nil {
 		t.Fatalf("LoadBundles() failed: %v", err)
 	}
 
-	if len(bundles) != 1 {
-		t.Fatalf("expected 1 standing template bundle, got %d", len(bundles))
-	}
-	if bundles[0].ID != "v8-migration-standing-team-bridge" {
-		t.Fatalf("expected v8-migration-standing-team-bridge bundle, got %s", bundles[0].ID)
-	}
-	if len(bundles[0].Teams) == 0 {
-		t.Fatal("expected migration bridge bundle to embed teams")
+	if len(bundles) != 2 || bundles[0].ID != OptionalDevSwarmBundleID || bundles[1].ID != DefaultStartupBundleID {
+		ids := make([]string, 0, len(bundles))
+		for _, bundle := range bundles {
+			ids = append(ids, bundle.ID)
+		}
+		t.Fatalf("shipped bundles = %v, want [%s %s]", ids, OptionalDevSwarmBundleID, DefaultStartupBundleID)
 	}
 }
 
@@ -104,31 +102,30 @@ func TestTemplateBundle_InstantiateRuntimeOrganization(t *testing.T) {
 		t.Fatalf("LoadBundles() failed: %v", err)
 	}
 
-	org, err := bundles[0].InstantiateRuntimeOrganization()
-	if err != nil {
-		t.Fatalf("InstantiateRuntimeOrganization() failed: %v", err)
-	}
-	if org.ID != "v8-migration-standing-team-bridge" {
-		t.Fatalf("expected organization id v8-migration-standing-team-bridge, got %s", org.ID)
-	}
-	if org.SourceKind != "standing_team_migration_input" {
-		t.Fatalf("expected standing_team_migration_input, got %s", org.SourceKind)
-	}
-	if len(org.Teams) == 0 {
-		t.Fatal("expected instantiated runtime organization to include teams")
-	}
-	if org.Teams[0].ID != "admin-core" {
-		t.Fatalf("expected first embedded team admin-core, got %s", org.Teams[0].ID)
-	}
-	if len(org.Teams[0].Members) == 0 || org.Teams[0].Members[0].ID != "admin" {
-		t.Fatalf("expected admin-core members to be embedded, got %+v", org.Teams[0].Members)
-	}
-	// Standing teams must not pin a provider; they route through configured cognitive profiles.
-	if org.ProviderPolicy.Provider != "" {
-		t.Fatalf("expected migration bridge to leave provider unpinned, got %q", org.ProviderPolicy.Provider)
-	}
-	if len(org.ProviderPolicy.Kernel.RoleProviders) != 0 || len(org.ProviderPolicy.Council.RoleProviders) != 0 {
-		t.Fatalf("expected no pinned role providers, got kernel=%v council=%v", org.ProviderPolicy.Kernel.RoleProviders, org.ProviderPolicy.Council.RoleProviders)
+	for _, bundle := range bundles {
+		org, err := bundle.InstantiateRuntimeOrganization()
+		if err != nil {
+			t.Fatalf("%s: InstantiateRuntimeOrganization() failed: %v", bundle.ID, err)
+		}
+		if org.ID != bundle.ID {
+			t.Fatalf("expected organization id %s, got %s", bundle.ID, org.ID)
+		}
+		if org.SourceKind != "standing_team_migration_input" {
+			t.Fatalf("%s: expected standing_team_migration_input, got %s", bundle.ID, org.SourceKind)
+		}
+		if len(org.Teams) == 0 || org.Teams[0].ID != "admin-core" {
+			t.Fatalf("%s: expected first embedded team admin-core, got %+v", bundle.ID, org.Teams)
+		}
+		if len(org.Teams[0].Members) == 0 || org.Teams[0].Members[0].ID != "admin" {
+			t.Fatalf("%s: expected admin-core members to be embedded, got %+v", bundle.ID, org.Teams[0].Members)
+		}
+		// Shipped teams must not pin a provider; they route through configured cognitive profiles.
+		if org.ProviderPolicy.Provider != "" {
+			t.Fatalf("%s: expected provider unpinned, got %q", bundle.ID, org.ProviderPolicy.Provider)
+		}
+		if len(org.ProviderPolicy.Kernel.RoleProviders) != 0 || len(org.ProviderPolicy.Council.RoleProviders) != 0 {
+			t.Fatalf("%s: expected no pinned role providers, got kernel=%v council=%v", bundle.ID, org.ProviderPolicy.Kernel.RoleProviders, org.ProviderPolicy.Council.RoleProviders)
+		}
 	}
 }
 
@@ -185,14 +182,14 @@ teams:
 
 func TestSelectStartupBundle(t *testing.T) {
 	bundles := []*TemplateBundle{
-		{ID: "v8-migration-standing-team-bridge"},
+		{ID: "fixture-startup-bundle"},
 	}
 
 	selected, err := SelectStartupBundle(bundles, "")
 	if err != nil {
 		t.Fatalf("SelectStartupBundle() failed: %v", err)
 	}
-	if selected.ID != "v8-migration-standing-team-bridge" {
+	if selected.ID != "fixture-startup-bundle" {
 		t.Fatalf("expected bridge bundle, got %s", selected.ID)
 	}
 }

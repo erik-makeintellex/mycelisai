@@ -29,10 +29,16 @@ test.describe("Active work Ask Team live GUI proof", () => {
       !liveGUIProofRequested(),
       "BLOCKED: set PLAYWRIGHT_TEAM_WORK_GUI_LIVE=1 with local Core, Interface, NATS, PostgreSQL, and a responsive runtime team.",
     );
+    // Default boot (mycelis-runtime-core) ships no delegated work team; name a
+    // running one, for example prime-development from mycelis-dev-swarm-optional.
+    const teamId = process.env.PLAYWRIGHT_TEAM_WORK_API_TEAM_ID?.trim() ?? "";
+    test.skip(
+      !teamId,
+      "BLOCKED: set PLAYWRIGHT_TEAM_WORK_API_TEAM_ID to a running runtime team; default boot starts only admin-core and council-core.",
+    );
     test.slow();
     test.setTimeout(120_000);
 
-    const teamId = process.env.PLAYWRIGHT_TEAM_WORK_API_TEAM_ID ?? "prime-development";
     const sourceWorkItemId = crypto.randomUUID();
     const sourceObjective = `Playwright GUI Ask Team source ${sourceWorkItemId}`;
     const askMarkerId = crypto.randomUUID();
