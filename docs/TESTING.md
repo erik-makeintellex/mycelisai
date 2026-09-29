@@ -363,7 +363,7 @@ Deployment proof contracts:
 
 These WSL tasks own proof-checkout synchronization and validation only; use platform tooling for host runtime recovery.
 
-Release-proof sequencing rule: start from a clean committed `dev` release preflight (`uv run inv ci.release-preflight --lane=runtime --no-e2e`). Full Compose, Kubernetes, and broader headed browser certification must use the committed candidate and the real operator-facing address before promotion.
+Release-proof sequencing rule: start from a clean committed `dev` release preflight (`ci.release-preflight --lane=runtime --no-e2e`). Full Compose, Kubernetes, and broader headed browser certification must use the committed candidate and the real operator-facing address before promotion.
 
 ## Adding New Tests
 Add tests where the risk lives:
