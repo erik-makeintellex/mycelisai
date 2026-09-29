@@ -128,8 +128,9 @@ func TestF16cDelegateTaskDropsModelClaim(t *testing.T) {
 	}
 }
 
-// Core's confirmed dispatch (server.confirmedActionToolContext) is the one
-// caller that keeps the correlation it built, and only for its own run.
+// Core's confirmed dispatch (server.confirmedActionToolContext, marked by
+// WithConfirmedDispatchToolContext since TPD) is the one caller that keeps the
+// correlation it built, and only for its own run.
 func TestF16cConfirmedDispatchDelegateKeepsCoreClaim(t *testing.T) {
 	_, nc := startTestNATS(t)
 	const team = "prime-development"
@@ -142,7 +143,7 @@ func TestF16cConfirmedDispatchDelegateKeepsCoreClaim(t *testing.T) {
 		return map[string]any{"team_id": team, "task": "write the approved note", "work_item_id": f16bWorkItem, "context": f16cClaim(team)}
 	}
 
-	if _, err := r.handleDelegateTask(WithToolInvocationContext(context.Background(), confirmed), args()); err != nil {
+	if _, err := r.handleDelegateTask(WithConfirmedDispatchToolContext(context.Background(), confirmed), args()); err != nil {
 		t.Fatal(err)
 	}
 	data := f16cReceive(t, inbox, "confirmed")
@@ -169,8 +170,9 @@ func TestF16cConfirmedDispatchDelegateKeepsCoreClaim(t *testing.T) {
 	planning.PlanningOnly = true
 	systemKind.SourceKind = protocol.SourceKindSystem
 	for name, ctx := range map[string]context.Context{
-		"other-run": WithToolInvocationContext(context.Background(), otherRun), "planning-only": WithToolInvocationContext(context.Background(), planning),
-		"system-kind": WithToolInvocationContext(context.Background(), systemKind), "no-invocation": context.Background(),
+		"other-run": WithConfirmedDispatchToolContext(context.Background(), otherRun), "planning-only": WithConfirmedDispatchToolContext(context.Background(), planning),
+		"system-kind": WithConfirmedDispatchToolContext(context.Background(), systemKind), "no-invocation": context.Background(),
+		"no-marker": WithToolInvocationContext(context.Background(), confirmed),
 	} {
 		if _, err := r.handleDelegateTask(ctx, args()); err != nil {
 			t.Fatalf("%s: %v", name, err)

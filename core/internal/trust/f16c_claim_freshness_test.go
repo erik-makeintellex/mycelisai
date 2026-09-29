@@ -68,7 +68,8 @@ func f16cExec(t *testing.T, db *sql.DB, q string, args ...any) {
 func f16cSeedLive(t *testing.T, db *sql.DB) f16cSeed {
 	t.Helper()
 	s := f16cSeed{uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), ""}
-	s.key = "confirm-action:" + s.proof
+	outboxKey := "confirm-action:" + s.proof
+	s.key = ConfirmedCallDeliveryKey(outboxKey, s.workItem) // TPD: per-planned-call key
 	scope, _ := json.Marshal(map[string]any{"planned_tool_calls": []map[string]any{{"name": "delegate_task", "arguments": map[string]any{
 		"team_id": "prime-development", "task": "write the approved note", "context": map[string]any{
 			"team_id": "prime-development", "work_item_id": s.workItem, "intent_proof_id": s.proof, "run_id": s.run, "contract_id": s.contract, "idempotency_key": s.key,
@@ -79,7 +80,7 @@ func f16cSeedLive(t *testing.T, db *sql.DB) f16cSeed {
 	f16cExec(t, db, `INSERT INTO execution_contracts (id, intent_proof_id, run_id, template_id) VALUES ($1,$2,$3,'chat-to-proposal')`, s.contract, s.proof, s.run)
 	f16cExec(t, db, `INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, status, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
 		VALUES ($1,$2,'confirmed_action_team_plan','executing',$3,$4,$5,'prime-development',$6,'web_api','api.intent.confirm-action','command')`,
-		uuid.NewString(), s.key, s.run, s.proof, s.contract, s.workItem)
+		uuid.NewString(), outboxKey, s.run, s.proof, s.contract, s.workItem)
 	t.Cleanup(func() {
 		_, _ = db.Exec(`DELETE FROM execution_dispatch_outbox WHERE intent_proof_id=$1`, s.proof)
 		_, _ = db.Exec(`DELETE FROM execution_contracts WHERE id=$1`, s.contract)

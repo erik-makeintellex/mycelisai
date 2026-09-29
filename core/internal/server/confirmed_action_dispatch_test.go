@@ -29,7 +29,7 @@ func TestCorrelateConfirmedActionScopeProducesStableDispatchIdentity(t *testing.
 		t.Fatalf("targets = %q/%q", teamID, workItemID)
 	}
 	args := correlated.PlannedToolCalls[1].Arguments
-	if got := correlationContextValue(args, "idempotency_key"); got != "confirm-action:proof-1" {
+	if got := correlationContextValue(args, "idempotency_key"); got != "confirm-action:proof-1:"+workItemID {
 		t.Fatalf("idempotency key = %q", got)
 	}
 	if got := correlationContextValue(args, "run_id"); got != "run-1" {

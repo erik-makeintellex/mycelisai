@@ -45,12 +45,22 @@ func correlateConfirmedActionScope(scope *protocol.ScopeValidation, runID, proof
 	}
 	copyScope := *scope
 	copyScope.PlannedToolCalls = make([]protocol.PlannedToolCall, 0, len(scope.PlannedToolCalls))
+	usedWorkItems := map[string]bool{}
 	for _, planned := range scope.PlannedToolCalls {
-		planned = normalizePlannedToolCall(planned)
-		copyScope.PlannedToolCalls = append(copyScope.PlannedToolCalls,
-			annotateConfirmedDelegationCall(planned, runID, proofID, contractID, &copyScope))
+		planned = withoutRepeatedWorkItem(normalizePlannedToolCall(planned), usedWorkItems)
+		planned = annotateConfirmedDelegationCall(planned, runID, proofID, contractID, &copyScope)
+		if workID := confirmedDelegationWorkItemID(planned.Arguments); isDelegateTool(planned.Name) && workID != "" {
+			usedWorkItems[workID] = true
+		}
+		copyScope.PlannedToolCalls = append(copyScope.PlannedToolCalls, planned)
 	}
 	return &copyScope
+}
+
+// confirmedActionOutboxKey is the confirmed plan's dispatch outbox key. Each
+// delegated call's delivery key extends it (trust.ConfirmedCallDeliveryKey).
+func confirmedActionOutboxKey(proofID string) string {
+	return "confirm-action:" + strings.TrimSpace(proofID)
 }
 
 func (s *AdminServer) stageConfirmedActionDispatchTx(ctx context.Context, tx *sql.Tx, proofID, contractID, runID string, scope *protocol.ScopeValidation, fixtureScopeID, auditUser string, actorIdentity map[string]any) (confirmedActionDispatchPayload, string, error) {
@@ -64,7 +74,7 @@ func (s *AdminServer) stageConfirmedActionDispatchTx(ctx context.Context, tx *sq
 	if err != nil {
 		return payload, "", err
 	}
-	idempotencyKey := "confirm-action:" + proofID
+	idempotencyKey := confirmedActionOutboxKey(proofID)
 	teamID, workItemID := confirmedActionDispatchTargets(scope)
 	_, err = s.DispatchOutbox.EnqueueTx(ctx, tx, dispatchoutbox.Item{
 		ID: uuid.NewString(), IdempotencyKey: idempotencyKey,

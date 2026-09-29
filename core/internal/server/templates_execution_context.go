@@ -9,6 +9,10 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// confirmedActionToolContext is the tool context for Core executing the
+// planned calls of a confirmed proposal. It carries the Core-only
+// confirmed-dispatch marker (swarm.WithConfirmedDispatchToolContext, TPD);
+// the source channel below is descriptive metadata, not the authority check.
 func confirmedActionToolContext(ctx context.Context, auditUser, runID string, boundary *protocol.ConfigDocumentRequestBoundary) context.Context {
 	actorID := strings.TrimSpace(auditUser)
 	trustedBoundary := protocol.ConfigDocumentRequestBoundary{OperatorID: actorID}
@@ -16,7 +20,7 @@ func confirmedActionToolContext(ctx context.Context, auditUser, runID string, bo
 		trustedBoundary = *boundary
 		trustedBoundary.OperatorID = actorID
 	}
-	return swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
+	return swarm.WithConfirmedDispatchToolContext(ctx, swarm.ToolInvocationContext{
 		SourceKind:     protocol.SourceKindWebAPI,
 		SourceChannel:  "api.intent.confirm-action",
 		PayloadKind:    protocol.PayloadKindCommand,

@@ -61,7 +61,7 @@ func confirmedActionWorkerCorrelation(runID, proofID, contractID string, scope *
 		ExecutionContractID: strings.TrimSpace(contractID),
 		TeamID:              strings.TrimSpace(teamID),
 		WorkItemID:          strings.TrimSpace(workItemID),
-		IdempotencyKey:      "confirm-action:" + strings.TrimSpace(proofID),
+		IdempotencyKey:      confirmedActionOutboxKey(proofID),
 		SourceKind:          string(protocol.SourceKindWebAPI),
 		SourceChannel:       confirmedActionSourceChannel,
 		PayloadKind:         string(protocol.PayloadKindCommand),

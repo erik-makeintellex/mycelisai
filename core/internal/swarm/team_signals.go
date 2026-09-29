@@ -39,7 +39,7 @@ func (t *Team) handleTrigger(msg *nats.Msg) {
 			return
 		}
 		if !accepted {
-			log.Printf("Team [%s] ignored replayed command [%s]", t.Manifest.Name, correlation.commandKey())
+			t.reportUndeliveredCommand(*correlation, msg.Subject, steering)
 			return
 		}
 		if t.commandReceipts != nil {
@@ -150,7 +150,7 @@ func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) bo
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.pruneExpiredCorrelationsLocked(time.Now().UTC())
-	key := correlation.commandKey()
+	key := correlation.deliveryKey()
 	if expiry, exists := t.seenCommandKeys[key]; exists && time.Now().UTC().Before(expiry) {
 		return false
 	}
@@ -160,6 +160,15 @@ func (t *Team) rememberCommandCorrelation(correlation teamCommandCorrelation) bo
 	t.seenCommandKeys[key] = time.Now().UTC().Add(time.Hour)
 	t.pendingCorrelations = append(t.pendingCorrelations, correlation)
 	return true
+}
+
+// commandDeliveredHere reports whether this Team instance already forwarded
+// the same planned call (work item and key) within the dedupe window.
+func (t *Team) commandDeliveredHere(correlation teamCommandCorrelation) bool {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	expiry, exists := t.seenCommandKeys[correlation.deliveryKey()]
+	return exists && time.Now().UTC().Before(expiry)
 }
 
 func (t *Team) responseCommandCorrelation(raw []byte) *teamCommandCorrelation {
@@ -274,6 +283,13 @@ func correlationFromMap(values map[string]any) *teamCommandCorrelation {
 
 func (c teamCommandCorrelation) commandKey() string {
 	return firstNonEmptySignalString(c.IdempotencyKey, c.WorkItemID)
+}
+
+// deliveryKey is the in-memory dedupe key for one planned call (TPD): the
+// work item plus its command key, matching the durable receipt's uniqueness.
+// Keying on the command key alone dropped a second call sharing a key.
+func (c teamCommandCorrelation) deliveryKey() string {
+	return strings.TrimSpace(c.WorkItemID) + "|" + c.commandKey()
 }
 
 func correlatedTeamResponsePayload(raw []byte, correlation *teamCommandCorrelation) []byte {

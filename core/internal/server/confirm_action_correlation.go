@@ -4,9 +4,15 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/trust"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// annotateConfirmedDelegationCall binds one approved delegate_task call to
+// its run, proof, contract and work item. Its idempotency_key is the call's
+// own delivery key (TPD: confirm-action:<proof>:<work_item_id>), so two calls
+// to one team are two deliveries; trust.VerifyExecutionClaim checks the same
+// derivation.
 func annotateConfirmedDelegationCall(planned protocol.PlannedToolCall, runID, proofID, contractID string, scope *protocol.ScopeValidation) protocol.PlannedToolCall {
 	if !isDelegateTool(planned.Name) {
 		return planned
@@ -17,7 +23,7 @@ func annotateConfirmedDelegationCall(planned protocol.PlannedToolCall, runID, pr
 	context := map[string]any{
 		"work_item_id":    workID,
 		"team_id":         teamID,
-		"idempotency_key": "confirm-action:" + proofID,
+		"idempotency_key": trust.ConfirmedCallDeliveryKey(confirmedActionOutboxKey(proofID), workID),
 	}
 	addIfNotEmpty(context, "run_id", runID)
 	addIfNotEmpty(context, "intent_proof_id", proofID)
@@ -40,6 +46,38 @@ func annotateConfirmedDelegationCall(planned protocol.PlannedToolCall, runID, pr
 
 func confirmedDelegationWorkItemID(args map[string]any) string {
 	return firstNonEmptyString(correlationContextValue(args, "work_item_id"), args["work_item_id"])
+}
+
+// withoutRepeatedWorkItem drops a delegate call's work item id when an
+// earlier call in the same plan already uses it (TPD), so annotation mints a
+// fresh one: each planned call is its own team work item and delivery.
+func withoutRepeatedWorkItem(planned protocol.PlannedToolCall, used map[string]bool) protocol.PlannedToolCall {
+	if !isDelegateTool(planned.Name) {
+		return planned
+	}
+	workID := confirmedDelegationWorkItemID(planned.Arguments)
+	if workID == "" || !used[workID] {
+		return planned
+	}
+	args := cloneAnyMap(planned.Arguments)
+	delete(args, "work_item_id")
+	for _, key := range []string{"context", "ask", "task"} {
+		nested, ok := args[key].(map[string]any)
+		if !ok {
+			continue
+		}
+		nested = cloneAnyMap(nested)
+		if key == "context" {
+			delete(nested, "work_item_id")
+		} else if inner, ok := nested["context"].(map[string]any); ok {
+			inner = cloneAnyMap(inner)
+			delete(inner, "work_item_id")
+			nested["context"] = inner
+		}
+		args[key] = nested
+	}
+	planned.Arguments = args
+	return planned
 }
 
 func correlationContextValue(args map[string]any, key string) string {
