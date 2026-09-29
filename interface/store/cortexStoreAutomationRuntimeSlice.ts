@@ -20,11 +20,17 @@ export function createCortexAutomationRuntimeSlice(
             set({ isFetchingTriggers: true });
             try {
                 const res = await fetch('/api/v1/triggers');
-                if (!res.ok) return;
+                if (!res.ok) {
+                    // A failed load is not "no automations": keep the list
+                    // untouched and record the error for the UI to render.
+                    const errBody = await res.json().catch(() => ({}));
+                    set({ triggerRulesError: { code: errBody?.data?.code, httpStatus: res.status } });
+                    return;
+                }
                 const body = await res.json();
-                set({ triggerRules: body.data ?? [] });
+                set({ triggerRules: body.data ?? [], triggerRulesError: null });
             } catch {
-                // degraded — silent
+                set({ triggerRulesError: { httpStatus: undefined } });
             } finally {
                 set({ isFetchingTriggers: false });
             }

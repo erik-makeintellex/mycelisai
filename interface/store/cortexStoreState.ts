@@ -186,6 +186,7 @@ export interface CortexGovernanceOpsContract {
     streamConnectionState: 'idle' | 'connecting' | 'online' | 'offline';
     activeSquadRoomId: string | null;
     teamRoster: TeamDetail[];
+    teamRosterError: { code?: string; httpStatus?: number } | null;
     isFetchingTeamRoster: boolean;
     policyConfig: PolicyConfig | null;
     policyError: { code?: string; httpStatus?: number } | null;
@@ -196,6 +197,7 @@ export interface CortexGovernanceOpsContract {
     isFetchingApprovals: boolean;
     auditLog: AuditLogEntry[];
     isFetchingAuditLog: boolean;
+    auditLogError: { code?: string; httpStatus?: number } | null;
     cognitiveStatus: CognitiveStatus | null;
     servicesStatus: ServiceHealthStatus[];
     isFetchingServicesStatus: boolean;
@@ -237,6 +239,7 @@ export interface CortexAutomationRunsContract {
     isFetchingRuns: boolean;
     triggerRules: TriggerRule[];
     isFetchingTriggers: boolean;
+    triggerRulesError: { code?: string; httpStatus?: number } | null;
     conversationTurns: ConversationTurn[] | null;
     isFetchingConversation: boolean;
     fetchRunTimeline: (runId: string) => Promise<void>;

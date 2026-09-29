@@ -10,6 +10,14 @@ import type { CortexSet, CortexSlice } from '@/store/cortexStoreSliceTypes';
 
 type TeamRosterResponse = Pick<TeamDetail, 'id' | 'name'> & { role?: string };
 
+// Same {code, httpStatus} shape as policyError/approvalsError, so the UI can
+// feed it to blockerCopy. Never invents a code: a body without one leaves it
+// undefined and the generic "request failed" copy applies.
+async function loadErrorFromResponse(res: Response) {
+    const body = await res.json().catch(() => ({}));
+    return { code: body?.data?.code as string | undefined, httpStatus: res.status };
+}
+
 export function createCortexGovernanceSystemSlice(
     set: CortexSet,
 ): CortexSlice<
@@ -31,8 +39,15 @@ export function createCortexGovernanceSystemSlice(
                     fetch('/agents'),
                 ]);
 
-                const teams = teamsRes.ok ? await teamsRes.json() : [];
-                const agentsData = agentsRes.ok ? await agentsRes.json() : { agents: [] };
+                // A failed teams/agents request is a load failure, not an
+                // empty roster: keep the last roster and record the error.
+                const failed = !teamsRes.ok ? teamsRes : !agentsRes.ok ? agentsRes : null;
+                if (failed) {
+                    set({ teamRosterError: await loadErrorFromResponse(failed), isFetchingTeamRoster: false });
+                    return;
+                }
+                const teams = await teamsRes.json();
+                const agentsData = await agentsRes.json();
                 const agents: TeamAgent[] = Array.isArray(agentsData.agents) ? agentsData.agents : [];
 
                 const teamRecords = (Array.isArray(teams) ? teams : []) as TeamRosterResponse[];
@@ -43,9 +58,9 @@ export function createCortexGovernanceSystemSlice(
                     agents: agents.filter((agent) => agent.team_id === team.id),
                 }));
 
-                set({ teamRoster: roster, isFetchingTeamRoster: false });
+                set({ teamRoster: roster, teamRosterError: null, isFetchingTeamRoster: false });
             } catch {
-                set({ teamRoster: [], isFetchingTeamRoster: false });
+                set({ teamRosterError: { httpStatus: undefined }, isFetchingTeamRoster: false });
             }
         },
 
@@ -118,12 +133,15 @@ export function createCortexGovernanceSystemSlice(
                 if (res.ok) {
                     const payload = await res.json();
                     const data = extractApiData<AuditLogEntry[] | unknown>(payload);
-                    set({ auditLog: Array.isArray(data) ? data : [], isFetchingAuditLog: false });
+                    set({ auditLog: Array.isArray(data) ? data : [], auditLogError: null, isFetchingAuditLog: false });
                 } else {
-                    set({ auditLog: [], isFetchingAuditLog: false });
+                    // A 403/5xx is not "no audit activity": keep the list
+                    // untouched and surface the error so the UI shows a
+                    // blocker instead of the empty state.
+                    set({ auditLogError: await loadErrorFromResponse(res), isFetchingAuditLog: false });
                 }
             } catch {
-                set({ auditLog: [], isFetchingAuditLog: false });
+                set({ auditLogError: { httpStatus: undefined }, isFetchingAuditLog: false });
             }
         },
 

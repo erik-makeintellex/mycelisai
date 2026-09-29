@@ -121,6 +121,7 @@ function ApprovalsQueue() {
 function AuditTab() {
   const auditLog = useCortexStore((s) => s.auditLog);
   const isFetchingAuditLog = useCortexStore((s) => s.isFetchingAuditLog);
+  const auditLogError = useCortexStore((s) => s.auditLogError);
   const fetchAuditLog = useCortexStore((s) => s.fetchAuditLog);
 
   useEffect(() => {
@@ -148,7 +149,14 @@ function AuditTab() {
         ) : null}
       </div>
 
-      {auditLog.length === 0 ? (
+      {auditLogError ? (
+        <InlineBlockerNotice
+          code={auditLogError.code}
+          httpStatus={auditLogError.httpStatus}
+          retryLabel="Try again"
+          onRetry={() => void fetchAuditLog()}
+        />
+      ) : auditLog.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-cortex-border bg-cortex-surface px-6 py-16 text-cortex-text-muted">
           <ScrollText size={40} className="mb-3 opacity-50" />
           <h3 className="text-base font-semibold text-cortex-text-main">
