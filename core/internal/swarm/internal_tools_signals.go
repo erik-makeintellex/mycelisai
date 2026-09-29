@@ -42,6 +42,17 @@ func (r *InternalToolRegistry) handlePublishSignal(ctx context.Context, args map
 	if r.nc == nil {
 		return "", fmt.Errorf("NATS not available — cannot publish signal")
 	}
+	if privateReference {
+		// MEM-LANES-3: a private reference keeps its payload only in the
+		// turn user's checkpoint, so it is refused before publishing when no
+		// checkpoint can be kept.
+		if owner, err := recallAccessFromContext(ctx).ownerUserID(); err != nil || owner == "" {
+			if err == nil {
+				err = errNoUserTempWrite
+			}
+			return "", fmt.Errorf("publish_signal refused: a private reference needs a checkpoint, and %w. Nothing was published.", err)
+		}
+	}
 
 	fileRef, err := buildWorkspaceFileReference(filePath)
 	if err != nil {

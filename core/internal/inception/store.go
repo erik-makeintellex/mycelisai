@@ -77,7 +77,7 @@ func (s *Store) CreateRecipe(ctx context.Context, r Recipe) (string, error) {
 			 source_run_id, source_session_id, agent_id, tags, quality_score)
 		VALUES ($1, $2, $3, $4, $5,
 			NULLIF($6, ''), NULLIF($7, ''),
-			NULLIF($8, ''), NULLIF($9, ''),
+			NULLIF($8, '')::uuid, NULLIF($9, '')::uuid, -- uuid columns (MEM-LANES-3)
 			$10, $11, $12)
 		RETURNING id
 	`,

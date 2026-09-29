@@ -158,8 +158,9 @@ func TestHandlePublishSignal_PrivateReferenceAndCheckpoint(t *testing.T) {
 	t.Setenv("MYCELIS_WORKSPACE", t.TempDir())
 
 	channelKey := "team.alpha.private.files"
+	// MEM-LANES-3: a private reference keeps its payload in the turn user's checkpoint.
 	mock.ExpectExec("DELETE FROM temp_memory_channels").
-		WithArgs("default", channelKey).
+		WithArgs("default", channelKey, "user-signal").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectQuery("INSERT INTO temp_memory_channels").
 		WithArgs("default", channelKey, "soma-admin", sqlmock.AnyArg(), sqlmock.AnyArg(), nil).
@@ -177,6 +178,7 @@ func TestHandlePublishSignal_PrivateReferenceAndCheckpoint(t *testing.T) {
 		RunID:   "run-901",
 		TeamID:  "alpha",
 		AgentID: "soma-admin",
+		Recall:  RecallAccess{User: true, Reader: memory.GovernedReader{UserID: "user-signal"}},
 	})
 	out, err := reg.handlePublishSignal(ctx, map[string]any{
 		"subject":      "swarm.team.alpha.signal.result",

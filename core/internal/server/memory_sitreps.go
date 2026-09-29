@@ -12,7 +12,9 @@ import (
 // GET /api/v1/memory/sitreps?team_id=<uuid>&limit=10 (MEM-LANES-2, C3).
 // A SitRep summarizes one team's activity, so the route needs an identity
 // and returns only the SitReps of teams the caller is a proven member of
-// (the B1R persisted membership proof, tokenBudgetTeamTenant), or of every
+// in the SitRep's tenant (the B1R persisted membership proof through
+// memoryTeamMember; MEM-LANES-3: a member of the same team id in another
+// tenant proves nothing), or of every
 // team for a root admin with groups:read (scopeRuntimeTeamRead, the scope
 // that already reads every runtime team). Without team_id it lists every
 // team the caller may read; a team_id the caller may not read is refused
@@ -21,6 +23,10 @@ const (
 	codeSitrepsSignInRequired = "memory_sign_in_required"
 	codeSitrepsTeamNotMember  = "memory_team_not_member"
 	maxSitrepLimit            = 100
+	// sitrepTenant is the tenant SitReps belong to: Core's Archivist writes
+	// them in tenant "default" (memory/archivist.go), and the table has no
+	// tenant column.
+	sitrepTenant = "default"
 )
 
 var (
@@ -104,13 +110,13 @@ func (s *AdminServer) sitrepReadableTeams(w http.ResponseWriter, r *http.Request
 	}
 	var teams []string
 	for _, candidate := range candidates {
-		tenant, err := s.tokenBudgetTeamTenant(r, candidate)
+		member, err := s.memoryTeamMember(r, sitrepTenant, candidate)
 		if err != nil {
 			log.Printf("sitreps: membership check failed for team %s: %v", candidate, err)
 			respondBlocker(w, r, http.StatusServiceUnavailable, codeServiceUnavailable, "team membership could not be checked", nil)
 			return nil, false
 		}
-		if tenant != "" {
+		if member {
 			teams = append(teams, candidate)
 		}
 	}

@@ -54,8 +54,11 @@ func TestPutTempMemory_HappyPath(t *testing.T) {
 	if id != "mem-1" {
 		t.Fatalf("id = %q, want mem-1", id)
 	}
-	if _, err := svc.PutTempMemory(context.Background(), "default", "lead.shared", "admin", "checkpoint", forged, 0, ""); err != nil {
-		t.Fatalf("PutTempMemory without a user: %v", err)
+	if _, err := svc.PutTempMemory(context.Background(), "default", "lead.shared", "admin", "checkpoint", forged, 0, ""); err == nil {
+		t.Fatal("PutTempMemory without a user must be refused (MEM-LANES-3)")
+	}
+	if _, err := svc.PutSystemTempMemory(context.Background(), "default", "lead.shared", "admin", "checkpoint", forged, 0, "bus"); err != nil {
+		t.Fatalf("PutSystemTempMemory: %v", err)
 	}
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("expectations: %v", err)
@@ -118,7 +121,7 @@ func TestClearTempMemory_HappyPath(t *testing.T) {
 
 func TestPutTempMemory_Validation(t *testing.T) {
 	svc := NewServiceWithDB(nil)
-	if _, err := svc.PutTempMemory(context.Background(), "default", "lead.shared", "admin", "x", nil, 0, ""); err == nil {
+	if _, err := svc.PutTempMemory(context.Background(), "default", "lead.shared", "admin", "x", nil, 0, "user-a"); err == nil {
 		t.Fatal("expected error when db is nil")
 	}
 }

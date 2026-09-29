@@ -208,7 +208,7 @@ func TestMemLanesRealDB_TempChannelsFollowTheRequestingUser(t *testing.T) {
 	// MEM-LANES-2: a signal checkpoint reaches users only as system bus state;
 	// a legacy row with neither owner key reaches no one.
 	if _, err := w.db.Exec(`INSERT INTO temp_memory_channels (tenant_id, channel_key, owner_agent_id, content, metadata) VALUES
-		('default', 'lead.shared', 'admin', $1, '{}'), ('default', 'signal.latest.swarm.team.memlanes.signal.status', 'memlanes', $2, '{"owner_class":"system"}'),
+		('default', 'lead.shared', 'admin', $1, '{}'), ('default', 'signal.latest.swarm.team.memlanes.signal.status', 'memlanes', $2, '{"owner_class":"system","system_writer":"bus_signal"}'),
 		('default', 'signal.latest.swarm.team.memlanes-legacy.signal.status', 'memlanes', 'MemLanes legacy kiwi signal 4646.', '{}')`, legacy, signal); err != nil {
 		t.Fatalf("seed legacy temp: %v", err)
 	}

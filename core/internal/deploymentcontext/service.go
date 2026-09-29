@@ -61,8 +61,7 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 	sourceLabel := normalizeSourceLabel(req.SourceLabel)
 	rawSourceKind := strings.TrimSpace(req.SourceKind)
 	sourceKind := normalizeSourceKind(req.SourceKind)
-	rawVisibility := strings.TrimSpace(req.Visibility)
-	visibility := normalizeVisibility(req.Visibility)
+	visibility := ResolveVisibility(req.KnowledgeClass, req.Visibility)
 	sensitivityClass := normalizeSensitivityClass(req.SensitivityClass)
 	rawTrustClass := strings.TrimSpace(req.TrustClass)
 	trustClass := normalizeTrustClass(req.TrustClass)
@@ -97,9 +96,6 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		if sensitivityClass == "role_scoped" {
 			sensitivityClass = "restricted"
 		}
-		if visibility == "private" {
-			visibility = "global"
-		}
 		tags = append(tags, "soma-operating-context")
 		if outputSpecificity != "" {
 			tags = append(tags, "shared-output-specificity")
@@ -112,9 +108,6 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		}
 		if sourceKind == "user_document" {
 			sourceKind = "user_record"
-		}
-		if visibility == "global" {
-			visibility = "private"
 		}
 		sensitivityClass = "restricted"
 		if contentDomain != "" {
@@ -129,9 +122,6 @@ func (s *Service) Ingest(ctx context.Context, req IngestRequest) (*IngestResult,
 		}
 		if rawSourceKind == "" || sourceKind == "user_document" {
 			sourceKind = "synthesis_note"
-		}
-		if rawVisibility == "" {
-			visibility = "private"
 		}
 		sensitivityClass = "restricted"
 		if rawTrustClass == "" {

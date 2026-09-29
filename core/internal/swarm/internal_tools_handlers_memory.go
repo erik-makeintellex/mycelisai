@@ -132,6 +132,7 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		return "", fmt.Errorf("load_deployment_context refused: %w. Nothing was saved.", err)
 	}
 	scope := resolveMemoryScope(ctx, args)
+	visibility, note := deploymentContextVisibility(ctx, stringValue(args["knowledge_class"]), stringValue(args["visibility"]), scope)
 	result, err := svc.Ingest(ctx, deploymentcontext.IngestRequest{
 		KnowledgeClass:    stringValue(args["knowledge_class"]),
 		Title:             title,
@@ -139,7 +140,7 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		ContentType:       stringValue(args["content_type"]),
 		SourceLabel:       stringValue(args["source_label"]),
 		SourceKind:        stringValue(args["source_kind"]),
-		Visibility:        stringValue(args["visibility"]),
+		Visibility:        visibility,
 		SensitivityClass:  stringValue(args["sensitivity_class"]),
 		TrustClass:        stringValue(args["trust_class"]),
 		Tags:              stringSlice(args["tags"]),
@@ -165,6 +166,7 @@ func (r *InternalToolRegistry) handleLoadDeploymentContext(ctx context.Context, 
 		"source_label":     result.SourceLabel,
 		"source_kind":      result.SourceKind,
 		"visibility":       result.Visibility,
+		"visibility_note":  note,
 		"trust_class":      result.TrustClass,
 		"content_domain":   result.ContentDomain,
 		"target_goal_sets": result.TargetGoalSets,
@@ -268,8 +270,8 @@ func (r *InternalToolRegistry) handleTempMemoryWrite(ctx context.Context, args m
 		return "", fmt.Errorf("temp_memory_write refused: %w. Nothing was saved.", err)
 	}
 	channel := stringValue(args["channel"])
-	if ownerUserID == "" && memory.SharedTempChannel(channel) {
-		return "", fmt.Errorf("temp_memory_write refused: %w. Nothing was saved.", errSharedChannelNoUser)
+	if ownerUserID == "" {
+		return "", fmt.Errorf("temp_memory_write refused: %w. Nothing was saved.", errNoUserTempWrite)
 	}
 	content := stringValue(args["content"])
 	owner := stringValue(args["owner_agent_id"])

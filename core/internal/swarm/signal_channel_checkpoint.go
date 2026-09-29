@@ -112,28 +112,30 @@ func workspaceRelativePath(absTarget string) (string, error) {
 	return filepath.ToSlash(rel), nil
 }
 
-// errSharedChannelNoUser refuses a model-tool write with no user to a shared
-// channel (memory.SharedTempChannel; MEM-LANES-2).
-var errSharedChannelNoUser = errors.New("it is a shared channel, and without a signed-in user only Core's bus writer may write it")
+// errNoUserTempWrite refuses a model-tool temp write with no signed-in user
+// (MEM-LANES-3). Every no-user row is read by other no-user turns, so a model
+// tool never writes one: only Core's writers do (the bus checkpoint in
+// publishToolBusSignal and AutoSummarize), through PutSystemTempMemory.
+var errNoUserTempWrite = errors.New("without a signed-in user a model tool cannot write temporary memory; only Core's own writers keep no-user state")
 
 // upsertSignalCheckpoint is publish_signal's checkpoint, a model-tool write:
-// it belongs to the turn's user (MEM-LANES), and with no user it may not land
-// on a shared channel, where other users or no-user prompts would read it.
+// it belongs to the turn's user (MEM-LANES), and with no user it is refused
+// (MEM-LANES-3).
 func (r *InternalToolRegistry) upsertSignalCheckpoint(ctx context.Context, channelKey, ownerAgentID, content string, metadata map[string]any) (string, error) {
 	owner, err := recallAccessFromContext(ctx).ownerUserID()
 	if err != nil {
 		return "", fmt.Errorf("store checkpoint: %w", err)
 	}
-	if owner == "" && memory.SharedTempChannel(channelKey) {
-		return "", errSharedChannelNoUser
+	if owner == "" {
+		return "", errNoUserTempWrite
 	}
 	return r.storeSignalCheckpoint(ctx, owner, channelKey, ownerAgentID, content, metadata)
 }
 
 // storeSignalCheckpoint replaces owner's latest checkpoint on channelKey: a
-// user's replaces only their own, a no-user (system) one replaces owner-less
-// rows. Only upsertSignalCheckpoint and Core's bus writer
-// (publishToolBusSignal) call it.
+// user's replaces only their own; a no-user one (only Core's bus writer,
+// publishToolBusSignal, passes no owner) replaces owner-less rows and is
+// written as system bus state.
 func (r *InternalToolRegistry) storeSignalCheckpoint(ctx context.Context, owner, channelKey, ownerAgentID, content string, metadata map[string]any) (string, error) {
 	if r == nil || r.mem == nil {
 		return "", nil
@@ -154,7 +156,13 @@ func (r *InternalToolRegistry) storeSignalCheckpoint(ctx context.Context, owner,
 	if _, err := r.mem.ClearTempMemory(ctx, "default", channelKey, memory.GovernedReader{UserID: owner}); err != nil {
 		return "", fmt.Errorf("clear existing checkpoint: %w", err)
 	}
-	id, err := r.mem.PutTempMemory(ctx, "default", channelKey, ownerAgentID, content, metadata, 0, owner)
+	var id string
+	var err error
+	if owner == "" {
+		id, err = r.mem.PutSystemTempMemory(ctx, "default", channelKey, ownerAgentID, content, metadata, 0, "bus_signal")
+	} else {
+		id, err = r.mem.PutTempMemory(ctx, "default", channelKey, ownerAgentID, content, metadata, 0, owner)
+	}
 	if err != nil {
 		return "", fmt.Errorf("store checkpoint: %w", err)
 	}

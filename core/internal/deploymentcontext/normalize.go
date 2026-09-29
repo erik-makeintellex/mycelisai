@@ -169,3 +169,27 @@ func normalizeTags(tags []string) []string {
 	}
 	return out
 }
+
+// ResolveVisibility is the visibility Ingest stores for a knowledge class and
+// a requested visibility. It is exported (MEM-LANES-3) so the agent tool path
+// can govern exactly the value a save would store: an unknown or missing
+// value is global, Soma operating context is never private, user-private
+// context is never global, and reflection defaults to private.
+func ResolveVisibility(knowledgeClass, requested string) string {
+	visibility := normalizeVisibility(requested)
+	switch normalizeKnowledgeClass(knowledgeClass) {
+	case KnowledgeClassSomaOperating:
+		if visibility == "private" {
+			visibility = "global"
+		}
+	case KnowledgeClassUserPrivate:
+		if visibility == "global" {
+			visibility = "private"
+		}
+	case KnowledgeClassReflection:
+		if strings.TrimSpace(requested) == "" {
+			visibility = "private"
+		}
+	}
+	return visibility
+}
