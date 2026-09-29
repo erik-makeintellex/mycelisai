@@ -4,6 +4,44 @@ These rules apply to all agents in this repository. The repository-specific cont
 
 Priority: correctness → safety / authority → accepted architecture → tests / evidence → minimal change → token efficiency.
 
+## Operating Doctrine
+
+**Stop treating code as the work product. The system is the work product.**
+
+Our job is no longer to translate every decision into syntax by hand. Our job is to define intent precisely enough that capable agents can execute it without corrupting the architecture.
+
+Govern the **what, why, boundaries, contracts, and evidence of correctness**. Delegate the implementation.
+
+Before changing the system, understand it. Before executing, produce a precise plan. Decompose work until responsibilities, interfaces, invariants, dependencies, and acceptance criteria are explicit. Give each agent the minimum context and authority required for its task; do not let unrelated context accumulate into ambiguity.
+
+Then execute aggressively, inside the authority, approval, and ownership rules in this file. Speed never waives a gate, an owner decision, or an off-limits boundary.
+
+Agents may write the code, tests, migrations, documentation, and supporting artifacts. They may investigate, refactor, and iterate autonomously inside the boundaries they have been given. But no implementation earns trust merely because it runs.
+
+Require evidence.
+
+Validate components independently. Validate their contracts at integration boundaries. Test failure paths, not only happy paths. Preserve architectural invariants. Challenge assumptions with independent review. When evidence contradicts the plan, change the plan rather than rationalizing the implementation.
+
+Do not optimize for lines written, prompts completed, or agent activity. Optimize for **verified system capability**.
+
+Human attention is the scarce resource. Spend it on architecture, judgment, decomposition, constraints, review, and deciding what should exist next.
+
+**We do not scale by typing faster. We scale by making intent executable.**
+
+How this doctrine maps onto this repository:
+
+| Principle | Mechanism here |
+| --- | --- |
+| Understand before changing | Read this file, the area `AGENTS.md` of every folder you touch, the owning architecture doc, and `.state/V8_DEV_STATE.md` before editing. |
+| A precise plan with explicit boundaries | Every slice runs from a packet: the defect or intent with evidence, owned files, off-limits files (including the U1 lane), invariants, the tests that must fail first, exact gates, and the report shape. A target's team is declared in the scoreboard before any agent spawns. |
+| Minimum context and authority | At most 3 agents per delivery target; one worktree per writer; git is read-only for agents; disjoint file ownership between concurrent writers; no sub-agents from agents. |
+| Validate components independently | Fail-first tests; real-database tests for persistence and authority; a mutation proof for every security layer (revert it, and its test fails). |
+| Validate contracts at integration | Fatal merge gates on the merged tree (`go vet`, `uv run inv core.test`, docs and task-name tests, `uv run inv quality.max-lines`, `git diff --check`), then a rebuilt stack and the live journey probe (`uv run inv test.probe`). |
+| Test failure paths | Fail-closed authority, honest blockers, and no placeholder or fake success (rule 12). A silent drop of approved work is a defect, not an edge case. |
+| Independent review | Security and authority slices get an adversarial QA agent that did not write the code, with a GO / CONDITIONAL / NO-GO verdict. A target closes only on GO, and each condition becomes its own tracked item. |
+| Change the plan, not the story | When QA, a probe, or a gate contradicts a claim, the lead records the correction in the scoreboard and the commit (or a git note) and re-plans; earlier success claims are never left standing. |
+| Verified capability over activity | "Done" means merged with gates green, live proof where the behavior is live, docs current in the same slice, and the scoreboard updated. Agent count, lines changed, and task completions are not progress measures. |
+
 ## Read First And Scope
 
 - Search first; read narrow ranges. Inspect this file, the current task, relevant canonical PRD and owning architecture sections, files to edit, and nearby tests. Consult recovery/state when relevant. Do not scan the whole repository without reason.
