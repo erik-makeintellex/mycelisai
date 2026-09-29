@@ -50,7 +50,8 @@ func f16cMustExec(t *testing.T, db *sql.DB, q string, args ...any) {
 func f16cSeedLiveRun(t *testing.T, db *sql.DB, team string) f16cLive {
 	t.Helper()
 	s := f16cLive{uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString(), "", team}
-	s.key = "confirm-action:" + s.proof
+	outboxKey := "confirm-action:" + s.proof
+	s.key = outboxKey + ":" + s.workItem // TPD: per-planned-call delivery key
 	scope, _ := json.Marshal(map[string]any{"planned_tool_calls": []map[string]any{{"name": "delegate_task", "arguments": map[string]any{
 		"team_id": team, "task": "write the approved note", "context": map[string]any{
 			"team_id": team, "work_item_id": s.workItem, "intent_proof_id": s.proof, "run_id": s.run, "contract_id": s.contract, "idempotency_key": s.key,
@@ -61,7 +62,7 @@ func f16cSeedLiveRun(t *testing.T, db *sql.DB, team string) f16cLive {
 	f16cMustExec(t, db, `INSERT INTO execution_contracts (id, intent_proof_id, run_id, template_id) VALUES ($1,$2,$3,'chat-to-proposal')`, s.contract, s.proof, s.run)
 	f16cMustExec(t, db, `INSERT INTO execution_dispatch_outbox (id, idempotency_key, dispatch_kind, status, run_id, intent_proof_id, contract_id, team_id, work_item_id, source_kind, source_channel, payload_kind)
 		VALUES ($1,$2,'confirmed_action_team_plan','completed',$3,$4,$5,$6,$7,'web_api','api.intent.confirm-action','command')`,
-		uuid.NewString(), s.key, s.run, s.proof, s.contract, team, s.workItem)
+		uuid.NewString(), outboxKey, s.run, s.proof, s.contract, team, s.workItem)
 	f16cMustExec(t, db, `INSERT INTO team_work_items (id, team_id, run_id, intent_proof_id, contract_id, objective, execution_shape, state)
 		VALUES ($1,$2,$3,$4,$5,'write the approved note','delegated_work','queued')`, s.workItem, team, s.run, s.proof, s.contract)
 	t.Cleanup(func() {

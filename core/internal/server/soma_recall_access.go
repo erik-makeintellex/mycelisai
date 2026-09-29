@@ -58,10 +58,9 @@ func (s *AdminServer) recallTurnMsg(ctx context.Context, subject string, payload
 // confirming user. The async dispatch path has no request identity, so its
 // memory tools read org-wide only and promote is refused.
 func (s *AdminServer) withConfirmedRecallAccess(ctx context.Context) context.Context {
-	inv, ok := swarm.ToolInvocationContextFromContext(ctx)
-	if !ok {
+	if _, ok := swarm.ToolInvocationContextFromContext(ctx); !ok {
 		return ctx
 	}
-	inv.Recall = s.recallAccessFor(ctx)
-	return swarm.WithToolInvocationContext(ctx, inv)
+	// WithRecallAccess keeps the confirmed-dispatch marker (TPD).
+	return swarm.WithRecallAccess(ctx, s.recallAccessFor(ctx))
 }

@@ -42,10 +42,11 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 	t.Cleanup(func() { db.Close() })
 	ctx := context.Background()
 	proofID, runID, contractID, workItem := uuid.NewString(), uuid.NewString(), uuid.NewString(), uuid.NewString()
+	callKey := ConfirmedCallDeliveryKey("confirm-action:"+proofID, workItem) // TPD
 	scope, _ := json.Marshal(map[string]any{"planned_tool_calls": []map[string]any{{
 		"name": "delegate_task",
 		"arguments": map[string]any{"team_id": "prime-development", "context": map[string]any{
-			"team_id": "prime-development", "work_item_id": workItem, "intent_proof_id": proofID, "run_id": runID, "contract_id": contractID,
+			"team_id": "prime-development", "work_item_id": workItem, "intent_proof_id": proofID, "run_id": runID, "contract_id": contractID, "idempotency_key": callKey,
 		}},
 	}}})
 	for _, stmt := range []struct {
@@ -69,7 +70,7 @@ func TestF16bVerifyExecutionClaimRealDB(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM mission_runs WHERE id = $1`, runID)
 		_, _ = db.Exec(`DELETE FROM intent_proofs WHERE id = $1`, proofID)
 	})
-	good := ExecutionClaim{IntentProofID: proofID, ContractID: contractID, RunID: runID, WorkItemID: workItem, TeamID: "prime-development", IdempotencyKey: "confirm-action:" + proofID}
+	good := ExecutionClaim{IntentProofID: proofID, ContractID: contractID, RunID: runID, WorkItemID: workItem, TeamID: "prime-development", IdempotencyKey: callKey}
 	if err := VerifyExecutionClaim(ctx, db, good); err != nil {
 		t.Fatalf("confirmed dispatched proof rejected: %v", err)
 	}

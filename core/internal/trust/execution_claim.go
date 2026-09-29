@@ -19,9 +19,19 @@ type ExecutionClaim struct {
 	RunID         string
 	WorkItemID    string
 	TeamID        string
-	// IdempotencyKey must equal the dispatch outbox row's key (F16c), which
-	// the team's durable command receipt accepts once.
+	// IdempotencyKey must equal the delivery key of this planned call:
+	// ConfirmedCallDeliveryKey(outbox key, WorkItemID) (TPD). The team's
+	// durable command receipt accepts it once.
 	IdempotencyKey string
+}
+
+// ConfirmedCallDeliveryKey is the delivery key of one planned call in a
+// confirmed plan (TPD): the plan's dispatch outbox key (confirm-action:<proof>)
+// bound to the call's work item. One plan may delegate several calls to one
+// team, so a plan-wide key would let the team's receipt accept only the first.
+// verifyExecutionClaimSQL derives the same value in SQL.
+func ConfirmedCallDeliveryKey(outboxKey, workItemID string) string {
+	return strings.TrimSpace(outboxKey) + ":" + strings.TrimSpace(workItemID)
 }
 
 // ErrExecutionClaimRejected means the claim does not name a confirmed,
@@ -44,8 +54,10 @@ type QueryRower interface {
 // degraded, failed and cancelled are terminal); the outbox row was released
 // for dispatch and not dead-lettered (pending, executing or completed;
 // staged, awaiting_handler and failed are not); and the claim's
-// idempotency_key is the outbox row's key, which the team's durable command
-// receipt accepts once.
+// idempotency_key is exactly this planned call's delivery key (TPD: the outbox
+// key, ':', the claimed work item; see ConfirmedCallDeliveryKey), which the
+// planned call itself also carries and the team's durable command receipt
+// accepts once. The plan-wide outbox key or another call's key never matches.
 //
 // intent_proofs.expires_at is deliberately NOT checked: it is the confirm-token
 // TTL (15 minutes from proposal creation) and governs only whether a proposal
@@ -66,7 +78,7 @@ SELECT EXISTS (
 	  AND r.status IN ('pending', 'running') -- runs.StatusPending, runs.StatusRunning
 	  AND o.dispatch_kind = 'confirmed_action_team_plan' -- server.confirmedActionDispatchKind
 	  AND o.status IN ('pending', 'executing', 'completed') -- dispatchoutbox.Status*
-	  AND o.idempotency_key = $6
+	  AND $6::text = o.idempotency_key || ':' || $5::text -- trust.ConfirmedCallDeliveryKey
 	  AND o.contract_id = ec.id
 	  AND o.run_id = ec.run_id::text
 	  AND EXISTS (
@@ -74,7 +86,8 @@ SELECT EXISTS (
 		FROM jsonb_array_elements(COALESCE(ip.scope_validation->'planned_tool_calls', '[]'::jsonb)) AS planned
 		WHERE planned->'arguments'->'context'->>'team_id' = $4
 		  AND planned->'arguments'->'context'->>'intent_proof_id' = ip.id::text
-		  AND planned->'arguments'->'context'->>'work_item_id' = $5
+		  AND planned->'arguments'->'context'->>'work_item_id' = $5::text
+		  AND planned->'arguments'->'context'->>'idempotency_key' = $6::text
 	  )
 )`
 

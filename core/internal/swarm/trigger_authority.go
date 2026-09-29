@@ -16,10 +16,6 @@ import (
 // Only Core's confirmed dispatch may set them (F16, F16b, F16c).
 var triggerAuthorityKeys = []string{"run_id", "contract_id", "intent_proof_id", "work_item_id", "idempotency_key"}
 
-// confirmedDispatchSourceChannel is the tool source channel Core sets only in
-// server.confirmedActionToolContext, when it executes an approved plan.
-const confirmedDispatchSourceChannel = "api.intent.confirm-action"
-
 // isTriggerAuthorityKey matches a triggerAuthorityKeys entry in any case and
 // with or without separators (run_id, RUN_ID, runId, run-id, "run id").
 func isTriggerAuthorityKey(key string) bool {
@@ -85,9 +81,12 @@ func delegateAskAuthority(ctx context.Context, ask protocol.TeamAsk) protocol.Te
 	return ask
 }
 
+// confirmedDispatchInvocation recognizes Core's confirmed dispatch by the
+// Core-only marker (WithConfirmedDispatchToolContext, TPD), never by the
+// source-channel string, which any caller could copy.
 func confirmedDispatchInvocation(ctx context.Context, askContext map[string]any) bool {
 	inv, ok := ToolInvocationContextFromContext(ctx)
-	if !ok || inv.PlanningOnly || inv.SourceKind != protocol.SourceKindWebAPI || inv.SourceChannel != confirmedDispatchSourceChannel {
+	if !ok || !inv.confirmedDispatch || inv.PlanningOnly || inv.SourceKind != protocol.SourceKindWebAPI {
 		return false
 	}
 	runID := strings.TrimSpace(inv.RunID)
