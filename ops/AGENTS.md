@@ -12,6 +12,7 @@
 - Task runner contract (root `AGENTS.md` "Task Runner Contract"): `uv run inv ...` only, no new Invoke aliases, keep the registered task surface within the budget pinned in `tests/test_tasks_root.py` (`test_root_task_surface_stays_within_operator_budget`; lower it whenever tasks are removed). **Get the live count and names from `uv run inv -l` (or `uvx --from invoke inv -l` as a compatibility probe only) rather than from this file or any other document.** Windows is only a host (Ollama); every task runs from the WSL `dev` checkout, and no task drives a second checkout or publishes raw to `swarm.*` subjects.
 - Committed config (`.env.compose`, Compose/Helm values) uses secret references only; `.env` remains the sole secret store and is never printed or committed.
 - Destructive proof only through `lifecycle.first-boot-proof --isolated`; never delete retained volumes, data-plane state, or external containers (vLLM, Open WebUI, NATS, PostgreSQL data plane) from a slice.
+- Live proof (`compose.health`, `test.probe`) must run on current app images: `ops/compose_images.py` fails on a core/interface container whose image id differs from its tag; `test.probe --allow-stale` is the only override.
 
 ## Gates
 - Python tests for this area live under `tests/` (see [`tests/AGENTS.md`](../tests/AGENTS.md)); run the specific file(s) covering the task you changed, for example `uv run pytest -q tests/test_compose_tasks.py` — get the exact file name from `tests/` rather than assuming.

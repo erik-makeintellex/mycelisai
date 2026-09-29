@@ -1,6 +1,6 @@
 from invoke import task, Collection
 from .config import CORE_DIR, is_windows
-from . import interface
+from . import compose_images, interface
 
 
 @task
@@ -21,14 +21,17 @@ def coverage(c):
     print("Coverage reports generated.")
 
 
-@task
-def probe(c):
+@task(help={"allow_stale": "Run even if core/interface containers run a stale image (proof then tests old code)."})
+def probe(c, allow_stale=False):
     """
     Run the live user-journey delivery probe (ops/live_journey_probe.py) against a running stack.
     Use after `lifecycle.up`/`compose.up` to check real outcomes (ask, deliverable, memory
     recall, sensors, search), not just health status; it is the delivery metric in
     .state/V8_DEV_STATE.md. Requires MYCELIS_API_KEY in .env and a reachable Core on :8081.
+    Refuses (non-zero) when the Compose core/interface containers run a stale image; pass
+    --allow-stale to override.
     """
+    compose_images.require_current("test.probe", allow_stale=allow_stale)
     c.run("uv run python ops/live_journey_probe.py", pty=not is_windows())
 
 
