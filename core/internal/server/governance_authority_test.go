@@ -10,14 +10,11 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/governance"
-	"github.com/nats-io/nats.go"
 )
 
 func standardUserIdentity() *RequestIdentity {
@@ -40,16 +37,9 @@ func governanceRoutes() []governanceRoute {
 	mux := func(pattern string, h func(s *AdminServer) http.HandlerFunc) func(s *AdminServer) http.Handler {
 		return func(s *AdminServer) http.Handler { m := http.NewServeMux(); m.HandleFunc(pattern, h(s)); return m }
 	}
-	direct := func(h func(s *AdminServer) http.HandlerFunc) func(s *AdminServer) http.Handler {
-		return func(s *AdminServer) http.Handler { return h(s) }
-	}
 	return []governanceRoute{
 		{"get-policy", "GET", "/api/v1/governance/policy", "", scopeGovernanceRead, mux("GET /api/v1/governance/policy", func(s *AdminServer) http.HandlerFunc { return s.handleGetPolicy })},
-		{"get-pending", "GET", "/api/v1/governance/pending", "", scopeGovernanceRead, mux("GET /api/v1/governance/pending", func(s *AdminServer) http.HandlerFunc { return s.handleGetPendingApprovals })},
-		{"admin-approvals", "GET", "/admin/approvals", "", scopeGovernanceRead, direct(func(s *AdminServer) http.HandlerFunc { return s.handleApprovals })},
 		{"put-policy", "PUT", "/api/v1/governance/policy", `{"groups":[],"defaults":{"default_action":"DENY"}}`, scopeGovernanceWrite, mux("PUT /api/v1/governance/policy", func(s *AdminServer) http.HandlerFunc { return s.handleUpdatePolicy })},
-		{"resolve", "POST", "/api/v1/governance/resolve/req-1", `{"action":"APPROVE"}`, scopeApprovalsDecide, mux(resolvePattern, func(s *AdminServer) http.HandlerFunc { return s.handleResolveApproval })},
-		{"admin-approval-action", "POST", "/admin/approvals/req-1", `{"action":"APPROVE"}`, scopeApprovalsDecide, direct(func(s *AdminServer) http.HandlerFunc { return s.handleApprovalAction })},
 	}
 }
 
@@ -70,8 +60,6 @@ func TestGovernanceAuthorityMatrixDenials(t *testing.T) {
 		switch route.scope {
 		case scopeGovernanceWrite:
 			cases["admin-read-only"] = adminWithScopes(scopeGovernanceRead)
-		case scopeApprovalsDecide:
-			cases["admin-read-write"] = adminWithScopes(scopeGovernanceRead, scopeGovernanceWrite)
 		case scopeGovernanceRead:
 			cases["admin-approvals-only"] = adminWithScopes(scopeApprovalsDecide)
 		}
@@ -79,7 +67,6 @@ func TestGovernanceAuthorityMatrixDenials(t *testing.T) {
 			t.Run(route.name+"/"+name, func(t *testing.T) {
 				dbOpt, mock := withDB(t) // no expectations: any audit insert fails the test
 				s := newTestServer(withGuard(defaultTestPolicyConfig()), dbOpt)
-				seedPending(s, "req-1")
 				before := s.Guard.GetPolicyConfig()
 				var rr *httptest.ResponseRecorder
 				if identity == nil {
@@ -93,14 +80,11 @@ func TestGovernanceAuthorityMatrixDenials(t *testing.T) {
 				}
 				assertStatus(t, rr, want)
 				body := rr.Body.String()
-				if denialLeaksData(body) || strings.Contains(body, "req-1") || strings.Contains(body, "test-group") {
+				if denialLeaksData(body) || strings.Contains(body, "test-group") {
 					t.Fatalf("denial leaked data: %s", body)
 				}
 				if s.Guard.GetPolicyConfig() != before {
 					t.Fatal("denial changed the live policy")
-				}
-				if _, ok := s.Guard.PendingRequest("req-1"); !ok {
-					t.Fatal("denial resolved the pending approval")
 				}
 				if got, _ := os.ReadFile(defaultPolicyPath); !bytes.Equal(got, original) {
 					t.Fatal("denial wrote the policy file")
@@ -117,12 +101,6 @@ func TestGovernanceAuthorityScopedAdminAllowed(t *testing.T) {
 	s := newTestServer(withGuard(defaultTestPolicyConfig()))
 	rr := doAuthenticatedRequestAs(t, http.HandlerFunc(s.handleGetPolicy), "GET", "/api/v1/governance/policy", "", adminWithScopes(scopeGovernanceRead))
 	assertStatus(t, rr, http.StatusOK)
-
-	s2, mock := approvalServer(t)
-	expectAudits(mock, 2)
-	seedPending(s2, "req-9")
-	rr = doAuthenticatedRequestAs(t, setupMux(t, resolvePattern, s2.handleResolveApproval), "POST", "/api/v1/governance/resolve/req-9", `{"action":"APPROVE"}`, adminWithScopes("approvals:*"))
-	assertStatus(t, rr, http.StatusOK)
 }
 
 func TestGovernanceAuthorityRejectsForgedWebIdentity(t *testing.T) {
@@ -131,16 +109,12 @@ func TestGovernanceAuthorityRejectsForgedWebIdentity(t *testing.T) {
 	payload := encodeForwardedWebIdentityForTest(t, forwardedWebIdentityPayload{Sub: "attacker", Email: "attacker@example.com", Role: "admin", Provider: "google", IAT: time.Now().Unix()})
 	for _, route := range governanceRoutes() {
 		s := newTestServer(withGuard(defaultTestPolicyConfig()))
-		seedPending(s, "req-1")
 		req, _ := http.NewRequest(route.method, route.path, strings.NewReader(route.body))
 		req.Header.Set("Authorization", "Bearer test-key")
 		req.Header.Set(forwardedWebIdentityHeader, payload) // unsigned
 		rr := httptest.NewRecorder()
 		AuthMiddleware("test-key", route.handler(s)).ServeHTTP(rr, req)
 		assertStatus(t, rr, http.StatusUnauthorized)
-		if _, ok := s.Guard.PendingRequest("req-1"); !ok {
-			t.Fatalf("%s: forged identity resolved an approval", route.name)
-		}
 	}
 }
 
@@ -291,84 +265,4 @@ func TestDegradedPolicyRecoversAfterValidPut(t *testing.T) {
 		t.Fatal("valid PUT must restore online governance")
 	}
 	assertStatus(t, doAuthenticatedRequest(t, http.HandlerFunc(s.handleGetPolicy), "GET", "/api/v1/governance/policy", ""), http.StatusOK)
-}
-
-// ── Approval decisions ─────────────────────────────────────────────
-
-func TestResolveApprovalConcurrentDoubleApprove(t *testing.T) {
-	s, mock := approvalServer(t)
-	mock.MatchExpectationsInOrder(false)
-	expectAudits(mock, 4)
-	seedPending(s, "req-dup")
-	var published int64
-	sub, err := s.NC.Subscribe("swarm.team.team-1.agent.agent-1.output", func(*nats.Msg) { atomic.AddInt64(&published, 1) })
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sub.Unsubscribe()
-	s.NC.Flush()
-
-	mux := setupMux(t, resolvePattern, s.handleResolveApproval)
-	codes := make([]int, 2)
-	var wg sync.WaitGroup
-	for i := range codes {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			codes[i] = doAuthenticatedRequest(t, mux, "POST", "/api/v1/governance/resolve/req-dup", `{"action":"APPROVE"}`).Code
-		}(i)
-	}
-	wg.Wait()
-	s.NC.Flush()
-	time.Sleep(100 * time.Millisecond)
-	if !(codes[0] == 200 && codes[1] == 404 || codes[0] == 404 && codes[1] == 200) {
-		t.Fatalf("expected exactly one 200 and one 404, got %v", codes)
-	}
-	if got := atomic.LoadInt64(&published); got != 1 {
-		t.Fatalf("expected exactly one re-publish, got %d", got)
-	}
-}
-
-func TestAdminApprovalActionRejectsUnknownDecision(t *testing.T) {
-	s := newTestServer(withGuard(defaultTestPolicyConfig()))
-	seedPending(s, "req-1")
-	for _, body := range []string{`{"action":"DENY"}`, `{"action":""}`, `{"action":"approve"}`, `{}`} {
-		rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleApprovalAction), "POST", "/admin/approvals/req-1", body)
-		assertStatus(t, rr, http.StatusBadRequest)
-	}
-	if _, ok := s.Guard.PendingRequest("req-1"); !ok {
-		t.Fatal("unknown decisions must leave the request pending")
-	}
-}
-
-func TestApprovalRoutesNilGuardOrRouterReturn503(t *testing.T) {
-	for name, s := range map[string]*AdminServer{
-		"nil-guard":  newTestServer(),
-		"nil-router": newTestServer(withGuard(defaultTestPolicyConfig())),
-	} {
-		if s.Guard != nil {
-			seedPending(s, "req-1")
-		}
-		rr := doAuthenticatedRequest(t, setupMux(t, resolvePattern, s.handleResolveApproval), "POST", "/api/v1/governance/resolve/req-1", `{"action":"APPROVE"}`)
-		assertStatus(t, rr, http.StatusServiceUnavailable)
-		// admin.go used to dereference a nil Guard here and panic.
-		rr = doAuthenticatedRequest(t, http.HandlerFunc(s.handleApprovalAction), "POST", "/admin/approvals/req-1", `{"action":"APPROVE"}`)
-		assertStatus(t, rr, http.StatusServiceUnavailable)
-		if s.Guard != nil {
-			if _, ok := s.Guard.PendingRequest("req-1"); !ok {
-				t.Fatalf("%s: 503 must leave the request pending", name)
-			}
-		}
-	}
-}
-
-func TestResolveApprovalAuditFailureKeepsPending(t *testing.T) {
-	s, mock := approvalServer(t)
-	mock.ExpectExec("INSERT INTO log_entries").WillReturnError(errors.New("audit down"))
-	seedPending(s, "req-1")
-	rr := doAuthenticatedRequest(t, http.HandlerFunc(s.handleApprovalAction), "POST", "/admin/approvals/req-1", `{"action":"APPROVE"}`)
-	assertStatus(t, rr, http.StatusServiceUnavailable)
-	if _, ok := s.Guard.PendingRequest("req-1"); !ok {
-		t.Fatal("audit failure must leave the request pending")
-	}
 }

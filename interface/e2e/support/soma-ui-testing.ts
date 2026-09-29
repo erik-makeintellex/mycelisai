@@ -262,8 +262,9 @@ export async function mockOrganizationWorkspace(
 export async function mockApprovalsAudit(page: Page) {
     await mockOperatorShell(page);
 
-    await page.route("**/api/v1/governance/pending", async (route) => {
-        await fulfillJSON(route, 200, []);
+    // Approvals opens on Proposals, the durable approval path (C2-RETIRE).
+    await page.route("**/api/v1/proposals", async (route) => {
+        await fulfillJSON(route, 200, { proposals: [] });
     });
 
     await page.route(/\/api\/v1\/audit(?:\?.*)?$/, async (route) => {

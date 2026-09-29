@@ -26,13 +26,10 @@ func TestDegradedGuardFailsClosed(t *testing.T) {
 		t.Fatalf("expected degraded guard with fixed code, got degraded=%v code=%q", g.Degraded(), g.LoadError())
 	}
 	for _, intent := range []string{"", "task.completed", "agent.heartbeat", "system.shutdown"} {
-		proceed, action, reqID := g.Intercept(eventEnvelope("alpha", "agent-1", intent))
-		if proceed || action != ActionDeny || reqID != "" {
-			t.Fatalf("degraded Intercept(%q) = %v %q %q, want DENY", intent, proceed, action, reqID)
+		proceed, action := g.Intercept(eventEnvelope("alpha", "agent-1", intent))
+		if proceed || action != ActionDeny {
+			t.Fatalf("degraded Intercept(%q) = %v %q, want DENY", intent, proceed, action)
 		}
-	}
-	if len(g.ListPending()) != 0 {
-		t.Fatal("degraded guard must not park approval requests")
 	}
 	if required, _ := g.PostureRequiresApproval("delivery-posture-lean", nil, nil); !required {
 		t.Fatal("degraded guard must require approval for posture work")
@@ -64,7 +61,7 @@ func TestUpdatePolicyConfigClearsDegraded(t *testing.T) {
 	if g.Degraded() || g.LoadError() != "" {
 		t.Fatal("valid policy must clear degraded state")
 	}
-	if proceed, action, _ := g.Intercept(eventEnvelope("alpha", "a", "task.completed")); !proceed || action != ActionAllow {
+	if proceed, action := g.Intercept(eventEnvelope("alpha", "a", "task.completed")); !proceed || action != ActionAllow {
 		t.Fatalf("recovered guard should allow by policy, got %v %q", proceed, action)
 	}
 }
@@ -155,7 +152,7 @@ func TestValidatePolicyConfigRejectsFailOpenPolicies(t *testing.T) {
 func TestInterceptDeniesUnknownAction(t *testing.T) {
 	g := NewDegradedGuard(errors.New("start"))
 	g.UpdatePolicyConfig(&PolicyConfig{Defaults: DefaultConfig{DefaultAction: "DENNY"}}) // bypasses validation on purpose
-	if proceed, action, _ := g.Intercept(eventEnvelope("alpha", "a", "x")); proceed || action != ActionDeny {
+	if proceed, action := g.Intercept(eventEnvelope("alpha", "a", "x")); proceed || action != ActionDeny {
 		t.Fatalf("unknown action must fail closed, got %v %q", proceed, action)
 	}
 }

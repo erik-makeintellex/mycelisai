@@ -116,11 +116,12 @@ Release review should treat governance as:
 not only as a raw allow/deny/intercept subsystem.
 
 Governance authority (A2a):
-- reading the policy or pending Guard approvals requires a root admin with `governance:read`; replacing the policy requires `governance:write`; approving or rejecting a Guard-parked message requires `approvals:decide` (an admin `*` covers all). Anonymous callers get 401 and other principals 403. See the Governance Policy rows in `docs/API_REFERENCE.md`
-- policy replacement and approval decisions are audit-first (`governance_policy_update`, `governance_approval_resolved`); if the audit row cannot be written, nothing changes
+- reading the policy requires a root admin with `governance:read`; replacing the policy requires `governance:write` (an admin `*` covers all). Anonymous callers get 401 and other principals 403. See the Governance Policy rows in `docs/API_REFERENCE.md`
+- policy replacement is audit-first (`governance_policy_update`); if the audit row cannot be written, nothing changes
 - every policy action must be exactly `ALLOW`, `DENY`, or `REQUIRE_APPROVAL`, and an `ALLOW` default needs at least one restricting rule; an empty, typo'd, or allow-only policy is invalid (PUT returns 400)
 - if `core/config/policy.yaml` is missing or invalid (including empty), Core still starts but governance is degraded and fails closed: the Gatekeeper denies everything except heartbeats, posture-shaped work requires approval, and `/api/v1/services/status` shows `governance: degraded`. Fix the file and restart Core, or PUT a valid policy as an admin to recover without a restart
-- the Gatekeeper observes the NATS bus: a DENY stops Core from reacting (registry, audit trace, approval request), not delivery to direct subscribers
+- the Gatekeeper observes the NATS bus: a DENY stops Core from reacting (registry, audit trace), not delivery to direct subscribers
+- a bus event that matches a `REQUIRE_APPROVAL` rule is not queued: Core does not act on it and writes one `policy_approval_required_observed` audit record (or logs `audit_unavailable`). There is no approval queue to resolve; governed work is approved through proposals and confirm-action (C2-RETIRE)
 - a policy PUT persists to the policy file inside the running Core; a redeploy restores the shipped policy
 - confirming a tier-2 proposal (see Approval Model) requires a root admin with `approvals:decide`; anyone else sees a "needs admin approval" blocker, nothing runs, and the proposal stays confirmable by an admin. Tier 0/1 chat and blueprint proposals are confirmable only by their proposer or an approver, and a tier-2 blueprint commit needs an approver too (A2b)
 - confirm tokens are single-use and durably purpose-bound (A2b: `purpose`, `binding_digest`, `minted_by` recorded at mint): a token only works on the path it was issued for (chat proposal, blueprint commit, one group operation, or an invocation), a blueprint commit must send exactly the negotiated blueprint, and a wrong-path, edited, or other-principal attempt is rejected without using the token up. Tokens minted before A2b are refused; propose again

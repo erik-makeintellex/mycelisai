@@ -7,21 +7,21 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	pb "github.com/mycelis/core/pkg/pb/swarm"
 	"github.com/mycelis/core/pkg/protocol"
 	"google.golang.org/protobuf/types/known/structpb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Guard intercepts and manages approvals. Engine.Config is swapped only under
-// mu; readers take a snapshot under mu.RLock. A nil Config means degraded.
+// Guard evaluates bus envelopes against the loaded policy. It holds no
+// approval state: REQUIRE_APPROVAL only means "do not proceed" (C2-RETIRE);
+// real approval is the durable confirm-action/proposal path. Engine.Config is
+// swapped only under mu; readers take a snapshot under mu.RLock. A nil Config
+// means degraded.
 type Guard struct {
-	Engine        *Engine
-	PendingBuffer map[string]*pb.ApprovalRequest
-	mu            sync.RWMutex
-	applyMu       sync.Mutex // serializes ReplacePolicy (persist + swap)
+	Engine  *Engine
+	mu      sync.RWMutex
+	applyMu sync.Mutex // serializes ReplacePolicy (persist + swap)
 	// ingressProviders are extra global-input provider tokens admitted by
 	// ValidateIngress (F16); guarded by mu.
 	ingressProviders map[string]struct{}
@@ -33,14 +33,13 @@ func NewGuard(policyPath string) (*Guard, error) {
 		return nil, err
 	}
 
-	return &Guard{
-		Engine:        engine,
-		PendingBuffer: make(map[string]*pb.ApprovalRequest),
-	}, nil
+	return &Guard{Engine: engine}, nil
 }
 
-// Intercept evaluates a message and returns (proceed bool, action string, requestID string)
-func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
+// Intercept evaluates a message and returns (proceed, action). Only ALLOW
+// proceeds; DENY, REQUIRE_APPROVAL and unknown actions do not, and nothing is
+// parked for later release.
+func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string) {
 	// Extract Context
 	ctx := make(map[string]interface{})
 	if msg.SwarmContext != nil {
@@ -77,28 +76,24 @@ func (g *Guard) Intercept(msg *pb.MsgEnvelope) (bool, string, string) {
 	cfg := g.policySnapshot()
 	if cfg == nil {
 		// Degraded: no loaded policy is authority, so nothing is allowed.
-		return false, ActionDeny, ""
+		return false, ActionDeny
 	}
 	action := (&Engine{Config: cfg}).Evaluate(msg.TeamId, msg.SourceAgentId, intent, ctx)
 
-	if action == ActionAllow {
-		return true, action, ""
-	}
-
-	if action == ActionDeny {
+	switch action {
+	case ActionAllow:
+		return true, action
+	case ActionDeny:
 		log.Printf("DENY: Guard blocked: %s from %s", intent, msg.SourceAgentId)
-		return false, action, ""
+		return false, action
+	case ActionRequireApproval:
+		// Not proceeding is the whole effect; the caller records the
+		// observation. Nothing is parked, so nothing can be released later.
+		return false, action
 	}
-
-	if action == ActionRequireApproval {
-		reqID := g.createApprovalRequest(msg, "Policy Triggered")
-		log.Printf("HALT: Guard paused: %s. Request ID: %s", intent, reqID)
-		return false, action, reqID
-	}
-
 	// Unknown action (validation should make this unreachable): fail closed.
 	log.Printf("DENY: Guard saw unknown policy action %q for %s", action, intent)
-	return false, ActionDeny, ""
+	return false, ActionDeny
 }
 
 // policySnapshot returns the live policy pointer under the read lock. Policy
@@ -114,64 +109,6 @@ func (g *Guard) policySnapshot() *PolicyConfig {
 		return nil
 	}
 	return g.Engine.Config
-}
-
-func (g *Guard) createApprovalRequest(msg *pb.MsgEnvelope, reason string) string {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	reqID := fmt.Sprintf("req-%d", time.Now().UnixNano())
-
-	req := &pb.ApprovalRequest{
-		RequestId:       reqID,
-		OriginalMessage: msg,
-		Reason:          reason,
-		ExpiresAt:       timestamppb.New(time.Now().Add(1 * time.Hour)),
-	}
-
-	g.PendingBuffer[reqID] = req
-	return reqID
-}
-
-// ListPending returns a snapshot of all pending requests
-func (g *Guard) ListPending() []*pb.ApprovalRequest {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	list := make([]*pb.ApprovalRequest, 0, len(g.PendingBuffer))
-	for _, req := range g.PendingBuffer {
-		list = append(list, req)
-	}
-	return list
-}
-
-// PendingRequest returns one pending request without resolving it.
-func (g *Guard) PendingRequest(reqID string) (*pb.ApprovalRequest, bool) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	req, ok := g.PendingBuffer[reqID]
-	return req, ok
-}
-
-// Resolve manually approves or denies a request
-func (g *Guard) Resolve(reqID string, approved bool, user string) (*pb.MsgEnvelope, error) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	req, exists := g.PendingBuffer[reqID]
-	if !exists {
-		return nil, fmt.Errorf("request %s not found", reqID)
-	}
-
-	delete(g.PendingBuffer, reqID)
-
-	if approved {
-		log.Printf("APPROVED: Request %s MANUALLY APPROVED by %s", reqID, user)
-		return req.OriginalMessage, nil
-	}
-
-	log.Printf("DENIED: Request %s MANUALLY DENIED by %s", reqID, user)
-	return nil, nil // Nil message means nothing to forward
 }
 
 // MaxIngressBytes caps one global-input message.

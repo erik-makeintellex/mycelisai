@@ -63,11 +63,12 @@ func startTestNATS(t *testing.T) *nats.Conn {
 	return nc
 }
 
-// reactions counts Core reactions: audit traces and approval requests.
+// reactions counts everything Core publishes on the product bus (C2-RETIRE:
+// only the audit trace remains; REQUIRE_APPROVAL publishes nothing).
 func reactions(t *testing.T, nc *nats.Conn) func() int64 {
 	t.Helper()
 	var n int64
-	for _, subject := range []string{protocol.TopicAuditTrace, "swarm.governance.needed"} {
+	for _, subject := range []string{protocol.TopicSwarmWild} {
 		if _, err := nc.Subscribe(subject, func(*nats.Msg) { atomic.AddInt64(&n, 1) }); err != nil {
 			t.Fatal(err)
 		}
@@ -141,10 +142,15 @@ func TestRouterReactsWithLoadedPolicy(t *testing.T) {
 		Defaults: governance.DefaultConfig{DefaultAction: governance.ActionAllow},
 	})
 	r := NewRouter(nc, guard)
+	var observed int64
+	r.SetApprovalAuditor(func(ApprovalObservation) (string, error) { atomic.AddInt64(&observed, 1); return "audit-1", nil })
 	deliver(t, r, "swarm.team.alpha.signal.result", "w", "task.completed")
 	deliver(t, r, "swarm.team.alpha.signal.result", "w", "k8s.delete.cluster")
-	if got := count(); got != 2 {
-		t.Fatalf("expected one audit trace and one approval request after recovery, got %d", got)
+	if got := count(); got != 1 {
+		t.Fatalf("expected only the audit trace for the allowed event after recovery, got %d", got)
+	}
+	if got := atomic.LoadInt64(&observed); got != 1 {
+		t.Fatalf("expected one approval observation audit, got %d", got)
 	}
 }
 

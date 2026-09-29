@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/mycelis/core/internal/artifacts"
 	"github.com/mycelis/core/internal/capabilities"
@@ -104,7 +103,7 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		mcpToolExecutor = mcp.NewToolExecutorAdapter(mcpSvc, mcpPool)
 	}
 
-	return &AdminServer{
+	s := &AdminServer{
 		Router:              r,
 		Guard:               guard,
 		Mem:                 mem,
@@ -141,47 +140,8 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		WorkerAuthority:     workerauthority.NewStore(db),
 		OutputValidator:     configuredOutputValidator(),
 	}
-}
-
-// GET /admin/approvals
-func (s *AdminServer) handleApprovals(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if _, ok := requireRootAdminScope(w, r, scopeGovernanceRead); !ok {
-		return
-	}
-	if s.Guard == nil {
-		http.Error(w, "Governance disabled", http.StatusNotImplemented)
-		return
-	}
-
-	pending := s.Guard.ListPending()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pending)
-}
-
-// POST /admin/approvals/{id} (legacy alias; root admin, approvals:decide)
-func (s *AdminServer) handleApprovalAction(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if _, ok := requireApprover(w, r); !ok {
-		return
-	}
-	id := strings.TrimPrefix(r.URL.Path, "/admin/approvals/")
-	if id == "" || id == r.URL.Path {
-		respondAPIError(w, "missing approval request ID", http.StatusBadRequest)
-		return
-	}
-	action, ok := decodeApprovalDecision(w, r)
-	if !ok {
-		return
-	}
-	s.resolveGuardApproval(w, r, id, action, "/admin/approvals")
+	s.wireRouterApprovalAudit()
+	return s
 }
 
 // GET /agents

@@ -1,9 +1,9 @@
 package router
 
 import (
-	"fmt"
 	"log"
 	"strings"
+	"sync/atomic"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/protobuf/proto"
@@ -14,10 +14,18 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
-// Router handles the distribution of messages from NATS to Agents
+// auditSubjectPrefix is the audit subject family (swarm.audit.*) the Router
+// never reacts to, derived from the protocol constant so it cannot drift.
+var auditSubjectPrefix = strings.TrimSuffix(protocol.TopicAuditTrace, "trace")
+
+// Router observes the product bus for Core: it runs the governance Guard,
+// refreshes the agent registry from heartbeats and emits the audit trace. It
+// only observes: NATS has already delivered every message to its direct
+// subscribers, so the Router can neither hold nor release one.
 type Router struct {
-	nc    *nats.Conn
-	guard *governance.Guard
+	nc      *nats.Conn
+	guard   *governance.Guard
+	auditor atomic.Pointer[ApprovalAuditor]
 }
 
 // NewRouter creates a new router instance
@@ -30,25 +38,24 @@ func NewRouter(nc *nats.Conn, guard *governance.Guard) *Router {
 
 // Start listens on the swarm network
 func (r *Router) Start() error {
-	log.Println("Router Listening on swarm.>")
+	log.Printf("Router listening on %s", protocol.TopicSwarmWild)
 	_, err := r.nc.Subscribe(protocol.TopicSwarmWild, r.handleMessage)
 	return err
 }
 
 func (r *Router) handleMessage(msg *nats.Msg) {
-	// 1. Loop Prevention & System Topics
-	if strings.HasPrefix(msg.Subject, "swarm.audit.") {
+	// 1. Loop prevention: never react to the audit family.
+	if strings.HasPrefix(msg.Subject, auditSubjectPrefix) {
 		return
 	}
 
 	// 2. Unmarshal
 	var envelope pb.MsgEnvelope
 	if err := proto.Unmarshal(msg.Data, &envelope); err != nil {
-		// log.Printf("Failed to unmarshal: %v", err)
 		return
 	}
 
-	// 2. Governance Check. A nil or degraded guard fails closed: Core only
+	// 3. Governance Check. A nil or degraded guard fails closed: Core only
 	// keeps liveness visible (heartbeats update the registry) and reacts to
 	// nothing else. The Router is an observer, so this does not stop NATS
 	// delivery to direct subscribers.
@@ -60,39 +67,28 @@ func (r *Router) handleMessage(msg *nats.Msg) {
 		}
 		return
 	}
-	if allowed, action, reqID := r.guard.Intercept(&envelope); !allowed {
+	if allowed, action := r.guard.Intercept(&envelope); !allowed {
+		// C2-RETIRE: REQUIRE_APPROVAL is recorded as an observation and Core
+		// does not react. Nothing is parked, published or replayed.
 		if action == governance.ActionRequireApproval {
-			log.Printf("📢 Published Approval Request %s", reqID)
-			// Publish the RequestID so the UI can fetch details.
-			r.nc.Publish("swarm.governance.needed", []byte(reqID))
+			r.observeApprovalRequired(msg.Subject, &envelope)
 		}
-		// Stop processing this message (Drop or Park)
 		return
 	}
 
-	// 3. Heartbeat / Registry Update
+	// 4. Heartbeat / Registry Update
 	r.updateRegistry(&envelope, msg.Subject)
 	if isHeartbeatEnvelope(msg.Subject, &envelope) {
 		return
 	}
 
-	// 4. Audit Trace (Enforcement)
-	// We emit a lightweight trace of this event
-	// Topic: swarm.audit.trace
-	// Payload: Original Envelope or a Summary?
-	// Phase 2 Spec says "Enforce swarm.audit.trace".
-	// Let's assume we re-publish the envelope to this topic for the Archivist to pick up.
-	// Since we filtered "swarm.audit." above, this won't loop.
+	// 5. Audit trace: re-publish the envelope for the Archivist. The audit
+	// family is filtered above, so this cannot loop.
 	go func() {
-		// Asynchronous to not block handling
 		if err := r.nc.Publish(protocol.TopicAuditTrace, msg.Data); err != nil {
 			log.Printf("⚠️ Audit Trace Failed: %v", err)
 		}
 	}()
-
-	// 5. Routing Logic (if any specific P2P logic is needed beyond NATS wildcards)
-	// Currently NATS handles the delivery to subscribers.
-	// This router component acts as the "Sidecar" or "Observer" for the Core.
 }
 
 // isHeartbeatEnvelope is exact (A2b): the canonical global heartbeat subject,
@@ -101,60 +97,6 @@ func isHeartbeatEnvelope(subject string, envelope *pb.MsgEnvelope) bool {
 	return subject == protocol.TopicGlobalHeartbeat && envelope != nil &&
 		envelope.GetEvent() != nil && envelope.GetEvent().EventType == "agent.heartbeat" &&
 		envelope.SourceAgentId != ""
-}
-
-// PublishDirect sends a message directly to NATS, bypassing Gatekeeper
-// Used by Admin API for approved messages
-func (r *Router) PublishDirect(envelope *pb.MsgEnvelope) error {
-	data, err := proto.Marshal(envelope)
-	if err != nil {
-		return err
-	}
-
-	// Topic Reconstruction logic
-	// Standard: swarm.team.{team}.agent.{agent}.output (if from agent)
-	// But here we are REPLAYING a message. It should go to its original destination?
-	// ACTUALLY: The router's job is to route based on recipient.
-	// If it was an "intent" to perform an action, the original topic was the publishing topic.
-	// But NATS is a bus.
-
-	// If the original message was intercepted *before* it hit the bus?
-	// The current Intercept logic in main.go checks messages *coming off the bus*.
-	// This means the message WAS published, but the Router (Core) intercepted it.
-	// Wait, if Core subscribes to "swarm.>", it receives everything.
-	// Gatekeeper returns "false" means "Stop Processing" inside Core.
-	// It does NOT stop other agents from seeing it if they are subscribed directly to NATS!
-
-	// ARCHITECTURAL NOTE:
-	// In the "Absolute Architecture", the Core is the "Brain".
-	// If Agents P2P directly, Core can only audit, not block, unless Agents use Request/Reply via Core.
-	// Current Gatekeeper `Intercept` returning `false` just stops the Core from reacting?
-	// OR does the Router assume it is the *only* path?
-
-	// For this task, we assume the Admin API just wants to put it back on the bus
-	// so the Core (and others) can process it again?
-	// But if we put it back, Gatekeeper will block it again unless we mark it approved!
-
-	// Solution: Add "approved_signature" to SwarmContext before publishing.
-	if envelope.SwarmContext == nil {
-		// Create struct if nil (using simple map for now then ignoring strict struct for MVP)
-		// proto.Struct is complex to init manually here without imports.
-		// Let's assume the Resolve logic or caller handles context injection?
-		// Or just rely on a special "admin" topic or flag.
-
-		// MVP: We assume the Gatekeeper has a "Allow all from Admin" or internal check?
-		// No, let's just publish it. If logic is "Interceptor stops Core from reacting", re-publishing won't help if it's the same MsgID.
-		// New ID?
-		// For MVP: We will simply Log that we are re-publishing.
-	}
-
-	// Re-construct routing key or use generic broadcast?
-	// If it was "swarm.agent.x.output", we usually want it there.
-	subject := fmt.Sprintf("swarm.team.%s.agent.%s.output", envelope.TeamId, envelope.SourceAgentId)
-
-	// PUBLISH
-	log.Printf("🚀 Re-Publishing Approved Message %s to %s", envelope.Id, subject)
-	return r.nc.Publish(subject, data)
 }
 
 func (r *Router) updateRegistry(env *pb.MsgEnvelope, subject string) {

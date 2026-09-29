@@ -22,7 +22,7 @@ Current tabs:
 | Active Automations | Actionable hub for current automation setup, trigger-rule entry, and governance review |
 | Trigger Rules | Event-driven actuation rules |
 | Schedule Rules | Propose-only cadence rules with cooldown, proof expectations, recovery text, and next-run state |
-| Approvals | Governance review queue and policy controls |
+| Approvals | Proposals to review, policy controls, and the audit log |
 | Workflow Builder (Admin tools) | Lower-level workflow structure editing |
 
 ---
@@ -78,7 +78,7 @@ Safety posture:
 
 ## Approvals
 
-Approvals is the governance queue.
+Approvals opens on **Proposals**, where governed work waits for a decision. It also has **Policy** and **Audit** views.
 
 You review:
 - low-trust or governed mutation proposals
@@ -91,7 +91,9 @@ Core actions:
 - reject
 - inspect structured payload details
 
-Load failures are shown, not hidden. If the queue, policy, or Audit tab cannot load (for example a permission error or an unavailable service), the tab shows a plain-language notice with a "Try again" action instead of an empty state such as "No recent audit activity". An empty list means the load succeeded and there was nothing to show. Automation rules follow the same rule in the store; their tab notice ships with the human-first UI work.
+When a team's activity matches a rule that needs approval, Mycelis does not act on it and records it in the Audit view. To get that work done, ask Soma, which prepares a proposal you can approve.
+
+Load failures are shown, not hidden. If the policy or Audit tab cannot load (for example a permission error or an unavailable service), the tab shows a plain-language notice with a "Try again" action instead of an empty state such as "No recent audit activity". An empty list means the load succeeded and there was nothing to show. Automation rules follow the same rule in the store; their tab notice ships with the human-first UI work.
 
 ---
 

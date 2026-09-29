@@ -6,10 +6,6 @@ vi.mock("reactflow", async () => {
   return mock;
 });
 
-vi.mock("@/components/approvals/DecisionCard", () => ({
-  DecisionCard: () => <div data-testid="decision-card">DecisionCard</div>,
-}));
-
 vi.mock("@/components/dashboard/ManifestationPanel", () => ({
   __esModule: true,
   default: () => <div data-testid="manifestation-panel">ManifestationPanel</div>,
@@ -21,12 +17,6 @@ import { useCortexStore } from "@/store/useCortexStore";
 describe("ApprovalsTab blockers (no fake success)", () => {
   beforeEach(() => {
     useCortexStore.setState({
-      pendingApprovals: [],
-      isFetchingApprovals: false,
-      approvalsError: null,
-      resolveApprovalError: null,
-      fetchPendingApprovals: vi.fn().mockResolvedValue(undefined),
-      resolveApproval: vi.fn().mockResolvedValue(undefined),
       policyConfig: null,
       policyError: null,
       isFetchingPolicy: false,
@@ -36,33 +26,6 @@ describe("ApprovalsTab blockers (no fake success)", () => {
       isFetchingAuditLog: false,
       fetchAuditLog: vi.fn().mockResolvedValue(undefined),
     });
-  });
-
-  it("does not render All Clear when the queue 403s; shows a blocker instead", () => {
-    useCortexStore.setState({ approvalsError: { code: "admin_required", httpStatus: 403 } });
-    render(<ApprovalsTab />);
-
-    expect(screen.queryByText("All Clear")).toBeNull();
-    expect(screen.getByRole("alert")).toBeDefined();
-  });
-
-  it("hides the pending-count line on a 403/503 instead of showing '0 pending requests'", () => {
-    useCortexStore.setState({ approvalsError: { code: "admin_required", httpStatus: 403 } });
-    render(<ApprovalsTab />);
-
-    expect(screen.queryByText(/pending request/)).toBeNull();
-  });
-
-  it("shows the empty state only when there is truly no error and no pending items", () => {
-    render(<ApprovalsTab />);
-    expect(screen.getByText("Nothing waiting for approval")).toBeDefined();
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-
-  it("surfaces a resolve failure instead of the card silently staying put", () => {
-    useCortexStore.setState({ resolveApprovalError: { code: "request_failed", httpStatus: 503 } });
-    render(<ApprovalsTab />);
-    expect(screen.getByRole("alert")).toBeDefined();
   });
 
   it("does not render a fake empty DENY policy editor when the Policy tab 403s/503s", () => {

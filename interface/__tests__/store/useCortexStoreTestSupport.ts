@@ -75,7 +75,6 @@ export function resetCortexStore(overrides: Partial<CortexState> = {}) {
         pendingArtifacts: [],
         subscribedSensorGroups: [],
         auditLog: [],
-        pendingApprovals: [],
         activeMode: 'answer',
         activeConfirmToken: null,
         activeRunId: null,
