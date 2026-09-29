@@ -102,7 +102,16 @@ test.describe("Soma output workspace UX", () => {
     await page.getByTestId("rail-collapse-toggle").click();
     await expect(page.getByTestId("zone-a-rail")).toHaveAttribute("data-collapsed", "true");
     await expect(page.getByTestId("nav-dashboard")).toBeVisible();
-    await expect.poll(async () => (await visualLayoutMetrics(page)).railWidth).toBeLessThan(before.railWidth);
+    // E2E-T1: the rail and the chat frame widths settle on independent CSS
+    // transitions. Waiting only on railWidth can catch a frame reflow that
+    // has not finished growing yet (frameWidth === before.frameWidth).
+    // Poll until both have actually settled before asserting on either.
+    await expect
+      .poll(async () => {
+        const metrics = await visualLayoutMetrics(page);
+        return metrics.railWidth < before.railWidth && metrics.frameWidth > before.frameWidth;
+      })
+      .toBe(true);
     const after = await visualLayoutMetrics(page);
     expect(after.railWidth).toBeLessThan(before.railWidth);
     expect(after.frameWidth).toBeGreaterThan(before.frameWidth);

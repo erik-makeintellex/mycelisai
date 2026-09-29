@@ -1,6 +1,17 @@
 import type { ChatMessage } from "@/store/useCortexStore";
 
 function operationalKey(message: ChatMessage) {
+    // E2E-T1: a still-pending proposal card is the only place
+    // "Confirmed, waiting for result" / "Approved, still running" is
+    // rendered. Once confirmProposal() records a run_id on this message
+    // (cortexStoreProposalExecutionSlice.ts), it would otherwise share an
+    // operational key with the terminal system message appended for that
+    // same run and get silently collapsed away, leaving no
+    // confirmed-pending-execution trace at all. Exempt it from this dedup
+    // while it is still pending. Once the proposal reaches its terminal
+    // "executed" lifecycle, its own completed-state render duplicates the
+    // appended terminal card, so let the normal dedup collapse it there.
+    if (message.proposal && message.proposal_status !== "executed") return null;
     const event = message.thread_event ?? message.thread_events?.at(-1);
     if (!event) return null;
     return message.run_id ?? event.run_id ?? event.team_id ?? null;

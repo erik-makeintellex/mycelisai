@@ -85,12 +85,14 @@ async function mockRetainedMediaExecution(page: Page) {
       ok: true,
       data: {
         run_id: "run-media-retained-output",
+        run_status: "completed",
+        confirmed: true,
         verified: true,
         execution_state: "verified",
         execution_summary: {
           execution: {
             shape: "directed_execution",
-            status: "verified",
+            status: "completed",
             summary: "Local/private media team retained the generated image for operator review.",
           },
           capability_use: {
