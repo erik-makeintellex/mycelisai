@@ -125,3 +125,86 @@ func TestEnsureDefaultProfileBindings_UsesFallbackProvider(t *testing.T) {
 		t.Fatalf("chat profile = %q, want ollama", got)
 	}
 }
+
+func TestResolveExecutionAvailability_ScopesAndFallback(t *testing.T) {
+	t.Run("ready primary provider", func(t *testing.T) {
+		r := &Router{
+			Config: &BrainConfig{
+				Providers: map[string]ProviderConfig{
+					"ollama": {Type: "openai_compatible", Enabled: true, ModelID: "qwen2.5-coder:7b"},
+				},
+				Profiles: map[string]string{
+					"architect": "ollama",
+				},
+			},
+			Adapters: map[string]LLMProvider{
+				"ollama": &startupProbeStub{healthy: true},
+			},
+		}
+
+		status := r.ResolveExecutionAvailability(ScopeCouncil, "architect")
+		if !status.Available {
+			t.Fatalf("expected available status, got %+v", status)
+		}
+		if status.Scope != ScopeCouncil {
+			t.Fatalf("scope = %q, want %q", status.Scope, ScopeCouncil)
+		}
+		if status.ResolvedProviderID != "ollama" {
+			t.Fatalf("resolved_provider_id = %q, want ollama", status.ResolvedProviderID)
+		}
+		if status.FallbackApplied {
+			t.Fatal("expected fallback_applied = false")
+		}
+	})
+
+	t.Run("fallback provider rebinding", func(t *testing.T) {
+		r := &Router{
+			Config: &BrainConfig{
+				Providers: map[string]ProviderConfig{
+					"ollama":           {Type: "openai_compatible", Enabled: true, ModelID: "qwen2.5-coder:7b", Location: "local"},
+					"local-ollama-dev": {Type: "openai_compatible", Enabled: false, ModelID: "qwen2.5-coder:7b", Location: "local"},
+				},
+				Profiles: map[string]string{
+					"coder": "local-ollama-dev",
+				},
+			},
+			Adapters: map[string]LLMProvider{
+				"ollama": &startupProbeStub{healthy: true},
+			},
+		}
+
+		status := r.ResolveExecutionAvailability(ScopeTeam, "coder")
+		if !status.Available {
+			t.Fatalf("expected available status via fallback, got %+v", status)
+		}
+		if !status.FallbackApplied {
+			t.Fatal("expected fallback_applied = true")
+		}
+		if status.ResolvedProviderID != "ollama" {
+			t.Fatalf("resolved_provider_id = %q, want ollama", status.ResolvedProviderID)
+		}
+	})
+
+	t.Run("no provider setup guidance across scopes", func(t *testing.T) {
+		r := &Router{
+			Config: &BrainConfig{
+				Providers: map[string]ProviderConfig{},
+				Profiles:  map[string]string{},
+			},
+			Adapters: map[string]LLMProvider{},
+		}
+
+		for _, scope := range []ExecutionScope{ScopeTeam, ScopeAutomation, ScopeCouncil} {
+			status := r.ResolveExecutionAvailability(scope, "")
+			if status.Available {
+				t.Fatalf("expected unavailable for scope %q", scope)
+			}
+			if status.Code != "cognitive_engine_unavailable" {
+				t.Fatalf("code = %q, want cognitive_engine_unavailable", status.Code)
+			}
+			if status.SetupGuidance == "" || status.RecommendedAction == "" {
+				t.Fatalf("expected actionable setup guidance for scope %q, got %+v", scope, status)
+			}
+		}
+	})
+}

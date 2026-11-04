@@ -2,15 +2,7 @@ package cognitive
 
 import "strings"
 
-var defaultExecutionProfiles = []string{
-	"admin",
-	"chat",
-	"architect",
-	"coder",
-	"creative",
-	"overseer",
-	"sentry",
-}
+var defaultExecutionProfiles = []string{"admin", "chat", "architect", "coder", "creative", "overseer", "sentry"}
 
 const (
 	ExecutionAvailable          = "available"
@@ -24,6 +16,60 @@ const (
 	DefaultExecutionSetupPath   = "/settings"
 	DefaultExecutionProfileName = "chat"
 )
+
+type ExecutionScope string
+
+const (
+	ScopeSoma       ExecutionScope = "soma"
+	ScopeTeam       ExecutionScope = "team"
+	ScopeAutomation ExecutionScope = "automation"
+	ScopeCouncil    ExecutionScope = "council"
+)
+
+type AvailabilityStatus struct {
+	Available          bool           `json:"available"`
+	Scope              ExecutionScope `json:"scope"`
+	RequestedProfile   string         `json:"requested_profile,omitempty"`
+	ResolvedProviderID string         `json:"resolved_provider_id,omitempty"`
+	FallbackApplied    bool           `json:"fallback_applied,omitempty"`
+	Code               string         `json:"code,omitempty"`
+	Summary            string         `json:"summary"`
+	SetupGuidance      string         `json:"setup_guidance,omitempty"`
+	RecommendedAction  string         `json:"recommended_action,omitempty"`
+}
+
+func (r *Router) ResolveExecutionAvailability(scope ExecutionScope, profile string) AvailabilityStatus {
+	normalizedScope := scope
+	if normalizedScope == "" {
+		normalizedScope = ScopeSoma
+	}
+	reqProfile := strings.TrimSpace(profile)
+	if reqProfile == "" {
+		reqProfile = DefaultExecutionProfileName
+	}
+	base := r.ExecutionAvailability(reqProfile, "")
+	if base.Available {
+		return AvailabilityStatus{
+			Available: true, Scope: normalizedScope, RequestedProfile: reqProfile,
+			ResolvedProviderID: base.ProviderID, FallbackApplied: base.FallbackApplied,
+			Code: base.Code, Summary: base.Summary, RecommendedAction: base.RecommendedAction,
+		}
+	}
+	action := "Configure or start an AI Engine in Settings -> AI Engines or verify OLLAMA_HOST reachability."
+	summary := "Soma does not have an available AI Engine for this request."
+	switch normalizedScope {
+	case ScopeTeam:
+		summary = "Team execution is blocked because no AI Engine is available for profile \"" + reqProfile + "\"."
+	case ScopeAutomation:
+		summary = "Automation trigger execution is blocked because no AI Engine is available for profile \"" + reqProfile + "\"."
+	case ScopeCouncil:
+		summary = "Council member execution is blocked because no AI Engine is available for profile \"" + reqProfile + "\"."
+	}
+	return AvailabilityStatus{
+		Available: false, Scope: normalizedScope, RequestedProfile: reqProfile,
+		Code: "cognitive_engine_unavailable", Summary: summary, SetupGuidance: action, RecommendedAction: action,
+	}
+}
 
 func (r *Router) profileAvailability(profile string) ExecutionAvailability {
 	return r.ExecutionAvailability(profile, "")
