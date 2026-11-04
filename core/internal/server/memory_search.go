@@ -79,6 +79,8 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	arbitrated, arbitration := arbitrateMemorySearchResults(r, results, limit)
+
 	respondJSON(w, map[string]any{
 		"query": query,
 		"scope": map[string]any{
@@ -89,8 +91,9 @@ func (s *AdminServer) HandleMemorySearch(w http.ResponseWriter, r *http.Request)
 			"visibility": visibility,
 			"types":      searchTypes,
 		},
-		"results": results,
-		"count":   len(results),
+		"results":     arbitrated,
+		"count":       len(arbitrated),
+		"arbitration": arbitration,
 	})
 }
 
