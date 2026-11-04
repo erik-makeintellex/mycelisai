@@ -43,20 +43,16 @@ func TestHandleMe(t *testing.T) {
 	if err := json.Unmarshal(user.Settings, &settings); err != nil {
 		t.Fatalf("unmarshal settings: %v", err)
 	}
-	if settings["assistant_name"] != "Soma" {
-		t.Errorf("Expected assistant_name Soma, got %#v", settings["assistant_name"])
-	}
-	if settings["access_management_tier"] != "release" {
-		t.Errorf("Expected access_management_tier release, got %#v", settings["access_management_tier"])
-	}
-	if settings["product_edition"] != "self_hosted_release" {
-		t.Errorf("Expected product_edition self_hosted_release, got %#v", settings["product_edition"])
-	}
-	if settings["identity_mode"] != "local_only" {
-		t.Errorf("Expected identity_mode local_only, got %#v", settings["identity_mode"])
-	}
-	if settings["shared_agent_specificity_owner"] != "root_admin" {
-		t.Errorf("Expected shared_agent_specificity_owner root_admin, got %#v", settings["shared_agent_specificity_owner"])
+	for k, want := range map[string]string{
+		"assistant_name":                 "Soma",
+		"access_management_tier":         "release",
+		"product_edition":                "self_hosted_release",
+		"identity_mode":                  "local_only",
+		"shared_agent_specificity_owner": "root_admin",
+	} {
+		if settings[k] != want {
+			t.Errorf("Expected %s %s, got %#v", k, want, settings[k])
+		}
 	}
 }
 
@@ -67,17 +63,8 @@ func TestHandleMe_HybridModeReportsBreakGlassPrincipal(t *testing.T) {
 
 	var user User
 	assertJSON(t, rr, &user)
-	if user.PrincipalType != "break_glass_admin" {
-		t.Errorf("Expected principal_type break_glass_admin, got %q", user.PrincipalType)
-	}
-	if user.AuthSource != "local_break_glass" {
-		t.Errorf("Expected auth_source local_break_glass, got %q", user.AuthSource)
-	}
-	if !user.BreakGlass {
-		t.Error("Expected break_glass true")
-	}
-	if user.EffectiveRole != "owner" {
-		t.Errorf("Expected effective_role owner, got %q", user.EffectiveRole)
+	if user.PrincipalType != "break_glass_admin" || user.AuthSource != "local_break_glass" || !user.BreakGlass || user.EffectiveRole != "owner" {
+		t.Errorf("unexpected break glass user: %+v", user)
 	}
 }
 
@@ -104,17 +91,15 @@ func TestHandleMe_UsesDeploymentContractSettings(t *testing.T) {
 	if err := json.Unmarshal(user.Settings, &settings); err != nil {
 		t.Fatalf("unmarshal settings: %v", err)
 	}
-	if settings["access_management_tier"] != "enterprise" {
-		t.Errorf("Expected access_management_tier enterprise, got %#v", settings["access_management_tier"])
-	}
-	if settings["product_edition"] != "self_hosted_enterprise" {
-		t.Errorf("Expected product_edition self_hosted_enterprise, got %#v", settings["product_edition"])
-	}
-	if settings["identity_mode"] != "hybrid" {
-		t.Errorf("Expected identity_mode hybrid, got %#v", settings["identity_mode"])
-	}
-	if settings["shared_agent_specificity_owner"] != "delegated_owner" {
-		t.Errorf("Expected shared_agent_specificity_owner delegated_owner, got %#v", settings["shared_agent_specificity_owner"])
+	for k, want := range map[string]string{
+		"access_management_tier":         "enterprise",
+		"product_edition":                "self_hosted_enterprise",
+		"identity_mode":                  "hybrid",
+		"shared_agent_specificity_owner": "delegated_owner",
+	} {
+		if settings[k] != want {
+			t.Errorf("Expected %s %s, got %#v", k, want, settings[k])
+		}
 	}
 }
 
@@ -127,7 +112,7 @@ func TestHandleMe_Unauthenticated(t *testing.T) {
 // ── GET /api/v1/teams ──────────────────────────────────────────────
 
 func TestHandleTeams_NilSoma(t *testing.T) {
-	s := newTestServer() // No Soma
+	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleTeams), "GET", "/api/v1/teams", "")
 	assertStatus(t, rr, http.StatusServiceUnavailable)
 }
@@ -148,23 +133,17 @@ func TestHandleUserSettings_GET(t *testing.T) {
 
 	var settings map[string]any
 	assertJSON(t, rr, &settings)
-	if settings["theme"] != "aero-light" {
-		t.Errorf("Expected theme aero-light, got %#v", settings["theme"])
-	}
-	if settings["assistant_name"] != "Soma" {
-		t.Errorf("Expected assistant_name Soma, got %#v", settings["assistant_name"])
-	}
-	if settings["access_management_tier"] != "release" {
-		t.Errorf("Expected access_management_tier release, got %#v", settings["access_management_tier"])
-	}
-	if settings["product_edition"] != "self_hosted_release" {
-		t.Errorf("Expected product_edition self_hosted_release, got %#v", settings["product_edition"])
-	}
-	if settings["identity_mode"] != "local_only" {
-		t.Errorf("Expected identity_mode local_only, got %#v", settings["identity_mode"])
-	}
-	if settings["shared_agent_specificity_owner"] != "root_admin" {
-		t.Errorf("Expected shared_agent_specificity_owner root_admin, got %#v", settings["shared_agent_specificity_owner"])
+	for k, want := range map[string]string{
+		"theme":                          "aero-light",
+		"assistant_name":                 "Soma",
+		"access_management_tier":         "release",
+		"product_edition":                "self_hosted_release",
+		"identity_mode":                  "local_only",
+		"shared_agent_specificity_owner": "root_admin",
+	} {
+		if settings[k] != want {
+			t.Errorf("Expected %s %s, got %#v", k, want, settings[k])
+		}
 	}
 }
 
@@ -214,20 +193,8 @@ func TestHandleUpdateSettings_DoesNotPersistDeploymentContractOwnedFields(t *tes
 
 	var settings map[string]any
 	assertJSON(t, rr, &settings)
-	if settings["theme"] != "midnight-cortex" {
-		t.Fatalf("Expected theme midnight-cortex, got %#v", settings["theme"])
-	}
-	if settings["access_management_tier"] != "release" {
-		t.Fatalf("Expected access_management_tier release, got %#v", settings["access_management_tier"])
-	}
-	if settings["product_edition"] != "self_hosted_release" {
-		t.Fatalf("Expected product_edition self_hosted_release, got %#v", settings["product_edition"])
-	}
-	if settings["identity_mode"] != "local_only" {
-		t.Fatalf("Expected identity_mode local_only, got %#v", settings["identity_mode"])
-	}
-	if settings["shared_agent_specificity_owner"] != "root_admin" {
-		t.Fatalf("Expected shared_agent_specificity_owner root_admin, got %#v", settings["shared_agent_specificity_owner"])
+	if settings["theme"] != "midnight-cortex" || settings["access_management_tier"] != "release" || settings["product_edition"] != "self_hosted_release" || settings["identity_mode"] != "local_only" || settings["shared_agent_specificity_owner"] != "root_admin" {
+		t.Fatalf("unexpected settings after PUT: %#v", settings)
 	}
 
 	me := doAuthenticatedRequest(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "")
@@ -238,20 +205,8 @@ func TestHandleUpdateSettings_DoesNotPersistDeploymentContractOwnedFields(t *tes
 	if err := json.Unmarshal(user.Settings, &settings); err != nil {
 		t.Fatalf("unmarshal settings: %v", err)
 	}
-	if settings["theme"] != "midnight-cortex" {
-		t.Errorf("Expected theme midnight-cortex from HandleMe, got %#v", settings["theme"])
-	}
-	if settings["access_management_tier"] != "release" {
-		t.Errorf("Expected access_management_tier release from HandleMe, got %#v", settings["access_management_tier"])
-	}
-	if settings["product_edition"] != "self_hosted_release" {
-		t.Errorf("Expected product_edition self_hosted_release from HandleMe, got %#v", settings["product_edition"])
-	}
-	if settings["identity_mode"] != "local_only" {
-		t.Errorf("Expected identity_mode local_only from HandleMe, got %#v", settings["identity_mode"])
-	}
-	if settings["shared_agent_specificity_owner"] != "root_admin" {
-		t.Errorf("Expected shared_agent_specificity_owner root_admin from HandleMe, got %#v", settings["shared_agent_specificity_owner"])
+	if settings["theme"] != "midnight-cortex" || settings["access_management_tier"] != "release" || settings["product_edition"] != "self_hosted_release" || settings["identity_mode"] != "local_only" || settings["shared_agent_specificity_owner"] != "root_admin" {
+		t.Fatalf("unexpected settings from HandleMe: %#v", settings)
 	}
 
 	raw, err := os.ReadFile(settingsPath)
@@ -271,10 +226,53 @@ func TestHandleUpdateSettings_DoesNotPersistDeploymentContractOwnedFields(t *tes
 	}
 }
 
+func TestIdentityAndSettings_RoleEnforcement(t *testing.T) {
+	s := newTestServer()
+	t.Setenv("MYCELIS_USER_SETTINGS_PATH", filepath.Join(t.TempDir(), "user-settings.json"))
+
+	viewer := &RequestIdentity{
+		UserID:        "00000000-0000-0000-0000-000000000003",
+		Username:      "viewer",
+		Role:          "viewer",
+		EffectiveRole: "viewer",
+		PrincipalType: "local_viewer",
+		AuthSource:    "local_api_key",
+		Scopes:        DefaultScopesForRole("viewer"),
+	}
+	operator := &RequestIdentity{
+		UserID:        "00000000-0000-0000-0000-000000000002",
+		Username:      "operator",
+		Role:          "operator",
+		EffectiveRole: "operator",
+		PrincipalType: "local_operator",
+		AuthSource:    "local_api_key",
+		Scopes:        DefaultScopesForRole("operator"),
+	}
+
+	assertStatus(t, doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleMe), "GET", "/api/v1/user/me", "", viewer), http.StatusOK)
+	assertStatus(t, doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleUserSettings), "GET", "/api/v1/user/settings", "", viewer), http.StatusOK)
+	assertStatus(t, doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"theme":"midnight-cortex"}`, viewer), http.StatusForbidden)
+	assertStatus(t, doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleTeams), "POST", "/api/v1/teams", `{"name":"ops"}`, viewer), http.StatusForbidden)
+
+	assertStatus(t, doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"theme":"midnight-cortex"}`, operator), http.StatusOK)
+	assertStatus(t, doAuthenticatedRequestAs(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"identity_mode":"hybrid"}`, operator), http.StatusForbidden)
+	assertStatus(t, doAuthenticatedRequest(t, http.HandlerFunc(s.HandleUserSettings), "PUT", "/api/v1/user/settings", `{"identity_mode":"hybrid","theme":"aero-light"}`), http.StatusOK)
+
+	if got := teamRoleForIdentity(viewer); got != "viewer" {
+		t.Fatalf("expected viewer team role, got %q", got)
+	}
+	if got := teamRoleForIdentity(operator); got != "operator" {
+		t.Fatalf("expected operator team role, got %q", got)
+	}
+	if got := teamRoleForIdentity(localAdminIdentityForTest()); got != "owner" {
+		t.Fatalf("expected owner team role, got %q", got)
+	}
+}
+
 // ── GET /api/v1/teams/detail ───────────────────────────────────────
 
 func TestHandleTeamsDetail_NilSoma(t *testing.T) {
-	s := newTestServer() // No Soma → returns empty array
+	s := newTestServer()
 	rr := doRequest(t, http.HandlerFunc(s.HandleTeamsDetail), "GET", "/api/v1/teams/detail", "")
 	assertStatus(t, rr, http.StatusOK)
 

@@ -34,6 +34,12 @@ type localAuthIdentityConfig struct {
 	BreakGlassAPIKey   string
 	BreakGlassUserID   string
 	BreakGlassUsername string
+	OperatorAPIKey     string
+	OperatorUserID     string
+	OperatorUsername   string
+	ViewerAPIKey       string
+	ViewerUserID       string
+	ViewerUsername     string
 	DeploymentContract DeploymentContract
 }
 
@@ -45,6 +51,12 @@ func resolveLocalAuthIdentityConfig(primaryAPIKey string) localAuthIdentityConfi
 		BreakGlassAPIKey:   strings.TrimSpace(os.Getenv("MYCELIS_BREAK_GLASS_API_KEY")),
 		BreakGlassUserID:   envOrDefaultIdentity("MYCELIS_BREAK_GLASS_USER_ID", "00000000-0000-0000-0000-000000000001"),
 		BreakGlassUsername: envOrDefaultIdentity("MYCELIS_BREAK_GLASS_USERNAME", "recovery-admin"),
+		OperatorAPIKey:     strings.TrimSpace(os.Getenv("MYCELIS_OPERATOR_API_KEY")),
+		OperatorUserID:     envOrDefaultIdentity("MYCELIS_OPERATOR_USER_ID", "00000000-0000-0000-0000-000000000002"),
+		OperatorUsername:   envOrDefaultIdentity("MYCELIS_OPERATOR_USERNAME", "operator"),
+		ViewerAPIKey:       strings.TrimSpace(os.Getenv("MYCELIS_VIEWER_API_KEY")),
+		ViewerUserID:       envOrDefaultIdentity("MYCELIS_VIEWER_USER_ID", "00000000-0000-0000-0000-000000000003"),
+		ViewerUsername:     envOrDefaultIdentity("MYCELIS_VIEWER_USERNAME", "viewer"),
 		DeploymentContract: ResolveDeploymentContract(),
 	}
 	return cfg
@@ -67,7 +79,7 @@ func (cfg localAuthIdentityConfig) identityForToken(token string) *RequestIdenti
 			EffectiveRole: "owner",
 			PrincipalType: "local_admin",
 			AuthSource:    "local_api_key",
-			Scopes:        []string{"*"},
+			Scopes:        DefaultScopesForRole("owner"),
 		}
 	case cfg.BreakGlassAPIKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(cfg.BreakGlassAPIKey)) == 1:
 		return &RequestIdentity{
@@ -78,7 +90,27 @@ func (cfg localAuthIdentityConfig) identityForToken(token string) *RequestIdenti
 			PrincipalType: "break_glass_admin",
 			AuthSource:    "local_break_glass",
 			BreakGlass:    true,
-			Scopes:        []string{"*"},
+			Scopes:        DefaultScopesForRole("owner"),
+		}
+	case cfg.OperatorAPIKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(cfg.OperatorAPIKey)) == 1:
+		return &RequestIdentity{
+			UserID:        cfg.OperatorUserID,
+			Username:      cfg.OperatorUsername,
+			Role:          "operator",
+			EffectiveRole: "operator",
+			PrincipalType: "local_operator",
+			AuthSource:    "local_api_key",
+			Scopes:        DefaultScopesForRole("operator"),
+		}
+	case cfg.ViewerAPIKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(cfg.ViewerAPIKey)) == 1:
+		return &RequestIdentity{
+			UserID:        cfg.ViewerUserID,
+			Username:      cfg.ViewerUsername,
+			Role:          "viewer",
+			EffectiveRole: "viewer",
+			PrincipalType: "local_viewer",
+			AuthSource:    "local_api_key",
+			Scopes:        DefaultScopesForRole("viewer"),
 		}
 	default:
 		return nil

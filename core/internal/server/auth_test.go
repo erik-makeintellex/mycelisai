@@ -167,3 +167,77 @@ func TestAuthMiddleware_OptionsExempt(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 	assertStatus(t, rr, http.StatusOK)
 }
+
+func TestAuthMiddleware_OperatorAndViewerTokens(t *testing.T) {
+	t.Setenv("MYCELIS_OPERATOR_API_KEY", "operator-key")
+	t.Setenv("MYCELIS_VIEWER_API_KEY", "viewer-key")
+
+	var captured *RequestIdentity
+	handler := AuthMiddleware("test-key", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		captured = IdentityFromContext(r.Context())
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	reqOp, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	reqOp.Header.Set("Authorization", "Bearer operator-key")
+	rrOp := httptest.NewRecorder()
+	handler.ServeHTTP(rrOp, reqOp)
+	assertStatus(t, rrOp, http.StatusOK)
+	if captured == nil || captured.Role != "operator" || captured.EffectiveRole != "operator" || captured.PrincipalType != "local_operator" || captured.UserID != "00000000-0000-0000-0000-000000000002" {
+		t.Fatalf("unexpected operator identity: %+v", captured)
+	}
+	if !hasScope(captured, "teams:write") || !hasScope(captured, "settings:write") {
+		t.Fatalf("expected operator scopes to allow teams:write and settings:write, got %v", captured.Scopes)
+	}
+
+	reqView, _ := http.NewRequest("GET", "/api/v1/user/me", nil)
+	reqView.Header.Set("Authorization", "Bearer viewer-key")
+	rrView := httptest.NewRecorder()
+	handler.ServeHTTP(rrView, reqView)
+	assertStatus(t, rrView, http.StatusOK)
+	if captured == nil || captured.Role != "viewer" || captured.EffectiveRole != "viewer" || captured.PrincipalType != "local_viewer" || captured.UserID != "00000000-0000-0000-0000-000000000003" {
+		t.Fatalf("unexpected viewer identity: %+v", captured)
+	}
+	if !hasScope(captured, "teams:read") || hasScope(captured, "teams:write") || hasScope(captured, "settings:write") {
+		t.Fatalf("expected viewer read-only scopes, got %v", captured.Scopes)
+	}
+}
+
+func TestHasMinimumRole_And_DefaultScopesForRole(t *testing.T) {
+	viewer := &RequestIdentity{Role: "viewer", EffectiveRole: "viewer", Scopes: DefaultScopesForRole("viewer")}
+	operator := &RequestIdentity{Role: "operator", EffectiveRole: "operator", Scopes: DefaultScopesForRole("operator")}
+	owner := &RequestIdentity{Role: "admin", EffectiveRole: "owner", Scopes: DefaultScopesForRole("owner")}
+
+	if !HasMinimumRole(viewer, "viewer") || HasMinimumRole(viewer, "operator") || HasMinimumRole(viewer, "admin") {
+		t.Fatal("viewer role rank mismatch")
+	}
+	if !HasMinimumRole(operator, "viewer") || !HasMinimumRole(operator, "operator") || HasMinimumRole(operator, "admin") {
+		t.Fatal("operator role rank mismatch")
+	}
+	if !HasMinimumRole(owner, "viewer") || !HasMinimumRole(owner, "operator") || !HasMinimumRole(owner, "admin") || !HasMinimumRole(owner, "owner") {
+		t.Fatal("owner/admin role rank mismatch")
+	}
+	if HasMinimumRole(nil, "viewer") || HasMinimumRole(owner, "unknown") {
+		t.Fatal("expected false for nil identity or unknown role")
+	}
+}
+
+func TestRequireMinimumRole(t *testing.T) {
+	check := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := RequireMinimumRole(w, r, "operator", "teams:write"); !ok {
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	assertStatus(t, doRequest(t, check, "POST", "/api/v1/teams", ""), http.StatusUnauthorized)
+
+	viewer := &RequestIdentity{UserID: "v1", Role: "viewer", EffectiveRole: "viewer", Scopes: DefaultScopesForRole("viewer")}
+	assertStatus(t, doAuthenticatedRequestAs(t, check, "POST", "/api/v1/teams", "", viewer), http.StatusForbidden)
+
+	scopedOutOperator := &RequestIdentity{UserID: "o1", Role: "operator", EffectiveRole: "operator", Scopes: []string{"teams:read"}}
+	assertStatus(t, doAuthenticatedRequestAs(t, check, "POST", "/api/v1/teams", "", scopedOutOperator), http.StatusForbidden)
+
+	operator := &RequestIdentity{UserID: "o2", Role: "operator", EffectiveRole: "operator", Scopes: DefaultScopesForRole("operator")}
+	assertStatus(t, doAuthenticatedRequestAs(t, check, "POST", "/api/v1/teams", "", operator), http.StatusOK)
+}

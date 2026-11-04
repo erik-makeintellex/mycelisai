@@ -30,7 +30,7 @@ func requireRootAdminScope(w http.ResponseWriter, r *http.Request, requiredScope
 		respondAPIError(w, "Authentication required", http.StatusUnauthorized)
 		return nil, false
 	}
-	if identity.Role != "admin" {
+	if !HasMinimumRole(identity, "admin") {
 		respondAPIError(w, "Root admin role required", http.StatusForbidden)
 		return nil, false
 	}

@@ -57,6 +57,11 @@ func (s *AdminServer) HandleMe(w http.ResponseWriter, r *http.Request) {
 func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
 	log.Printf("DEBUG: HandleTeams called. Method: %s. Soma: %v", r.Method, s.Soma)
 	if r.Method == "POST" {
+		if IdentityFromContext(r.Context()) != nil {
+			if _, ok := RequireMinimumRole(w, r, "operator", "teams:write"); !ok {
+				return
+			}
+		}
 		if s.Soma != nil {
 			s.Soma.HandleCreateTeam(w, r)
 			return
@@ -67,13 +72,14 @@ func (s *AdminServer) HandleTeams(w http.ResponseWriter, r *http.Request) {
 
 	// Real Data from Soma
 	if s.Soma != nil {
+		role := teamRoleForIdentity(IdentityFromContext(r.Context()))
 		manifests := s.Soma.ListTeams()
 		var teams []Team
 		for _, m := range manifests {
 			teams = append(teams, Team{
 				ID:   m.ID,
 				Name: m.Name,
-				Role: "observer", // Default role for now
+				Role: role,
 			})
 		}
 		respondJSON(w, teams)
@@ -90,9 +96,21 @@ func (s *AdminServer) HandleUserSettings(w http.ResponseWriter, r *http.Request)
 	case http.MethodGet:
 		respondJSON(w, loadUserSettings())
 	case http.MethodPut:
+		identity := IdentityFromContext(r.Context())
+		if identity != nil {
+			if _, ok := RequireMinimumRole(w, r, "operator", "settings:write"); !ok {
+				return
+			}
+		}
+
 		var input map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			http.Error(w, "invalid JSON body", http.StatusBadRequest)
+			return
+		}
+
+		if identity != nil && hasRestrictedSettingsMutation(input) && !HasMinimumRole(identity, "admin") {
+			respondAPIError(w, "Admin role required to mutate deployment posture settings", http.StatusForbidden)
 			return
 		}
 
