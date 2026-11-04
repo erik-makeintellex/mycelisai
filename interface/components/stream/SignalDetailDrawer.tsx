@@ -30,7 +30,7 @@ function typeColor(type?: string): { badge: string; dot: string } {
         case 'sensor_data':
         case 'user_input':
         case 'command':
-            return { badge: 'bg-cyan-400/15 text-cyan-400', dot: 'bg-cyan-400' };
+            return { badge: 'bg-cortex-info/15 text-cortex-info', dot: 'bg-cortex-info' };
         case 'tool_call':
         case 'actuation':
             return { badge: 'bg-cortex-success/15 text-cortex-success', dot: 'bg-cortex-success' };
@@ -207,7 +207,7 @@ export default function SignalDetailDrawer() {
                             ) : (
                                 <ChevronRight className="w-3 h-3" />
                             )}
-                            Raw Data
+                            View Technical Envelope
                         </button>
                         {rawExpanded && (
                             <div className="bg-cortex-bg rounded-lg p-3 border border-cortex-border/50 max-h-64 overflow-y-auto">

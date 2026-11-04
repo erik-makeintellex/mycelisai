@@ -34,6 +34,7 @@ describe('ProposedActionBlock', () => {
                 approval_mode: 'required',
                 capability_risk: 'medium',
                 capability_ids: ['write_file'],
+                estimated_cost: 0.45,
                 team_expressions: [
                     {
                         expression_id: 'expr-1',
@@ -56,32 +57,66 @@ describe('ProposedActionBlock', () => {
         };
     }
 
-    it('renders the user-facing approval summary by default and hides low-level mechanics', () => {
+    it('renders the user-facing outcome summary by default and hides cost, risk, and low-level proof metadata', () => {
         render(<ProposedActionBlock message={buildMessage()} />);
 
         expect(screen.getByText(/proposed action/i)).toBeDefined();
+        expect(screen.getByText(/soma proposes saving a deliverable to your workspace/i)).toBeDefined();
         expect(screen.getByText(/soma wants to/i)).toBeDefined();
         expect(screen.getByText(/create a hello_world\.py file in your workspace\./i)).toBeDefined();
         expect(screen.getByText(/a new python file will be saved to workspace\/logs\/hello_world\.py after approval\./i)).toBeDefined();
         expect(screen.getAllByText(/workspace\/logs\/hello_world\.py/i).length).toBeGreaterThan(0);
         expect(screen.getByText(/this action will change your workspace, so soma needs your approval before running it\./i)).toBeDefined();
         expect(screen.getByText(/approval required/i)).toBeDefined();
-        expect(screen.getByText(/risk medium/i)).toBeDefined();
-        expect(screen.getByRole('button', { name: /show details/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /view proof details/i })).toBeDefined();
+
+        // Technical metadata hidden behind [View Proof Details]
+        expect(screen.queryByText(/risk medium/i)).toBeNull();
+        expect(screen.queryByText(/est\. cost/i)).toBeNull();
+        expect(screen.queryByText(/ct-123/i)).toBeNull();
+        expect(screen.queryByText(/ip-123/i)).toBeNull();
         expect(screen.queryByText(/execute delegate through governed module binding/i)).toBeNull();
         expect(screen.queryByText(/delegate \(internal\)/i)).toBeNull();
     });
 
-    it('reveals advanced execution details only after inspection', () => {
-        render(<ProposedActionBlock message={buildMessage()} />);
+    it('reveals cost, risk, tokens, and technical execution details when View Proof Details is clicked', () => {
+        render(<ProposedActionBlock message={buildMessage({ run_id: 'run-uuid-999' })} />);
 
-        fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+        fireEvent.click(screen.getByRole('button', { name: /view proof details/i }));
 
+        expect(screen.getByText(/risk medium/i)).toBeDefined();
+        expect(screen.getByText(/est\. cost 0\.45/i)).toBeDefined();
+        expect(screen.getByText(/proof id: ip-123/i)).toBeDefined();
+        expect(screen.getByText(/token: ct-123/i)).toBeDefined();
+        expect(screen.getByText(/run id: run-uuid-999/i)).toBeDefined();
         expect(screen.getByText(/execute delegate through governed module binding/i)).toBeDefined();
         expect(screen.getByText(/1 expression/i)).toBeDefined();
         expect(screen.getByText(/delegate \(internal\)/i)).toBeDefined();
         expect(screen.getByText(/capability risk/i)).toBeDefined();
         expect(screen.getByText(/write file/i)).toBeDefined();
+    });
+
+    it('renders deliverable preview cards with Preview and Download / Open actions when artifacts are present', () => {
+        render(
+            <ProposedActionBlock
+                message={buildMessage({
+                    artifacts: [
+                        {
+                            id: 'art-1',
+                            type: 'document',
+                            title: 'launch-brief.md',
+                            content: '# Launch Brief\nReady for operator review.',
+                            url: '/api/v1/artifacts/art-1/download',
+                        },
+                    ],
+                })}
+            />,
+        );
+
+        expect(screen.getByText('launch-brief.md')).toBeDefined();
+        expect(screen.getByRole('link', { name: /download \/ open/i })).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /preview/i }));
+        expect(screen.getByText(/# Launch Brief/i)).toBeDefined();
     });
 
     it('dispatches confirm and cancel actions', () => {
@@ -162,7 +197,7 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText('swarm.team.ops.signal.status')).toBeDefined();
     });
 
-    it('shows auto-approved execution posture for low-risk actions and keeps raw reasons in details', () => {
+    it('shows auto-approved execution posture for low-risk actions and keeps raw reasons in proof details', () => {
         render(<ProposedActionBlock message={buildMessage({
             proposal: {
                 ...buildMessage().proposal!,
@@ -183,11 +218,12 @@ describe('ProposedActionBlock', () => {
         expect(screen.getByText(/execution posture/i)).toBeDefined();
         expect(screen.getByText(/within current policy thresholds and can run without a mandatory approval/i)).toBeDefined();
         expect(screen.getByText(/auto-approved/i)).toBeDefined();
-        expect(screen.getByText(/risk low/i)).toBeDefined();
+        expect(screen.queryByText(/risk low/i)).toBeNull();
         expect(screen.queryByText(/auto approve/i)).toBeNull();
 
-        fireEvent.click(screen.getByRole('button', { name: /show details/i }));
+        fireEvent.click(screen.getByRole('button', { name: /view proof details/i }));
 
+        expect(screen.getByText(/risk low/i)).toBeDefined();
         expect(screen.getByText(/auto approve/i)).toBeDefined();
         expect(screen.getByText(/planning/i)).toBeDefined();
         expect(screen.getByRole('button', { name: /^execute$/i })).toBeDefined();

@@ -33,9 +33,11 @@ export function ZoneA() {
     const isCurrentOrganizationRoute =
         !!currentOrganizationHref &&
         (pathname === currentOrganizationHref || pathname?.startsWith(currentOrganizationHref + '/') === true);
+
     const primaryNav = [
-        { href: '/dashboard', icon: Home, label: 'Soma', description: 'Ask first', testId: 'nav-dashboard' },
-        { href: '/deployments', icon: Boxes, label: 'Deployments', description: 'What is running', testId: 'nav-deployments' },
+        { href: '/dashboard', icon: Home, label: 'Soma Work', description: 'Ask first', testId: 'nav-dashboard' },
+        { href: '/teams', icon: Users, label: 'Teams', description: 'Active workflows', testId: 'nav-teams' },
+        { href: '/resources', icon: FolderCog, label: 'Durable Files', description: 'Deliverables & files', testId: 'nav-resources' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
             icon: Building2,
@@ -44,16 +46,17 @@ export function ZoneA() {
             description: lastOrganization.name,
             testId: 'current-organization-nav',
         }] : []),
-        { href: '/docs', icon: BookOpen, label: 'Docs', testId: 'nav-docs' },
     ];
+
     const advancedNav = [
-        { href: '/groups', icon: Users, label: 'Groups', description: 'Operations', testId: 'nav-groups' },
-        { href: '/automations', icon: Workflow, label: 'Automations', description: 'Triggers & approvals', testId: 'nav-automations' },
+        { href: '/activity', icon: Radio, label: 'Activity History', description: 'Runs & bus', testId: 'nav-activity' },
         { href: '/runs', icon: Zap, label: 'Runs', description: 'Execution history', testId: 'nav-runs' },
-        { href: '/activity', icon: Radio, label: 'Activity', description: 'Runs & bus', testId: 'nav-activity' },
-        { href: '/resources', icon: FolderCog, label: 'Resources', testId: 'nav-resources' },
-        { href: '/memory', icon: Brain, label: 'Memory', testId: 'nav-memory' },
-        { href: '/system', icon: Activity, label: 'System', testId: 'nav-system' },
+        { href: '/memory', icon: Brain, label: 'Memory & Continuity', description: 'Retained context', testId: 'nav-memory' },
+        { href: '/groups', icon: Users, label: 'Groups', description: 'Operations', testId: 'nav-groups' },
+        { href: '/deployments', icon: Boxes, label: 'Deployments', description: 'What is running', testId: 'nav-deployments' },
+        { href: '/automations', icon: Workflow, label: 'Automations', description: 'Triggers & approvals', testId: 'nav-automations' },
+        { href: '/system', icon: Activity, label: 'System', description: 'Health & diagnostics', testId: 'nav-system' },
+        { href: '/docs', icon: BookOpen, label: 'Docs', description: 'Reference', testId: 'nav-docs' },
     ];
 
     return (
@@ -61,15 +64,15 @@ export function ZoneA() {
             {/* 1. Identity / Logo → Home */}
             <Link href="/" className="h-14 flex items-center justify-center md:justify-start md:px-4 border-b border-cortex-border hover:bg-cortex-bg/50 transition-colors">
                 <div className="w-8 h-8 bg-cortex-primary rounded-lg flex items-center justify-center shadow-[0_4px_14px_0_rgba(75,78,109,0.28)]">
-                    <Network className="w-5 h-5 text-white" />
+                    <Network className="w-5 h-5 text-cortex-bg" />
                 </div>
                 <span className="hidden md:block ml-3 font-bold text-sm tracking-widest uppercase text-cortex-text-muted">
                     Mycelis
                 </span>
             </Link>
 
-            {/* 2. Soma-primary Navigation */}
-            <div className="flex-1 flex flex-col py-4 gap-1 px-2">
+            {/* 2. Soma-primary Operator Navigation */}
+            <div className="flex-1 flex flex-col py-4 gap-1 px-2 overflow-y-auto">
                 {primaryNav.map((item) => (
                     <NavItem
                         key={item.href}
@@ -83,18 +86,25 @@ export function ZoneA() {
                     />
                 ))}
                 {effectiveAdvancedMode && (
-                    <div className="mt-3 space-y-1">
+                    <div className="mt-3 pt-2 border-t border-cortex-border/60 space-y-1">
                         <div className="hidden px-2 py-1 text-[10px] font-mono uppercase tracking-[0.22em] text-cortex-text-muted/70 md:block">
-                            Advanced / Admin
+                            Advanced / Builder
                         </div>
                         {advancedNav.map((item) => (
-                            <NavItem key={item.href} href={item.href} icon={item.icon} label={item.label} testId={item.testId} />
+                            <NavItem
+                                key={item.href}
+                                href={item.href}
+                                icon={item.icon}
+                                label={item.label}
+                                description={item.description}
+                                testId={item.testId}
+                            />
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* 3. Footer: Advanced Toggle + Settings */}
+            {/* 3. Footer: Advanced Toggle + Status + Settings */}
             <div className="p-2 border-t border-cortex-border space-y-1">
                 <button
                     onClick={toggleAdvancedMode}

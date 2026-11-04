@@ -63,13 +63,15 @@ export default function LandingPage() {
     return (
         <main className="min-h-screen bg-cortex-bg text-cortex-text-main">
             <nav className="sticky top-0 z-50 border-b border-cortex-border bg-cortex-bg/95 backdrop-blur">
-                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-6">
-                    <Link href="/" className="flex items-center gap-3">
+                <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-4 sm:gap-3 sm:px-6">
+                    <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
                         <BrandMark logoUrl={config.brand.logo_url} productName={config.brand.product_name} />
-                        <span className="text-sm font-semibold uppercase tracking-[0.22em]">{config.brand.product_name}</span>
+                        <span className="truncate text-sm font-semibold uppercase tracking-[0.22em]">{config.brand.product_name}</span>
                     </Link>
-                    <div className="flex items-center gap-2">
-                        <ActionLink cta={secondaryCTA} quiet icon={<BookOpen className="h-4 w-4" />} />
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                        <div className="hidden sm:block">
+                            <ActionLink cta={secondaryCTA} quiet icon={<BookOpen className="h-4 w-4" />} />
+                        </div>
                         <ActionLink cta={primaryCTA} icon={<ArrowRight className="h-4 w-4" />} />
                     </div>
                 </div>

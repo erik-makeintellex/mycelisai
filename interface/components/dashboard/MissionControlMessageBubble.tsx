@@ -67,7 +67,7 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
                     <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                     <span
                         className={`text-[8px] font-mono font-bold uppercase tracking-wide flex items-center gap-1 ${
-                            msg.brain.location === "remote" ? "text-amber-400" : "text-cortex-text-muted"
+                            msg.brain.location === "remote" ? "text-cortex-warning" : "text-cortex-text-muted"
                         }`}
                         title={`Model: ${msg.brain.model_id}\nProvider: ${msg.brain.provider_id}\nLocation: ${msg.brain.location}\nData: ${msg.brain.data_boundary}`}
                     >
@@ -101,7 +101,7 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
                 </>
             )}
             {advancedMode && msg.brain?.location === "remote" && (
-                <span className="flex items-center gap-0.5 text-[7px] font-mono text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+                <span className="flex items-center gap-0.5 text-[7px] font-mono text-cortex-warning bg-cortex-warning/10 px-1.5 py-0.5 rounded border border-cortex-warning/20">
                     <AlertTriangle className="w-2.5 h-2.5" />
                     External
                 </span>
@@ -130,7 +130,7 @@ function ToolsUsed({ tools }: { tools?: string[] }) {
                         key={tool}
                         className={`text-[7px] font-mono px-1.5 py-0.5 rounded border flex items-center gap-1 ${
                             origin === "external"
-                                ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
+                                ? "bg-cortex-warning/10 text-cortex-warning border-cortex-warning/20"
                                 : origin === "sandboxed"
                                 ? "bg-cortex-success/10 text-cortex-success border-cortex-success/20"
                                 : "bg-cortex-primary/10 text-cortex-primary border-cortex-primary/20"
@@ -151,6 +151,12 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const assistantName = useCortexStore((s) => s.assistantName);
+    const advancedMode = useCortexStore((s) => s.advancedMode);
+    const selectedTeamId = useCortexStore((s) => s.selectedTeamId);
+    const teamsDetail = useCortexStore((s) => s.teamsDetail);
+    const currentTeam = selectedTeamId ? teamsDetail.find((t) => t.id === selectedTeamId) ?? null : null;
+    const producerLabel = currentTeam?.name || sourceNodeLabel(msg.source_node || "admin", assistantName);
+
     const isPackageOutput = Boolean(msg.delivery_package)
         || Boolean(msg.output_refs?.some((ref) => ref.package_id || ref.role === "proof"))
         || Boolean(msg.artifacts?.some((artifact) => (
@@ -164,9 +170,16 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
         return (
             <div className="flex justify-center my-2">
                 {msg.run_id ? (
-                    <a href={`/runs/${msg.run_id}`} className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[10px] font-mono hover:bg-cortex-success/10 transition-colors">
+                    <a
+                        href={`/runs/${msg.run_id}`}
+                        title={`Mission activated — Run ID: ${msg.run_id}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-cortex-success/30 bg-cortex-success/5 text-cortex-success text-[10px] font-mono hover:bg-cortex-success/10 transition-colors"
+                    >
                         <Zap className="w-3 h-3" />
-                        Mission activated &mdash; {msg.run_id.slice(0, 8)}...
+                        <span>Workflow started &mdash; View Progress</span>
+                        {advancedMode ? (
+                            <span className="opacity-75">({msg.run_id.slice(0, 8)}...)</span>
+                        ) : null}
                         <ExternalLink className="w-2.5 h-2.5 opacity-60" />
                     </a>
                 ) : (
@@ -207,8 +220,13 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                 ) : null}
                 {!isUser && artifactSummary && (
                     <div className="rounded-lg border border-cortex-primary/20 bg-cortex-primary/5 px-3 py-2">
-                        <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
-                            Returned output
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-cortex-primary">
+                                Returned output
+                            </span>
+                            <span className="rounded-full border border-cortex-primary/30 bg-cortex-surface px-2 py-0.5 text-[9px] font-mono text-cortex-primary">
+                                Produced by {producerLabel}
+                            </span>
                         </div>
                         <p className="mt-1 text-sm text-cortex-text-main leading-6">{artifactSummary}</p>
                     </div>
@@ -223,7 +241,9 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                 )}
                 {!isUser && msg.artifacts?.length && !isPackageOutput ? (
                     <div className="space-y-1">
-                        {msg.artifacts.map((artifact, i) => <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} />)}
+                        {msg.artifacts.map((artifact, i) => (
+                            <InlineArtifact key={artifact.id || `art-${i}`} artifact={artifact} producerLabel={producerLabel} />
+                        ))}
                     </div>
                 ) : null}
                 {!isUser && <ToolsUsed tools={msg.tools_used} />}

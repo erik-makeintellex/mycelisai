@@ -31,25 +31,25 @@ vi.mock('@/store/useCortexStore', () => ({
 import { ZoneA } from '@/components/shell/ZoneA_Rail';
 
 const DEFAULT_NAV_ENTRIES = [
-    { href: '/dashboard', label: 'Soma' },
-    { href: '/deployments', label: 'Deployments' },
-    { href: '/docs', label: 'Docs' },
+    { href: '/dashboard', label: 'Soma Work' },
+    { href: '/teams', label: 'Teams' },
+    { href: '/resources', label: 'Durable Files' },
 ];
 
-describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
+describe('ZoneA_Rail (V8.2 Operator vs. Builder Navigation)', () => {
     beforeEach(() => {
         mockPathname.mockReturnValue('/dashboard');
         mockAdvancedMode.mockReturnValue(false);
-        mockSetStatusDrawerOpen.mockReset();
-        localStorage.clear();
+        mockSetStatusDrawerOpen.mockClear();
+        window.localStorage.clear();
     });
 
-    it('renders the Mycelis brand name', () => {
+    it('renders the Mycelis brand identity', () => {
         render(<ZoneA />);
         expect(screen.getByText('Mycelis')).toBeDefined();
     });
 
-    it('renders default navigation links', () => {
+    it('renders streamlined operator navigation entries when advancedMode is off', () => {
         render(<ZoneA />);
         for (const entry of DEFAULT_NAV_ENTRIES) {
             expect(screen.getByText(entry.label)).toBeDefined();
@@ -61,79 +61,72 @@ describe('ZoneA_Rail (V8.1 Soma-primary Navigation)', () => {
         expect(screen.getByText('Settings')).toBeDefined();
     });
 
-    it('renders Status in footer without using a floating workspace control', () => {
+    it('renders Status drawer trigger in footer', () => {
         render(<ZoneA />);
         expect(screen.getByRole('button', { name: /Status/i })).toBeDefined();
     });
 
-    it('shows a persistent current organization link when one was opened previously', async () => {
-        localStorage.setItem('mycelis-last-organization-id', 'org-123');
-        localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
+    it('renders a return link for the remembered organization when outside the workspace', async () => {
+        window.localStorage.setItem('mycelis-last-organization-id', 'org-123');
+        window.localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
 
         render(<ZoneA />);
 
         await waitFor(() => {
-            expect(screen.getByText('Return to Organization')).toBeDefined();
+            expect(screen.getByTestId('current-organization-nav')).toBeDefined();
         });
+        expect(screen.getByText('Return to Organization')).toBeDefined();
         expect(screen.getByText('Northstar Labs')).toBeDefined();
-        expect(screen.getByRole('button', { name: /Return to Organization/i })).toBeDefined();
     });
 
-    it('labels the current organization entry as current while inside the workspace', async () => {
+    it('labels the remembered organization as Current Organization when on its route', async () => {
+        window.localStorage.setItem('mycelis-last-organization-id', 'org-123');
+        window.localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
         mockPathname.mockReturnValue('/organizations/org-123');
-        localStorage.setItem('mycelis-last-organization-id', 'org-123');
-        localStorage.setItem('mycelis-last-organization-name', 'Northstar Labs');
 
         render(<ZoneA />);
 
         await waitFor(() => {
             expect(screen.getByText('Current Organization')).toBeDefined();
         });
-        expect(screen.getByText('Northstar Labs')).toBeDefined();
     });
 
-    it('highlights active route with cortex-primary', () => {
+    it('highlights Soma Work when on /dashboard', () => {
         mockPathname.mockReturnValue('/dashboard');
         const { container } = render(<ZoneA />);
         const dashboardLink = container.querySelector('a[href="/dashboard"]');
         expect(dashboardLink?.className).toContain('bg-cortex-primary');
     });
 
-    it('uses muted text for inactive routes', () => {
+    it('keeps non-active operator entries muted when on /dashboard', () => {
         mockPathname.mockReturnValue('/dashboard');
         const { container } = render(<ZoneA />);
-        const docsLink = container.querySelector('a[href="/docs"]');
-        expect(docsLink?.className).toContain('text-cortex-text-muted');
+        const resourcesLink = container.querySelector('a[href="/resources"]');
+        expect(resourcesLink?.className).toContain('text-cortex-text-muted');
     });
 
-    it('keeps advanced routes hidden when advancedMode is off', () => {
+    it('hides builder/runtime links (/activity, /runs, /groups, /system, /docs, /memory) when advancedMode is off', () => {
         mockAdvancedMode.mockReturnValue(false);
         const { container } = render(<ZoneA />);
         expect(container.querySelector('a[href="/groups"]')).toBeNull();
         expect(container.querySelector('a[href="/activity"]')).toBeNull();
-        expect(container.querySelector('a[href="/resources"]')).toBeNull();
+        expect(container.querySelector('a[href="/runs"]')).toBeNull();
+        expect(container.querySelector('a[href="/system"]')).toBeNull();
         expect(container.querySelector('a[href="/memory"]')).toBeNull();
-        const systemLink = container.querySelector('a[href="/system"]');
-        expect(systemLink).toBeNull();
+        expect(container.querySelector('a[href="/docs"]')).toBeNull();
     });
 
-    it('shows advanced routes when advancedMode is on', () => {
+    it('reveals full builder and governance surfaces when advancedMode is on', () => {
         mockAdvancedMode.mockReturnValue(true);
         render(<ZoneA />);
-        expect(screen.getByText('Groups')).toBeDefined();
-        expect(screen.getByText('Automations')).toBeDefined();
+        expect(screen.getByText('Activity History')).toBeDefined();
         expect(screen.getByText('Runs')).toBeDefined();
-        expect(screen.getByText('Activity')).toBeDefined();
-        expect(screen.getByText('Resources')).toBeDefined();
-        expect(screen.getByText('Memory')).toBeDefined();
-        expect(screen.getByText('System')).toBeDefined();
-    });
-
-    it('always shows Deployments in the main rail, even when advancedMode is off', () => {
-        mockAdvancedMode.mockReturnValue(false);
-        const { container } = render(<ZoneA />);
+        expect(screen.getByText('Memory & Continuity')).toBeDefined();
+        expect(screen.getByText('Groups')).toBeDefined();
         expect(screen.getByText('Deployments')).toBeDefined();
-        expect(container.querySelector('a[href="/deployments"]')).not.toBeNull();
+        expect(screen.getByText('Automations')).toBeDefined();
+        expect(screen.getByText('System')).toBeDefined();
+        expect(screen.getByText('Docs')).toBeDefined();
     });
 
     it('links Automations and Runs to real surfaces when advancedMode is on', () => {

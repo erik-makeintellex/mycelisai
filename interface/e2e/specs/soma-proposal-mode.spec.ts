@@ -19,10 +19,13 @@ test.describe("Soma proposal mode", () => {
         await expect(page.getByText("Soma wants to")).toBeVisible();
         await expect(page.getByText("create a hello_world.py file in your workspace.")).toBeVisible();
         await expect(page.getByText("A new Python file will be saved to workspace/logs/hello_world.py after approval.")).toBeVisible();
-        await expect(page.getByText("workspace/logs/hello_world.py", { exact: true })).toBeVisible();
-        await expect(page.getByText("Approval optional")).toBeVisible();
+        await expect(page.getByText("workspace/logs/hello_world.py", { exact: true }).first()).toBeVisible();
+        await expect(page.getByText(/Approval optional/i)).toBeVisible();
+        await expect(page.getByText(/RISK MEDIUM/i)).toHaveCount(0);
+        const proofDetailsBtn = page.getByRole("button", { name: /View Proof Details/i });
+        await expect(proofDetailsBtn).toBeVisible();
+        await proofDetailsBtn.click();
         await expect(page.getByText(/RISK MEDIUM/i)).toBeVisible();
-        await expect(page.getByRole("button", { name: /Show details/i })).toBeVisible();
 
         await page.getByRole("button", { name: /^Cancel$/i }).click();
         await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 20_000 });

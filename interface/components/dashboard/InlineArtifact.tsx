@@ -23,10 +23,12 @@ function mediaSource(artifact: ChatArtifactRef): string | null {
 function ArtifactHeader({
     artifact,
     icon,
+    producerLabel,
     children,
 }: {
     artifact: ChatArtifactRef;
     icon: React.ReactNode;
+    producerLabel?: string;
     children?: ReactNode;
 }) {
     return (
@@ -35,6 +37,11 @@ function ArtifactHeader({
             <span className="flex-1 truncate text-[10px] font-mono font-bold text-cortex-text-main">
                 {artifact.title}
             </span>
+            {producerLabel ? (
+                <span className="rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-0.5 text-[8px] font-mono text-cortex-primary">
+                    {producerLabel}
+                </span>
+            ) : null}
             {children}
         </div>
     );
@@ -53,7 +60,7 @@ function SaveBadge({ path, href }: { path: string; href: string | null }) {
     );
 }
 
-function MediaArtifact({ artifact }: { artifact: ChatArtifactRef }) {
+function MediaArtifact({ artifact, producerLabel }: { artifact: ChatArtifactRef; producerLabel?: string }) {
     const src = mediaSource(artifact);
     const type = artifact.content_type?.toLowerCase() ?? "";
     const isVideo = artifact.type === "video" || type.startsWith("video/");
@@ -61,11 +68,11 @@ function MediaArtifact({ artifact }: { artifact: ChatArtifactRef }) {
 
     return (
         <div className="mt-2 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg">
-            <ArtifactHeader artifact={artifact} icon={<Icon className="h-3 w-3 text-cortex-primary" />} />
+            <ArtifactHeader artifact={artifact} icon={<Icon className="h-3 w-3 text-cortex-primary" />} producerLabel={producerLabel} />
             <div className="p-3">
                 {src ? (
                     isVideo ? (
-                        <video controls className="max-h-80 w-full rounded bg-black" src={src}>
+                        <video controls className="max-h-80 w-full rounded bg-cortex-bg" src={src}>
                             Your browser does not support video playback.
                         </video>
                     ) : (
@@ -96,7 +103,7 @@ function DownloadOnly({ artifact, label }: { artifact: ChatArtifactRef; label: s
     );
 }
 
-export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef }) {
+export default function InlineArtifact({ artifact, producerLabel }: { artifact: ChatArtifactRef; producerLabel?: string }) {
     const [expanded, setExpanded] = useState(false);
     const [saving, setSaving] = useState(false);
     const [savedPath, setSavedPath] = useState(artifact.saved_path || "");
@@ -131,7 +138,7 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
             if (spec.chart_type && spec.data) {
                 return (
                     <div className="mt-2 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg">
-                        <ArtifactHeader artifact={artifact} icon={<BarChart3 className="h-3 w-3 text-cortex-primary" />} />
+                        <ArtifactHeader artifact={artifact} icon={<BarChart3 className="h-3 w-3 text-cortex-primary" />} producerLabel={producerLabel} />
                         <div className="max-h-[280px] p-2"><ChartRenderer spec={spec} /></div>
                     </div>
                 );
@@ -146,7 +153,7 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
         const cached = artifact.cached || !!artifact.expires_at;
         return (
             <div className="mt-2 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg">
-                <ArtifactHeader artifact={artifact} icon={<ImageIcon className="h-3 w-3 text-cortex-primary" />}>
+                <ArtifactHeader artifact={artifact} icon={<ImageIcon className="h-3 w-3 text-cortex-primary" />} producerLabel={producerLabel}>
                     {cached && !savedPath ? <span className="rounded border border-cortex-warning/30 bg-cortex-warning/10 px-1.5 py-0.5 text-[8px] font-mono text-cortex-warning">cached</span> : null}
                     {savedPath ? <span className="rounded border border-cortex-success/30 bg-cortex-success/10 px-1.5 py-0.5 text-[8px] font-mono text-cortex-success">saved</span> : null}
                     {artifact.id && !savedPath ? <button onClick={handleSave} disabled={saving} className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 py-0.5 text-[8px] font-mono text-cortex-primary hover:bg-cortex-primary/20 disabled:opacity-60" title="Save image to workspace/saved-media">{saving ? "Saving..." : "Save"}</button> : null}
@@ -159,13 +166,13 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
     }
 
     if (artifact.type === "audio" || artifact.type === "video" || contentType.startsWith("audio/") || contentType.startsWith("video/")) {
-        return <MediaArtifact artifact={artifact} />;
+        return <MediaArtifact artifact={artifact} producerLabel={producerLabel} />;
     }
 
     if (artifact.type === "code" && artifact.content) {
         return (
             <div className="mt-2 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg">
-                <ArtifactHeader artifact={artifact} icon={<Icon className="h-3 w-3 text-cortex-primary" />}>
+                <ArtifactHeader artifact={artifact} icon={<Icon className="h-3 w-3 text-cortex-primary" />} producerLabel={producerLabel}>
                     {artifact.content_type ? <span className="rounded bg-cortex-bg px-1.5 py-0.5 text-[8px] font-mono text-cortex-text-muted">{artifact.content_type.replace("text/", "").replace("application/", "")}</span> : null}
                     <ChatCopyButton text={artifact.content} />
                 </ArtifactHeader>
@@ -181,7 +188,7 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
         }
         return (
             <div className="mt-2 overflow-hidden rounded-lg border border-cortex-border bg-cortex-bg">
-                <ArtifactHeader artifact={artifact} icon={<Icon className="h-3 w-3 text-cortex-primary" />}>
+                <ArtifactHeader artifact={artifact} icon={<Icon className="h-3 w-3 text-cortex-primary" />} producerLabel={producerLabel}>
                     <ChatCopyButton text={displayContent} />
                     <button onClick={() => setExpanded(!expanded)} className="text-[8px] font-mono text-cortex-primary hover:text-cortex-primary/80">{expanded ? "collapse" : "expand"}</button>
                 </ArtifactHeader>
@@ -195,6 +202,11 @@ export default function InlineArtifact({ artifact }: { artifact: ChatArtifactRef
             <div className="flex items-center gap-2 px-3 py-2">
                 <Icon className="h-3.5 w-3.5 text-cortex-primary" />
                 <span className="flex-1 truncate text-[10px] font-mono font-bold text-cortex-text-main">{artifact.title}</span>
+                {producerLabel ? (
+                    <span className="rounded-full border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-0.5 text-[8px] font-mono text-cortex-primary">
+                        {producerLabel}
+                    </span>
+                ) : null}
                 <span className="text-[8px] font-mono uppercase text-cortex-text-muted">{artifact.type}</span>
                 {downloadHref ? <a href={downloadHref} download target="_blank" rel="noopener noreferrer" className="rounded p-0.5 text-cortex-text-muted hover:bg-cortex-border hover:text-cortex-primary" title={`Download ${binaryArtifactLabel(artifact)}`}><ExternalLink className="h-3 w-3" /></a> : null}
             </div>

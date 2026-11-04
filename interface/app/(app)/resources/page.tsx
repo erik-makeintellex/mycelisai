@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Brain, Wrench, BookOpen, FolderOpen, GitBranch, BookMarked } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
-import AdvancedModeGate from "@/components/shared/AdvancedModeGate";
+import DurableFilesOperatorView from "@/components/resources/DurableFilesOperatorView";
 import { useCortexStore } from "@/store/useCortexStore";
 
 const MCPToolRegistry = dynamic(() => import("@/components/settings/MCPToolRegistry"), {
@@ -53,12 +53,7 @@ function ResourcesContent() {
     );
 
     if (!advancedMode) {
-        return (
-            <AdvancedModeGate
-                title="Advanced resources stay tucked away by default"
-                summary="Connected tools, workspace file access, role libraries, and global AI engine setup are available when you intentionally open Advanced mode."
-            />
-        );
+        return <DurableFilesOperatorView />;
     }
 
     return (

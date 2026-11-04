@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { formatHumanActivityEvent } from "@/lib/activityLabels";
 import type { MissionEvent } from "@/store/useCortexStore";
 
 // ── Event type → badge color ──────────────────────────────────
@@ -39,23 +40,6 @@ function dotColor(eventType: string): string {
     }
 }
 
-function payloadSummary(event: MissionEvent): string {
-    const p = event.payload ?? {};
-    if (p.tool)          return String(p.tool);
-    if (p.tool_name)     return String(p.tool_name);
-    if (p.error)         return String(p.error).slice(0, 80);
-    if (event.event_type === "artifact.created" && p.package_kind === "codex_task_bundle") {
-        const label = String(p.package_slug ?? p.base_path ?? "codex_task_bundle");
-        const fileCount = Array.isArray(p.files) ? ` · ${p.files.length} files` : "";
-        const proof = typeof p.proof_path === "string" ? ` · proof: ${p.proof_path}` : "";
-        return `Codex task bundle: ${label}${fileCount}${proof}`;
-    }
-    if (p.title)         return String(p.title);
-    if (p.member)        return `member: ${p.member}`;
-    if (p.mission_id)    return `mission: ${String(p.mission_id).slice(0, 8)}`;
-    return '';
-}
-
 function relativeTime(iso: string): string {
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
     if (diff < 60)   return `${diff}s ago`;
@@ -63,17 +47,36 @@ function relativeTime(iso: string): string {
     return `${Math.floor(diff / 3600)}h ago`;
 }
 
+function payloadSummary(payload?: Record<string, unknown>): string | null {
+    if (!payload) return null;
+    if (payload.package_kind === "codex_task_bundle") {
+        const label = String(payload.package_slug ?? payload.base_path ?? "codex_task_bundle");
+        const fileCount = Array.isArray(payload.files) ? ` · ${payload.files.length} files` : "";
+        const proof = typeof payload.proof_path === "string" ? ` · proof: ${payload.proof_path}` : "";
+        return `Codex task bundle: ${label}${fileCount}${proof}`;
+    }
+    if (typeof payload.error === "string")     return payload.error.slice(0, 80);
+    if (typeof payload.tool === "string")      return payload.tool;
+    if (typeof payload.tool_name === "string") return payload.tool_name;
+    if (typeof payload.title === "string")     return payload.title;
+    if (typeof payload.rule_name === "string") return payload.rule_name;
+    return null;
+}
+
 // ── EventCard ─────────────────────────────────────────────────
 
 interface Props {
     event: MissionEvent;
-    isLast: boolean;
+    isLast?: boolean;
+    isExpanded?: boolean;
+    onToggle?: () => void;
 }
 
-export default function EventCard({ event, isLast }: Props) {
+export default function EventCard({ event, isLast = false }: Props) {
     const [expanded, setExpanded] = useState(false);
-    const summary = payloadSummary(event);
-    const hasPayload = event.payload && Object.keys(event.payload).length > 0;
+    const humanSentence = formatHumanActivityEvent(event);
+    const summary = payloadSummary(event.payload);
+    const hasPayload = Boolean(event.payload && Object.keys(event.payload).length > 0);
 
     return (
         <div className="flex gap-3">
@@ -86,9 +89,9 @@ export default function EventCard({ event, isLast }: Props) {
             {/* Content */}
             <div className="flex-1 pb-4">
                 <div className="flex items-start gap-2 flex-wrap">
-                    {/* Event type badge */}
-                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${eventColor(event.event_type)}`}>
-                        {event.event_type}
+                    {/* Human-readable event sentence */}
+                    <span className="text-xs font-medium text-cortex-text-main leading-relaxed">
+                        {humanSentence}
                     </span>
 
                     {/* Source agent chip */}
@@ -98,34 +101,42 @@ export default function EventCard({ event, isLast }: Props) {
                         </span>
                     )}
 
+                    {/* Concise payload tag */}
+                    {summary && (
+                        <span className="text-[10px] font-mono text-cortex-text-muted truncate max-w-[260px]">
+                            {summary}
+                        </span>
+                    )}
+
                     {/* Timestamp */}
                     <span className="text-[9px] font-mono text-cortex-text-muted/60 ml-auto">
                         {relativeTime(event.emitted_at)}
                     </span>
                 </div>
 
-                {/* Payload summary + expand */}
-                {(summary || hasPayload) && (
-                    <div className="mt-1 flex items-start gap-1">
-                        {summary && (
-                            <span className="text-[10px] font-mono text-cortex-text-muted flex-1 leading-relaxed">
-                                {summary}
-                            </span>
-                        )}
-                        {hasPayload && (
-                            <button
-                                onClick={() => setExpanded((p) => !p)}
-                                className="flex-shrink-0 p-0.5 rounded text-cortex-text-muted hover:text-cortex-primary transition-colors"
-                                title={expanded ? "Collapse payload" : "Expand payload"}
-                            >
-                                {expanded
-                                    ? <ChevronDown className="w-3 h-3" />
-                                    : <ChevronRight className="w-3 h-3" />
-                                }
-                            </button>
-                        )}
-                    </div>
-                )}
+                {/* Event type badge + View Technical Envelope toggle */}
+                <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${eventColor(event.event_type)}`}>
+                        {event.event_type}
+                    </span>
+
+                    {hasPayload && (
+                        <button
+                            type="button"
+                            data-testid="toggle-technical-envelope"
+                            onClick={() => setExpanded((p) => !p)}
+                            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono text-cortex-text-muted hover:text-cortex-primary transition-colors"
+                            aria-expanded={expanded}
+                            title={expanded ? "Collapse payload" : "View Technical Envelope"}
+                        >
+                            {expanded
+                                ? <ChevronDown className="w-3 h-3" />
+                                : <ChevronRight className="w-3 h-3" />
+                            }
+                            <span>View Technical Envelope</span>
+                        </button>
+                    )}
+                </div>
 
                 {/* Full payload JSON */}
                 {expanded && event.payload && (

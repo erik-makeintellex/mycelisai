@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { openOrganizationSetup } from '../support/organization-entry';
 
 test.describe('Soma Dashboard (/dashboard)', () => {
 
@@ -17,18 +18,18 @@ test.describe('Soma Dashboard (/dashboard)', () => {
 
     test('navigation rail is visible', async ({ page }) => {
         await expect(page.locator('a[href="/dashboard"]').first()).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Docs' })).toBeVisible();
+        await expect(page.getByRole('link', { name: /Teams/i })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
     });
 
     test('organization entry actions render', async ({ page }) => {
-        await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
+        await openOrganizationSetup(page);
         await expect(page.getByRole('button', { name: 'Start from template' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Start Empty', exact: true })).toBeVisible();
     });
 
     test('recent organization guidance renders', async ({ page }) => {
-        await page.getByRole('button', { name: 'Create or open AI Organizations' }).click();
+        await openOrganizationSetup(page);
         await expect(page.getByRole('heading', { name: 'Recent AI Organizations' })).toBeVisible();
         await expect(
             page.getByText(/Create the AI Organization first so Mycelis opens with structure, not a one-off assistant session\./i),

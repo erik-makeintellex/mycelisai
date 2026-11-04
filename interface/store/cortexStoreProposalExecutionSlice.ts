@@ -112,7 +112,9 @@ export function createCortexProposalExecutionSlice(
                     const packageMsg: ChatMessage | null = artifacts.length > 0 || deliveryPackage || outputRefs.length > 0
                         ? {
                             role: 'council',
-                            content: proofSummary ?? 'Codex task bundle created with retained package proof.',
+                            content: proofSummary
+                                ?? trimToNonEmpty(executionSummary?.summary)
+                                ?? 'Codex task bundle created with retained package proof.',
                             mode: 'execution_result',
                             run_id: runId ?? undefined,
                             artifacts,

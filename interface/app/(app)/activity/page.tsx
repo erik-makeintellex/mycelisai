@@ -83,7 +83,7 @@ export default function ActivityPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-3 py-1 text-[11px] font-mono uppercase tracking-[0.24em] text-cortex-primary">
               <Activity className="h-3.5 w-3.5" />
-              Advanced Activity
+              Activity History
             </div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight">
               Progress, runs, and bus review

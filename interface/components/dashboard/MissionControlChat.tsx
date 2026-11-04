@@ -22,6 +22,7 @@ import {
 import MissionControlMessageBubble from "./MissionControlMessageBubble";
 import { MissionControlAdvancedInput } from "./MissionControlAdvancedInput";
 import OrchestrationInspector from "./OrchestrationInspector";
+import WorkspaceContextHeader from "./WorkspaceContextHeader";
 import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 
 export default function MissionControlChat({
@@ -128,6 +129,13 @@ export default function MissionControlChat({
 
     return (
         <div className="flex h-full min-h-0 flex-col" data-testid="mission-chat">
+            <WorkspaceContextHeader
+                assistantName={assistantName}
+                currentTeamName={currentTeam?.name}
+                agentCount={currentTeam?.agents?.length ?? 0}
+                directTarget={directTarget}
+                broadcastMode={showAdvancedRouting && broadcastMode}
+            />
             <MissionControlChatHeader
                 assistantName={assistantName}
                 broadcastMode={broadcastMode}

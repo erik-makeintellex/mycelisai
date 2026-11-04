@@ -7,6 +7,8 @@
 export const TOOL_LABELS: Record<string, string> = {
   consult_council: "Ask Specialist",
   delegate_task: "Assign to Team",
+  delegate: "Coordinate Team",
+  create_team: "Create Team",
   search_memory: "Search Memory",
   load_deployment_context: "Load Governed Context",
   promote_deployment_context: "Promote Company Knowledge",
@@ -185,6 +187,8 @@ export const TOOL_DESCRIPTIONS: Record<string, string> = {
   generate_image: "Generates image via cognitive pipeline",
   save_cached_image: "Persists cached generated image to workspace saved-media",
   summarize_conversation: "Stores a deliberate conversation summary in durable memory",
+  delegate: "Delegates work to an active team or specialist",
+  create_team: "Creates a new team workflow in the workspace",
 };
 
 export function toolDescription(name: string): string {
@@ -237,3 +241,9 @@ export function toolOrigin(name: string): 'internal' | 'external' | 'sandboxed' 
   if (SANDBOXED_TOOLS.has(name)) return 'sandboxed';
   return 'internal';
 }
+
+export {
+  formatHumanActivityEvent,
+  formatProposalHeadline,
+  type ActivityEventLike,
+} from "./activityLabels";

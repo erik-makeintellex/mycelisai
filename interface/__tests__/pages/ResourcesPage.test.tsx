@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -56,25 +56,50 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
 const mockAdvancedMode = vi.fn(() => true);
 const mockFetchMCPServers = vi.fn();
 const mockDeleteMCPServer = vi.fn();
+const mockFetchArtifacts = vi.fn().mockResolvedValue(undefined);
+const mockToggleAdvancedMode = vi.fn();
+let mockArtifacts: Record<string, unknown>[] = [];
+
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) =>
         selector({
             advancedMode: mockAdvancedMode(),
+            assistantName: 'Soma',
             mcpServers: [],
             isFetchingMCPServers: false,
             fetchMCPServers: mockFetchMCPServers,
             deleteMCPServer: mockDeleteMCPServer,
+            isFetchingArtifacts: false,
+            fetchArtifacts: mockFetchArtifacts,
+            toggleAdvancedMode: mockToggleAdvancedMode,
+            missionChat: [],
+            artifacts: mockArtifacts,
         }),
 }));
 
 import ResourcesPage from '@/app/(app)/resources/page';
 
-describe('Resources Page (V8.1 advanced support)', () => {
+describe('Resources Page (V8.1 advanced support & Operator vs Builder View)', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
         mockAdvancedMode.mockReturnValue(true);
+        mockArtifacts = [
+            {
+                id: 'art-1',
+                agent_id: 'admin',
+                artifact_type: 'document',
+                title: 'Q3 Launch Plan',
+                content_type: 'text/markdown',
+                content: '# Q3 Launch Plan\nReady for distribution.',
+                file_path: 'workspace/deliverables/q3-launch-plan.md',
+                metadata: {},
+                status: 'approved',
+                created_at: new Date().toISOString(),
+            },
+        ];
     });
 
     it('renders page title', async () => {
@@ -121,9 +146,21 @@ describe('Resources Page (V8.1 advanced support)', () => {
         });
     });
 
-    it('shows the advanced gate when advanced mode is off', async () => {
+    it('shows the Durable Files & Deliverables operator view when advanced mode is off', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<ResourcesPage />); });
-        expect(screen.getByText(/Advanced resources stay tucked away by default/i)).toBeDefined();
+        expect(screen.getByTestId('durable-files-operator-view')).toBeDefined();
+        expect(screen.getByText('Q3 Launch Plan')).toBeDefined();
+        expect(screen.getByText('workspace/deliverables/q3-launch-plan.md')).toBeDefined();
+        expect(screen.getByText('Produced by Soma')).toBeDefined();
+
+        const previewBtn = screen.getByRole('button', { name: /Preview/i });
+        fireEvent.click(previewBtn);
+        expect(screen.getByText(/Ready for distribution/i)).toBeDefined();
+
+        const advancedBtn = screen.getByTestId('resources-switch-advanced');
+        expect(advancedBtn.textContent).toContain('Switch to Advanced Mode to configure AI Engines & Connected MCP Tools');
+        fireEvent.click(advancedBtn);
+        expect(mockToggleAdvancedMode).toHaveBeenCalledTimes(1);
     });
 });

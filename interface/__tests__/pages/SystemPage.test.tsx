@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 
 // Mock reactflow (store imports it)
 vi.mock('reactflow', async () => {
@@ -17,25 +17,36 @@ vi.mock('next/navigation', () => ({
 
 const mockAdvancedMode = vi.fn(() => true);
 const mockFetchServicesStatus = vi.fn();
+const mockToggleAdvancedMode = vi.fn();
+let mockServicesStatus: Array<{ name: string; status: string }> = [];
+
 vi.mock('@/store/useCortexStore', () => ({
     useCortexStore: (selector: any) =>
         selector({
             advancedMode: mockAdvancedMode(),
-            servicesStatus: [],
+            assistantName: 'Soma',
+            servicesStatus: mockServicesStatus,
             isFetchingServicesStatus: false,
             servicesStatusUpdatedAt: null,
             fetchServicesStatus: mockFetchServicesStatus,
+            toggleAdvancedMode: mockToggleAdvancedMode,
         }),
 }));
 
 import SystemPage from '@/app/(app)/system/page';
 
-describe('System Page (V8.1 advanced diagnostics)', () => {
+describe('System Page (V8.1 advanced diagnostics & Operator vs Builder View)', () => {
     beforeEach(() => {
+        vi.clearAllMocks();
         for (const key of [...mockSearchParams.keys()]) {
             mockSearchParams.delete(key);
         }
         mockAdvancedMode.mockReturnValue(true);
+        mockServicesStatus = [
+            { name: 'nats', status: 'online' },
+            { name: 'postgres', status: 'online' },
+            { name: 'cognitive', status: 'online' },
+        ];
         // Mock fetch for health checks
         vi.spyOn(global, 'fetch').mockResolvedValue({
             ok: true,
@@ -72,10 +83,18 @@ describe('System Page (V8.1 advanced diagnostics)', () => {
         expect(screen.getByText('Services')).toBeDefined();
     });
 
-    it('shows the advanced gate when advanced mode is off', async () => {
+    it('shows the System Status Summary Card when advanced mode is off', async () => {
         mockAdvancedMode.mockReturnValue(false);
         await act(async () => { render(<SystemPage />); });
-        expect(screen.getByText(/System diagnostics are hidden until you open Advanced mode/i)).toBeDefined();
+        expect(screen.getByTestId('system-status-summary-card')).toBeDefined();
+        expect(screen.getByText('System Status: Online (3/3 services active)')).toBeDefined();
+        expect(screen.getByText('Event Bus & Team Coordination')).toBeDefined();
+        expect(screen.getByText('Workspace Memory & Storage')).toBeDefined();
+
+        const diagBtn = screen.getByTestId('open-advanced-diagnostics');
+        expect(diagBtn.textContent).toContain('Open Advanced Diagnostics');
+        fireEvent.click(diagBtn);
+        expect(mockToggleAdvancedMode).toHaveBeenCalledTimes(1);
     });
 
     it('shows lifecycle commands through the supported invoke contract', async () => {

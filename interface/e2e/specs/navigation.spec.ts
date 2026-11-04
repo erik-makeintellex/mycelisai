@@ -1,15 +1,21 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const DEFAULT_NAV_ENTRIES = [
-    { href: '/dashboard', label: 'Soma', testId: 'nav-dashboard' },
-    { href: '/docs', label: 'Docs', testId: 'nav-docs' },
+    { href: '/dashboard', label: 'Soma Work', testId: 'nav-dashboard' },
+    { href: '/teams', label: 'Teams', testId: 'nav-teams' },
+    { href: '/resources', label: 'Durable Files', testId: 'nav-resources' },
     { href: '/settings', label: 'Settings', testId: 'nav-settings' },
 ];
 
 const ADVANCED_NAV_ENTRIES = [
-    { href: '/resources', label: 'Resources', testId: 'nav-resources' },
-    { href: '/memory', label: 'Memory', testId: 'nav-memory' },
+    { href: '/activity', label: 'Activity History', testId: 'nav-activity' },
+    { href: '/runs', label: 'Runs', testId: 'nav-runs' },
+    { href: '/memory', label: 'Memory & Continuity', testId: 'nav-memory' },
+    { href: '/groups', label: 'Groups', testId: 'nav-groups' },
+    { href: '/deployments', label: 'Deployments', testId: 'nav-deployments' },
+    { href: '/automations', label: 'Automations', testId: 'nav-automations' },
     { href: '/system', label: 'System', testId: 'nav-system' },
+    { href: '/docs', label: 'Docs', testId: 'nav-docs' },
 ];
 
 async function openDashboard(page: Page) {
@@ -34,7 +40,7 @@ async function openDashboard(page: Page) {
     }
 }
 
-test.describe('V8.1 Soma-primary Navigation', () => {
+test.describe('V8 Operator-First Navigation', () => {
     test.describe.configure({ mode: 'serial' });
 
     test.beforeEach(async ({ page }) => {
@@ -50,7 +56,7 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         await expect(page.getByTestId('nav-dashboard')).toBeVisible();
     });
 
-    test('default MVP navigation entries are present', async ({ page }) => {
+    test('default Operator navigation entries are present and Builder entries are hidden', async ({ page }) => {
         for (const entry of DEFAULT_NAV_ENTRIES) {
             await expect(page.getByTestId(entry.testId)).toBeVisible();
         }
@@ -65,7 +71,7 @@ test.describe('V8.1 Soma-primary Navigation', () => {
     });
 
     for (const route of [
-        { href: '/docs', testId: 'nav-docs', url: /\/docs/, label: 'docs' },
+        { href: '/resources', testId: 'nav-resources', url: /\/resources/, label: 'resources' },
         { href: '/settings', testId: 'nav-settings', url: /\/settings/, label: 'settings' },
     ]) {
         test(`navigating to ${route.label} highlights the corresponding nav item`, async ({ page, browserName }) => {
@@ -86,18 +92,21 @@ test.describe('V8.1 Soma-primary Navigation', () => {
         await expect(page.getByTestId('nav-system')).toHaveCount(0);
     });
 
-    test('Advanced mode persistence flips visible state labels', async ({ page }) => {
-        await expect(page.getByTestId('nav-resources')).toHaveCount(0);
+    test('Advanced mode persistence flips visible Builder navigation entries', async ({ page }) => {
+        await expect(page.getByTestId('nav-system')).toHaveCount(0);
+        await expect(page.getByTestId('nav-docs')).toHaveCount(0);
         await page.evaluate(() => {
             window.localStorage.setItem('mycelis-advanced-mode', 'true');
         });
         await openDashboard(page);
-        await expect(page.getByTestId('nav-resources')).toBeVisible();
+        await expect(page.getByTestId('nav-system')).toBeVisible();
+        await expect(page.getByTestId('nav-docs')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Advanced: On' })).toBeVisible();
         await page.evaluate(() => {
             window.localStorage.setItem('mycelis-advanced-mode', 'false');
         });
         await openDashboard(page);
-        await expect(page.getByTestId('nav-resources')).toHaveCount(0);
+        await expect(page.getByTestId('nav-system')).toHaveCount(0);
+        await expect(page.getByTestId('nav-docs')).toHaveCount(0);
     });
 });
