@@ -58,7 +58,7 @@ def _compose_effective_env(env_values: dict[str, str] | None = None) -> dict[str
 
 
 def _wsl_exec_command(*args: str) -> list[str]:
-    return compose_env.wsl_exec_command(*args)
+    return list(args) if running_in_wsl() else compose_env.wsl_exec_command(*args)
 
 
 def _port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:

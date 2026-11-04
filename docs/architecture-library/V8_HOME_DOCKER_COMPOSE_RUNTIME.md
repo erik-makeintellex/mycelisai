@@ -78,9 +78,19 @@ Host port defaults stay aligned with the normal local operator path:
 ## Storage Contract
 
 Compose persistence is split intentionally:
-- named volume for PostgreSQL data
-- named volume for NATS JetStream data
-- bind-mounted output block path at `MYCELIS_OUTPUT_HOST_PATH` for Core `/data`
+- named volume `postgres-data` for PostgreSQL (`pgvector`) data
+- named volume `nats-data` for NATS JetStream data
+- named volume `mcp-cache` mounted at `/data/mcp-cache` (`MYCELIS_MCP_NPM_CACHE=/data/mcp-cache/npm`) so curated stdio MCP servers launched via `npx` persist package caches across container restarts
+- bind-mounted output block path at `MYCELIS_OUTPUT_HOST_PATH` for Core `/data` (`/data/artifacts` and `/data/workspace`)
+
+## On-Demand Tiered Service Management (`service.*`)
+
+Operators and target servers (including the `mycelis` service user hosting `/srv/mycelis/app` in WSL) can bring tiers up or hibernate non-data tiers on demand:
+- `uv run inv service.plan` — prints the Initial Total Service (Docker Compose) vs Scale-Up (Kubernetes/Helm) strategy matrix
+- `uv run inv service.up --tier=data|capabilities|core|full --target=compose|k8s` — starts the requested tier
+- `uv run inv service.wake --service=searxng --target=compose` — wakes an on-demand capability service such as SearXNG (`:8088`)
+- `uv run inv service.hibernate --tier=capabilities|core --target=compose` — stops non-data containers while keeping `postgres` and `nats` stateful volumes running
+- `uv run inv service.status --target=compose` — reports Data, Capabilities (`SearXNG`), and Core/Interface status
 
 That keeps:
 - database and bus state durable across restarts

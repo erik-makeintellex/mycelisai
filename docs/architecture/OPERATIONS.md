@@ -102,7 +102,7 @@ uv run inv lifecycle.down
 uv run inv lifecycle.memory-restart --frontend
 ```
 
-### Compose Tasks (`ops/compose.py`)
+### Compose & Tiered Service Tasks (`ops/compose.py`, `ops/service_tiers.py`)
 
 ```bash
 uv run inv compose.up --build --wait-timeout=240
@@ -113,10 +113,15 @@ uv run inv compose.storage-health
 uv run inv compose.infra-up --wait-timeout=180
 uv run inv compose.infra-health
 uv run inv compose.down
+uv run inv service.plan --target=compose
+uv run inv service.up --tier=data|capabilities|core|full --target=compose|k8s
+uv run inv service.wake --service=searxng --target=compose|k8s
+uv run inv service.hibernate --tier=capabilities|core --target=compose|k8s
+uv run inv service.status --target=compose|k8s
+uv run inv service.prune-cache
 ```
 
-Compose is the supported single-host runtime lane. `.env.compose` owns container topology; `.env` remains the secret source.
-
+Compose is the supported single-host runtime lane (`postgres-data`, `nats-data`, `mcp-cache`, and `/data` output block). `.env.compose` owns container topology; `.env` remains the secret source. `service.*` provides on-demand tiered wake/hibernate and cache pruning across Compose and Kubernetes while protecting the stateful `data` tier.
 Organizations persist to the `organizations` table added by migration 040. A database missing that migration returns 503 from the organization API naming `uv run inv compose.migrate`; run `uv run inv compose.migrate` (Compose) or `uv run inv db.migrate` (source-mode) to apply it. `compose.migrate` detects whether the table already exists, so it is safe to rerun on existing databases.
 
 Operator templates (governed clones of template bundles and starters, RC-004G) persist to the `operator_templates` table added by migration 041. A database missing that migration returns 503 from clone and apply naming `uv run inv compose.migrate`, and the organization-starters catalog lists file starters only; run `uv run inv compose.migrate` (Compose) or `uv run inv db.migrate` (source-mode) to apply it. `compose.migrate` detects whether the table already exists, so it is safe to rerun.

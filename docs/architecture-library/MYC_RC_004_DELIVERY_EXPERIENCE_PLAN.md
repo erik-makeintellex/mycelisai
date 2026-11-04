@@ -1,7 +1,7 @@
 # MYC-RC-004 Delivery Experience Plan
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8 Config and Bootstrap Model](V8_CONFIG_AND_BOOTSTRAP_MODEL.md) | [MYC-RC-003 Proof Envelope Delivery Plan](MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md)
 
-> Status: `COMPLETE` (Windows proof lane) - accepted from committed state `bb6ea007`: full Chromium `93` passed / `14` skipped / `0` failed; Vitest `123` files; tsc clean; `go vet` + `go test ./... -count=1 -p 1` green; `pytest` `327` passed; line gate and `git diff --check` clean. Live walkthrough against a running Core waits on the Environment lane.
+> Status: `COMPLETE` (Windows + WSL live proof lanes) - accepted from committed state `bb6ea007` and verified via live end-to-end walkthrough against the running `mycelis@mother-brain` WSL Compose stack (`Ubuntu-26.04`: starter catalog, organization creation & Postgres persistence, Deployments aggregate API across all 5 sources, redacted View Config, and governed template clone `202` preview -> `201` confirm).
 > Date: 2026-09-25
 > Purpose: make strong delivery the zero-config default for simple operators, make delivery config readable and governable for advanced operators, and make every team deployment explainable from one page.
 

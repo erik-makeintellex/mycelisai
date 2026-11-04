@@ -110,6 +110,8 @@ spec:
             - name: MYCELIS_SEARCH_MAX_RESULTS
               value: {{ default 8 .maxResults | quote }}
             {{- end }}
+            - name: NPM_CONFIG_CACHE
+              value: {{ default "/data/mcp-cache/npm" .Values.npmConfigCache | quote }}
             {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
             {{- end }}

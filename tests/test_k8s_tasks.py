@@ -282,3 +282,11 @@ def test_recover_fails_when_restart_signal_cannot_be_sent(monkeypatch):
 
     with pytest.raises(SystemExit, match="unable to send restart signal"):
         k8s.recover.body(ctx)
+
+
+def test_deployment_template_sets_npm_config_cache_under_data_volume():
+    deployment_path = Path(__file__).resolve().parents[1] / "charts" / "mycelis-core" / "templates" / "deployment.yaml"
+    deployment_text = deployment_path.read_text(encoding="utf-8")
+
+    assert "- name: NPM_CONFIG_CACHE" in deployment_text
+    assert "/data/mcp-cache/npm" in deployment_text

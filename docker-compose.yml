@@ -48,6 +48,12 @@ services:
       - "${MYCELIS_COMPOSE_SEARXNG_PORT:-8088}:8080"
     volumes:
       - ./ops/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
     logging: *default-logging
 
   core:
@@ -82,6 +88,7 @@ services:
       MYCELIS_SEARCH_MAX_RESULTS: ${MYCELIS_SEARCH_MAX_RESULTS:-8}
       DATA_DIR: ${DATA_DIR:-/data/artifacts}
       MYCELIS_WORKSPACE: ${MYCELIS_WORKSPACE:-/data/workspace}
+      NPM_CONFIG_CACHE: ${MYCELIS_MCP_NPM_CACHE:-/data/mcp-cache/npm}
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,6 +101,7 @@ services:
     volumes:
       - ./core/config:/core/config:ro
       - ${MYCELIS_OUTPUT_HOST_PATH:-./workspace/docker-compose/data}:/data
+      - mcp-cache:/data/mcp-cache
     healthcheck:
       test: ["CMD", "/server", "action", "GET", "/healthz"]
       interval: 10s
@@ -132,3 +140,4 @@ services:
 volumes:
   postgres-data:
   nats-data:
+  mcp-cache:

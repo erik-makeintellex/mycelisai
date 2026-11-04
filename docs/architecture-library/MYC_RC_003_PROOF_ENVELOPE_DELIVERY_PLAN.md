@@ -1,7 +1,7 @@
 # MYC-RC-003 Proof Envelope Delivery Plan
 > Navigation: [Project README](../../README.md) | [Docs Home](../README.md) | [Architecture Index](ARCHITECTURE_LIBRARY_INDEX.md) | [V8.3 Convergence PRD](mycelis_soma_updated_prd_v8_3_current_state_convergence.md)
 
-> Status: `COMPLETE` (Windows proof lane) - MYC-RC-003A accepted from committed state `bb6ea007` (full Chromium `93` passed / `14` skipped / `0` failed; Vitest `123` files; tsc clean; `go vet` + `go test ./... -count=1 -p 1` green; `pytest` `327` passed; line gate and `git diff --check` clean). WSL release proof remains a separate environment gate.
+> Status: `COMPLETE` (Windows + WSL live proof lanes) - MYC-RC-003A and MYC-RC-003B (non-package `write_file`, team/group outputs, MCP tool calls, and Team Lead guided actions) accepted with live WSL walkthrough verified on `mycelis@mother-brain` (`Ubuntu-26.04`).
 > Date: 2026-05-29
 > Purpose: deliver the minimum universal proof envelope for retained outputs, beginning with Codex task packages.
 

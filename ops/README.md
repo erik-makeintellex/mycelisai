@@ -103,8 +103,17 @@ Handles the rapid Docker Compose single-host runtime for development, same-machi
 - Compose now emits deterministic stage expectations and timeout guidance so humans and agent-run callers can tell what should happen next and which recovery command to run if a stage stalls.
 - Use `uv run inv compose.up --build --wait-timeout=240` on a fresh or slower machine when image build and first readiness can legitimately take longer than the default window.
 - `compose.health` is a usable-product gate for the home runtime, so it fails when text inference is offline even if the API still responds.
-- The compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; default npm-backed MCP auto-bootstrap still stays disabled by default to keep startup logs honest.
+- The compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container, backed by the persistent `mcp-cache` volume (`MYCELIS_MCP_NPM_CACHE=/data/mcp-cache/npm`); default npm-backed MCP auto-bootstrap still stays disabled by default to keep startup logs honest.
 - Manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root, which is `/data/workspace` in the supported Compose output block.
+
+### `service_tiers.py` (On-Demand Tiered Service Management)
+Brings service tiers up or into hibernation on demand across Docker Compose (`compose`) and Kubernetes (`k8s`) while protecting stateful data volumes (`postgres`, `nats`):
+- **Plan**: `uv run inv service.plan --target=compose|k8s` (deployment strategy matrix for Initial Total Service vs Scale-Up)
+- **Up**: `uv run inv service.up --tier=data|capabilities|core|full --target=compose|k8s`
+- **Wake**: `uv run inv service.wake --service=postgres|nats|searxng|core|interface --target=compose|k8s`
+- **Hibernate**: `uv run inv service.hibernate --tier=capabilities|core --target=compose|k8s` (refuses to hibernate `data`)
+- **Status**: `uv run inv service.status --target=compose|k8s`
+- **Prune Cache**: `uv run inv service.prune-cache` (cleans project/user external library caches, Docker BuildKit cache, and dangling images while preserving active containers and volumes)
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.

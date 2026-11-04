@@ -193,6 +193,8 @@ uv run inv lifecycle.health
 uv run inv lifecycle.down
 uv run inv compose.up --build --wait-timeout=240
 uv run inv compose.health
+uv run inv service.plan
+uv run inv service.up --tier=data --target=compose
 uv run inv ci.baseline
 uv run inv ci.entrypoint-check
 uv run inv ci.service-check
@@ -207,11 +209,8 @@ A slice is not complete unless:
 - tests pass
 - documentation is updated where meaning changed
 - architecture alignment is verified across the layered truth surfaces
-
 `README.md` is the primary architecture inception document. `architecture/v8-2.md` is the canonical full architecture. `.state/V8_DEV_STATE.md` is the source of actual implementation truth. all slices must update these surfaces when implementation, release posture, or target meaning changes.
-
 end-of-slice reporting must explicitly state which tests ran, which docs changed, and which scoped docs were reviewed but left unchanged.
-
 every implementation slice must include a docs review for the touched surface, even when the result is "reviewed, no content change required". Review `docs/API_REFERENCE.md` when API behavior, payload meaning, or endpoint contract changes.
 
 Go owns runtime, orchestration, API, NATS, and backend persistence-facing logic. TypeScript owns the interface and in-app docs browser. Python owns repo management, operator automation, CI orchestration, and local test harnesses. SQL owns migrations. PowerShell may only be a thin host wrapper when the platform requires it.

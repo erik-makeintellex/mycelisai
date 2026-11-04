@@ -135,6 +135,7 @@ uv run inv ci.baseline
 uv run inv ci.release-preflight --lane=release
 uv run inv compose.health
 uv run inv compose.storage-health
+uv run inv service.status --target=compose
 uv run inv lifecycle.health
 uv run inv quality.max-lines --limit 300
 uv run inv logging.check-schema
@@ -142,7 +143,6 @@ uv run inv logging.check-topics
 ```
 
 Focused live-backend examples:
-
 ```bash
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/soma-governance-live.spec.ts
 uv run inv interface.e2e --live-backend --server-mode=start --spec=e2e/specs/workspace-live-backend.spec.ts
@@ -218,7 +218,7 @@ uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --sp
 ```
 **Windows e2e harness rules:** never run two `uv run inv interface.e2e` invocations at once (they share port 3100 and the webserver log, producing unrelated "worker process exited unexpectedly" cascades), and never run Vitest during an e2e run (its Interface process cleanup can kill the Vitest process mid-suite); specs that assert state after `page.reload()` must wait for the relevant network response with a bounded retry, because the throttled managed dev server can occasionally stall one reload round-trip (see `settings.spec.ts`).
 
-`catalogue.spec.ts`, `wiring-active-delete.spec.ts`, and `wiring-edit.spec.ts` cover real MVP surfaces (Role Library, Automations "Workflow Builder" behind Advanced Mode) via a documented `test.fixme(...)` rather than a silent `test.skip()`, and are not yet in the CI `mvp-browser` set pending the noted fixture/locator gap.
+`catalogue.spec.ts`, `wiring-active-delete.spec.ts`, and `wiring-edit.spec.ts` cover real MVP surfaces (Role Library and Automations "Workflow Builder" behind Advanced Mode) by seeding `mycelis-advanced-mode=true` via `page.addInitScript` and asserting the current `New Agent` and `Workflow Builder` controls directly.
 
 ## Tier 4: Integration Tests
 

@@ -112,6 +112,10 @@ Advisors, Departments, and Specialists stay visible without becoming a flat defa
 
 Advanced mode exposes inheritance, config origin, groups, resources/MCP, deep memory, runs/bus state, settings, auth, and docs without becoming required for first use.
 
+- **Default Operator Rail (`advancedMode === false`):** Exposes only `Soma Work` (`/dashboard`), `Teams` (`/teams`), `Durable Files` (`/resources`), and `Settings` (`/settings`), while revealing `Activity History` (`/activity`), `Runs` (`/runs`), `Memory & Continuity` (`/memory`), `Groups` (`/groups`), `Deployments` (`/deployments`), `Automations` (`/automations`), `System` (`/system`), and `Docs` (`/docs`) when `advancedMode === true`.
+- **Outcome-First Proposal & Activity Disclosure:** Proposal cards highlight plain-English intent, deliverable preview/download cards, and Confirm/Cancel actions while keeping cost, risk badges, capability IDs, tokens, and `run_id` UUIDs behind `[View Proof Details]`. Activity and run events render human-readable sentences (`formatHumanActivityEvent`) and keep raw JSON inside `"View Technical Envelope"`.
+- **Calm Operator Views on `/resources` and `/system`:** In default mode, `/resources` renders a **Durable Files & Deliverables** browser with Preview/Open/Download actions, and `/system` renders a calm **System Status Summary Card** with 1-click access to Advanced Diagnostics.
+
 Current screen contract families:
 - first-run and organization creation
 - AI Organization home/re-entry

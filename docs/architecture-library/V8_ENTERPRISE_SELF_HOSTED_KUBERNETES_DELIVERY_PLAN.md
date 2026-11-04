@@ -131,8 +131,8 @@ PM rules:
 | --- | --- | --- | --- | --- |
 | Delivery Management | `ACTIVE` | Delivery Manager | keep one enterprise-Kubernetes target and compact team ownership | updated state + accepted slice board |
 | Platform Contract | `ACTIVE` | Platform Architect | define `k3d` as local K8s lane and enterprise chart promotion rules | canonical plan + docs alignment |
-| Chart Enterprise Readiness | `IN_REVIEW` | Chart / Runtime Engineer | keep enterprise-friendly Helm surfaces aligned with promoted preset files | rendered chart diff + focused tests |
-| Local K8s Ops | `IN_REVIEW` | Ops / Deployment Engineer | apply promoted preset files through `MYCELIS_K8S_VALUES_FILE` and keep `k3d` tasking deterministic | deterministic local `k3d` up/deploy/status proof |
+| Chart Enterprise Readiness | `COMPLETE` | Chart / Runtime Engineer | keep enterprise-friendly Helm surfaces aligned with promoted preset files and writable `/data/mcp-cache/npm` (`NPM_CONFIG_CACHE`) under `readOnlyRootFilesystem` | rendered chart diff + `test_k8s_tasks.py` (`16/16` passed) + `k8s.standards --helm` (`OK`) |
+| Local K8s Ops | `IN_REVIEW` | Ops / Deployment Engineer | apply promoted preset files through `MYCELIS_K8S_VALUES_FILE`, tiered `service.* --target=k8s` workload scaling, and keep `k3d` tasking deterministic | deterministic local `k3d` up/deploy/status proof |
 | Validation + Release | `IN_REVIEW` | Validation / Release Engineer | keep chart render/policy/runtime proof in the repo gate and cover preset values files | `k8s.standards`, local enterprise-sim render/test gate |
 | Enterprise Staging Contract | `IN_REVIEW` | Shared after preceding lanes | use promoted values files to define customer-managed dependency posture | documented deploy contract for real clusters |
 
