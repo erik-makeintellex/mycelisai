@@ -195,6 +195,13 @@ func (s *AdminServer) executeReviewLoop(home OrganizationHomePayload, profile Lo
 		return ReviewLoopResult{}, err
 	}
 
+	reviewOutput := buildReviewLoopOutput(home, owner)
+	activityStatus, activitySummary := summarizeActivityFromReview(reviewOutput)
+	if profile.Type == LoopProfileTypeLearning {
+		reviewOutput = buildLearningLoopOutput(home, profile, owner)
+		activityStatus, activitySummary = summarizeActivityFromLearning(reviewOutput)
+	}
+
 	result := ReviewLoopResult{
 		ID:               uuid.NewString(),
 		LoopID:           profile.ID,
@@ -204,10 +211,11 @@ func (s *AdminServer) executeReviewLoop(home OrganizationHomePayload, profile Lo
 		OrganizationName: safeOrganizationName(home.Name),
 		Trigger:          trigger,
 		Owner:            owner,
-		Review:           buildReviewLoopOutput(home, owner),
+		Review:           reviewOutput,
+		ActivityStatus:   activityStatus,
+		ActivitySummary:  activitySummary,
 		ReviewedAt:       time.Now().UTC().Format(time.RFC3339),
 	}
-	result.ActivityStatus, result.ActivitySummary = summarizeActivityFromReview(result.Review)
 
 	s.loopResultStore().Add(home.ID, result)
 	log.Printf("[review-loop] organization=%s loop=%s owner_type=%s owner_id=%s status=%s findings=%d suggestions=%d", home.ID, profile.ID, owner.Type, owner.ID, result.Review.Status, len(result.Review.Findings), len(result.Review.Suggestions))

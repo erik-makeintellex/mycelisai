@@ -1,10 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Snowflake, Brain } from "lucide-react";
-import { memoryResultScore, type SearchResult } from "./memorySelection";
+import { Snowflake, Brain, AlertTriangle } from "lucide-react";
+import {
+  memoryResultScore,
+  formatMemoryLayerLabel,
+  formatVerificationStatusLabel,
+  type SearchResult,
+  type ArbitrationSummary,
+} from "./memorySelection";
 
-// ── Types ────────────────────────────────────────────────────
+type LayerFilterValue = "" | "GOVERNED_DOCTRINE" | "PROJECT_MEMORY" | "AGENT_MEMORY" | "SOMA_MEMORY" | "REFLECTION_MEMORY";
+
+const LAYER_FILTER_OPTIONS: Array<{ value: LayerFilterValue; label: string }> = [
+  { value: "", label: "All" },
+  { value: "GOVERNED_DOCTRINE", label: "Governed Doctrine" },
+  { value: "PROJECT_MEMORY", label: "Project" },
+  { value: "AGENT_MEMORY", label: "Team / Agent" },
+  { value: "SOMA_MEMORY", label: "Soma" },
+  { value: "REFLECTION_MEMORY", label: "Reflection" },
+];
 
 // ── Timestamp Formatting ─────────────────────────────────────
 
@@ -12,12 +27,7 @@ function formatTimestamp(ts: string): string {
   try {
     const d = new Date(ts);
     if (isNaN(d.getTime())) return ts;
-    return d.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
   } catch {
     return ts;
   }
@@ -25,18 +35,11 @@ function formatTimestamp(ts: string): string {
 
 // ── Result Card ──────────────────────────────────────────────
 
-function ResultCard({
-  result,
-  onSelect,
-}: {
-  result: SearchResult;
-  onSelect: (result: SearchResult) => void;
-}) {
+function ResultCard({ result, onSelect }: { result: SearchResult; onSelect: (result: SearchResult) => void }) {
   const pct = Math.round(memoryResultScore(result) * 100);
-  const preview =
-    result.content.length > 200
-      ? result.content.slice(0, 200) + "..."
-      : result.content;
+  const preview = result.content.length > 200 ? result.content.slice(0, 200) + "..." : result.content;
+  const layerLabel = formatMemoryLayerLabel(result.memory_layer);
+  const statusLabel = formatVerificationStatusLabel(result.verification_status);
 
   return (
     <button
@@ -60,11 +63,21 @@ function ResultCard({
       {/* Content preview */}
       <p className="text-sm text-cortex-text-main leading-relaxed">{preview}</p>
 
-      {/* Source + Timestamp */}
-      <div className="flex items-center gap-2">
+      {/* Source + Layer + Verification + Timestamp */}
+      <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-cortex-info/15 text-cortex-info">
           {result.source}
         </span>
+        {layerLabel ? (
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cortex-primary/15 text-cortex-primary">
+            {layerLabel}
+          </span>
+        ) : null}
+        {statusLabel ? (
+          <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cortex-border/60 text-cortex-text-main">
+            {statusLabel}
+          </span>
+        ) : null}
         <span className="text-[9px] font-mono text-cortex-text-muted ml-auto">
           {formatTimestamp(result.created_at)}
         </span>
@@ -85,7 +98,9 @@ export default function ColdMemoryPanel({
   onSelectResult,
 }: ColdMemoryPanelProps) {
   const [query, setQuery] = useState(searchQuery ?? "");
+  const [layerFilter, setLayerFilter] = useState<LayerFilterValue>("");
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [arbitration, setArbitration] = useState<ArbitrationSummary | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
@@ -102,6 +117,7 @@ export default function ColdMemoryPanel({
   useEffect(() => {
     if (!query.trim()) {
       setResults([]);
+      setArbitration(null);
       setHasSearched(false);
       setIsSearching(false);
       return;
@@ -111,9 +127,12 @@ export default function ColdMemoryPanel({
       controller = new AbortController();
       setIsSearching(true);
       setHasSearched(true);
+      const filterParam = layerFilter
+        ? `&layer_filter=${encodeURIComponent(layerFilter)}`
+        : "";
       try {
         const res = await fetch(
-          `/api/v1/memory/search?q=${encodeURIComponent(query)}`,
+          `/api/v1/memory/search?q=${encodeURIComponent(query)}${filterParam}`,
           { signal: controller.signal },
         );
         if (controller.signal.aborted) return;
@@ -121,12 +140,15 @@ export default function ColdMemoryPanel({
           const data = await res.json();
           if (controller.signal.aborted) return;
           setResults(data.results ?? []);
+          setArbitration(data.arbitration ?? null);
         } else {
           setResults([]);
+          setArbitration(null);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         setResults([]);
+        setArbitration(null);
       }
       if (!controller.signal.aborted) setIsSearching(false);
     }, 500);
@@ -134,7 +156,7 @@ export default function ColdMemoryPanel({
       clearTimeout(timer);
       controller?.abort();
     };
-  }, [query]);
+  }, [query, layerFilter]);
 
   return (
     <div className="h-full flex flex-col">
@@ -148,8 +170,8 @@ export default function ColdMemoryPanel({
         </div>
       </div>
 
-      {/* Search input */}
-      <div className="px-3 py-2 border-b border-cortex-border/50 flex-shrink-0">
+      {/* Search input + Layer filter bar */}
+      <div className="px-3 py-2 border-b border-cortex-border/50 flex-shrink-0 space-y-2">
         <div className="relative">
           <Brain className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cortex-text-muted pointer-events-none" />
           <input
@@ -161,7 +183,41 @@ export default function ColdMemoryPanel({
             className="w-full bg-cortex-bg border border-cortex-border rounded-lg pl-8 pr-3 py-2 text-sm font-mono text-cortex-text-main placeholder:text-cortex-text-muted/50 focus:outline-none focus:border-cortex-primary/50 transition-colors"
           />
         </div>
+        <div
+          role="group"
+          aria-label="Filter memory layer"
+          className="flex flex-wrap items-center gap-1"
+        >
+          {LAYER_FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value || "all"}
+              type="button"
+              aria-pressed={layerFilter === opt.value}
+              onClick={() => setLayerFilter(opt.value)}
+              className={`text-[9px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                layerFilter === opt.value
+                  ? "bg-cortex-primary/20 border-cortex-primary text-cortex-primary"
+                  : "bg-cortex-bg border-cortex-border text-cortex-text-muted hover:text-cortex-text-main"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* Contradiction Warning Banner */}
+      {arbitration?.has_contradictions ? (
+        <div
+          data-testid="memory-contradiction-banner"
+          className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-300 flex-shrink-0"
+        >
+          <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>
+            Conflicting memory candidates were detected during retrieval arbitration.
+          </span>
+        </div>
+      ) : null}
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-cortex-border min-h-0">

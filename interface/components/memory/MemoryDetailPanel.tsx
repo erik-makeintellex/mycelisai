@@ -1,9 +1,15 @@
 "use client";
 
-import { Download, FileText, Search } from "lucide-react";
+import { AlertTriangle, Download, FileText, Search } from "lucide-react";
 import type React from "react";
 import type { Artifact } from "@/store/useCortexStore";
-import { memoryResultScore, type MemorySelection, type SearchResult } from "./memorySelection";
+import {
+  formatMemoryLayerLabel,
+  formatVerificationStatusLabel,
+  memoryResultScore,
+  type MemorySelection,
+  type SearchResult,
+} from "./memorySelection";
 
 export default function MemoryDetailPanel({
   selection,
@@ -35,6 +41,8 @@ export default function MemoryDetailPanel({
 }
 
 function SearchDetail({ result }: { result: SearchResult }) {
+  const layerLabel = formatMemoryLayerLabel(result.memory_layer);
+  const statusLabel = formatVerificationStatusLabel(result.verification_status);
   return (
     <DetailShell
       icon={<Search className="h-4 w-4 text-cortex-info" />}
@@ -43,6 +51,17 @@ function SearchDetail({ result }: { result: SearchResult }) {
     >
       <Meta label="ID" value={result.id} />
       <Meta label="Created" value={formatDate(result.created_at)} />
+      {layerLabel ? <Meta label="Layer" value={layerLabel} /> : null}
+      {statusLabel ? <Meta label="Verification" value={statusLabel} /> : null}
+      {result.contradiction_halt?.halted ? (
+        <div
+          data-testid="memory-detail-contradiction-warning"
+          className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-5 text-amber-300"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>{result.contradiction_halt.reason}</span>
+        </div>
+      ) : null}
       <pre className="whitespace-pre-wrap rounded-xl border border-cortex-border bg-cortex-bg p-3 text-xs leading-6 text-cortex-text-main">
         {result.content}
       </pre>

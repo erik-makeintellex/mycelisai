@@ -101,4 +101,73 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
         await expect(page.getByRole("heading", { name: "System", exact: true })).toBeVisible();
         await expect(page.getByRole("button", { name: "Runtime Health" })).toBeVisible();
     });
+
+    test("renders Trusted-Memory arbitration badges, layer filter, and contradiction warning on /memory", async ({ page }) => {
+        await page.route("**/api/v1/memory/sitreps**", async (route) => {
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify([]) });
+        });
+        await page.route("**/api/v1/artifacts**", async (route) => {
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, data: [] }) });
+        });
+        await page.route("**/api/v1/memory/search**", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    results: [
+                        {
+                            id: "mem-doctrine-1",
+                            content: "Governed organization doctrine: all external deployments require release approval.",
+                            score: 0.94,
+                            source: "company_knowledge",
+                            created_at: new Date().toISOString(),
+                            memory_layer: "GOVERNED_DOCTRINE",
+                            verification_status: "verified",
+                        },
+                        {
+                            id: "mem-cand-2",
+                            content: "Unverified reflection candidate suggesting auto-deploy on Fridays.",
+                            score: 0.71,
+                            source: "reflection_synthesis",
+                            created_at: new Date().toISOString(),
+                            memory_layer: "REFLECTION_MEMORY",
+                            verification_status: "contradicted",
+                            contradiction_halt: {
+                                halted: true,
+                                reason: "Contradicts higher-precedence Governed Doctrine mem-doctrine-1",
+                                conflicting_id: "mem-doctrine-1",
+                                conflicting_layer: "GOVERNED_DOCTRINE",
+                            },
+                        },
+                    ],
+                    arbitration: {
+                        total_candidates: 2,
+                        returned_count: 2,
+                        verified_count: 1,
+                        contradicted_count: 1,
+                        dominant_layer: "GOVERNED_DOCTRINE",
+                        has_contradictions: true,
+                    },
+                }),
+            });
+        });
+
+        await page.addInitScript(() => {
+            window.localStorage.setItem("mycelis-advanced-mode", "true");
+        });
+        await page.goto("/memory", { waitUntil: "domcontentloaded" });
+
+        const filterGroup = page.getByRole("group", { name: "Filter memory layer" });
+        await expect(filterGroup).toBeVisible();
+        await filterGroup.getByRole("button", { name: "Governed Doctrine" }).click();
+
+        const searchInput = page.getByLabel("Search semantic memory");
+        await searchInput.fill("deployment approval");
+
+        await expect(page.getByTestId("memory-contradiction-banner")).toBeVisible();
+        await expect(page.getByText("Governed organization doctrine: all external deployments require release approval.")).toBeVisible();
+
+        await page.getByText("Unverified reflection candidate suggesting auto-deploy on Fridays.").click();
+        await expect(page.getByText("Contradicts higher-precedence Governed Doctrine mem-doctrine-1")).toBeVisible();
+    });
 });

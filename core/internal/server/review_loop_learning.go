@@ -80,12 +80,69 @@ func learningInsightRoleSubject(name string) string {
 	return trimmed + " specialists"
 }
 
+func buildLearningLoopOutput(home OrganizationHomePayload, profile LoopProfile, owner LoopOwnerResolution) ReviewLoopStructuredOutput {
+	loopName := strings.TrimSpace(profile.Name)
+	if loopName == "" {
+		loopName = "Learning synthesis"
+	}
+	findings := []string{
+		fmt.Sprintf("%s synthesized bounded learning patterns for %s across %d Department%s and %d Specialist%s.", loopName, safeOrganizationName(home.Name), home.DepartmentCount, pluralSuffix(home.DepartmentCount), home.SpecialistCount, pluralSuffix(home.SpecialistCount)),
+		fmt.Sprintf("%s is the active learning owner for this candidate synthesis.", owner.Name),
+	}
+	if desc := strings.TrimSpace(profile.Description); desc != "" {
+		findings = append(findings, fmt.Sprintf("Learning focus: %s", desc))
+	}
+	suggestions := []string{
+		"Keep learning pattern candidates review-gated until an operator approves promotion.",
+	}
+
+	status := "healthy"
+	flaggedItems := 0
+	if home.DepartmentCount == 0 || home.SpecialistCount == 0 {
+		status = "attention_needed"
+		flaggedItems++
+		findings = append(findings, "Recurring execution signal is still sparse because Departments or Specialists are not fully staffed yet.")
+		suggestions = append(suggestions, "Establish at least one staffed Department lane before promoting reusable playbooks.")
+	} else {
+		findings = append(findings, fmt.Sprintf("Candidate patterns align with the %s AI Engine posture and %s Response Style.", strings.TrimSpace(home.AIEngineSettingsSummary), strings.TrimSpace(home.ResponseContractSummary)))
+	}
+
+	if owner.Type == LoopOwnerTypeAgentType {
+		findings = append(findings, fmt.Sprintf("Specialist role %s demonstrates reusable patterns while %s.", owner.Name, learningInsightAction(owner)))
+		suggestions = append(suggestions, fmt.Sprintf("Candidate promotion: capture a reusable specialist checklist for %s without altering inherited defaults automatically.", owner.Name))
+	} else {
+		findings = append(findings, fmt.Sprintf("Team %s is accumulating repeatable delivery and handoff patterns (%s).", owner.Name, owner.HelpsWith))
+		suggestions = append(suggestions, fmt.Sprintf("Candidate promotion: package %s handoff conventions as a bounded team playbook candidate for operator review.", owner.Name))
+	}
+
+	return ReviewLoopStructuredOutput{
+		Status:       status,
+		FlaggedItems: flaggedItems,
+		Findings:     findings,
+		Suggestions:  suggestions,
+	}
+}
+
+func summarizeActivityFromLearning(review ReviewLoopStructuredOutput) (LoopActivityStatus, string) {
+	if review.Status == "attention_needed" {
+		flagged := review.FlaggedItems
+		if flagged <= 0 {
+			flagged = 1
+		}
+		return LoopActivityStatusWarning, fmt.Sprintf("%d learning gap%s flagged", flagged, pluralSuffix(flagged))
+	}
+	return LoopActivityStatusSuccess, "Learning pattern recorded"
+}
+
 func summarizeLearningInsight(result ReviewLoopResult) string {
 	switch result.Owner.Type {
 	case LoopOwnerTypeTeam:
 		teamName := strings.TrimSpace(result.Owner.Name)
 		if teamName == "" {
 			teamName = "This team"
+		}
+		if result.LoopType == LoopProfileTypeLearning && strings.TrimSpace(result.LoopName) != "" && result.ActivityStatus == LoopActivityStatusSuccess {
+			return fmt.Sprintf("%s recorded new %s takeaways to strengthen future team handoffs.", teamName, lowerFirst(strings.TrimSpace(result.LoopName)))
 		}
 		switch result.ActivityStatus {
 		case LoopActivityStatusWarning:
@@ -98,6 +155,9 @@ func summarizeLearningInsight(result ReviewLoopResult) string {
 	case LoopOwnerTypeAgentType:
 		subject := learningInsightRoleSubject(result.Owner.Name)
 		action := learningInsightAction(result.Owner)
+		if result.LoopType == LoopProfileTypeLearning && strings.TrimSpace(result.LoopName) != "" && result.ActivityStatus == LoopActivityStatusSuccess {
+			return fmt.Sprintf("%s captured reusable %s patterns while %s.", subject, lowerFirst(strings.TrimSpace(result.LoopName)), action)
+		}
 		switch result.ActivityStatus {
 		case LoopActivityStatusWarning:
 			return fmt.Sprintf("%s are identifying recurring gaps while %s.", subject, action)

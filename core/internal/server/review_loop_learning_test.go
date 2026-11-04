@@ -116,3 +116,50 @@ func TestHandleListLearningInsights_ReturnsSafeReadableInsights(t *testing.T) {
 		t.Fatalf("expected readable role learning summary, got %+v", second)
 	}
 }
+
+func TestExecuteLearningLoop_ProducesBoundedLearningOutputAndInsight(t *testing.T) {
+	s := newTestServer()
+	home := s.organizationStore().Save(testReviewLoopHome())
+	profile := LoopProfile{
+		ID:          "engineering-lesson-synthesis",
+		Name:        "Engineering lesson synthesis",
+		Type:        LoopProfileTypeLearning,
+		Description: "Synthesizes reusable implementation and delivery lessons from recent runs.",
+		Owner: LoopOwnerRef{
+			Type: LoopOwnerTypeTeam,
+			ID:   "platform",
+		},
+		EventTriggers: []ReviewLoopEventKind{ReviewLoopEventTeamLeadActionCompleted},
+	}
+	s.loopProfileStore().Save(home.ID, profile)
+
+	result, err := s.executeReviewLoop(home, profile, "event:team_lead_action_completed")
+	if err != nil {
+		t.Fatalf("executeReviewLoop returned error: %v", err)
+	}
+	if result.LoopType != LoopProfileTypeLearning {
+		t.Fatalf("expected learning loop type, got %q", result.LoopType)
+	}
+	if result.ActivityStatus != LoopActivityStatusSuccess || result.ActivitySummary != "Learning pattern recorded" {
+		t.Fatalf("expected learning activity summary, got status=%q summary=%q", result.ActivityStatus, result.ActivitySummary)
+	}
+	if result.Review.Status != "healthy" || len(result.Review.Findings) < 3 || len(result.Review.Suggestions) < 2 {
+		t.Fatalf("expected bounded learning output, got %+v", result.Review)
+	}
+
+	after, ok := s.organizationStore().Get(home.ID)
+	if !ok {
+		t.Fatal("expected organization to remain stored after learning loop")
+	}
+	if after.DepartmentCount != home.DepartmentCount || after.SpecialistCount != home.SpecialistCount || after.AIEngineProfileID != home.AIEngineProfileID {
+		t.Fatalf("expected learning loop not to mutate organization, before=%+v after=%+v", home, after)
+	}
+
+	insights := organizationLearningInsights(s.loopResultStore().List(home.ID), 4)
+	if len(insights) != 1 {
+		t.Fatalf("expected 1 learning insight, got %+v", insights)
+	}
+	if !strings.Contains(insights[0].Summary, "Platform Department") || !strings.Contains(insights[0].Summary, "engineering lesson synthesis") {
+		t.Fatalf("expected learning insight summary to include owner and learning focus, got %q", insights[0].Summary)
+	}
+}
