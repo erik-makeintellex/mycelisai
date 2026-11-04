@@ -231,7 +231,7 @@ export function createCortexResourceCatalogSlice(
                 const res = await fetch(buildArtifactQuery(filters));
                 if (res.ok) {
                     const data = await res.json();
-                    set({ artifacts: readArray(data), isFetchingArtifacts: false });
+                    set({ artifacts: readArray(readData(data)), isFetchingArtifacts: false });
                 } else {
                     set({ artifacts: [], isFetchingArtifacts: false });
                 }

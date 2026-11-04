@@ -40,11 +40,10 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
             });
         });
 
-        await page.goto("/resources", { waitUntil: "domcontentloaded" });
-        await page.evaluate(() => {
+        await page.addInitScript(() => {
             window.localStorage.setItem("mycelis-advanced-mode", "false");
         });
-        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.goto("/resources", { waitUntil: "domcontentloaded" });
 
         await expect(page.getByTestId("durable-files-operator-view")).toBeVisible();
         await expect(page.getByRole("heading", { name: "Durable Files & Deliverables" })).toBeVisible();
@@ -85,11 +84,10 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
             });
         });
 
-        await page.goto("/system", { waitUntil: "domcontentloaded" });
-        await page.evaluate(() => {
+        await page.addInitScript(() => {
             window.localStorage.setItem("mycelis-advanced-mode", "false");
         });
-        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.goto("/system", { waitUntil: "domcontentloaded" });
 
         await expect(page.getByTestId("system-status-summary-card")).toBeVisible();
         await expect(page.getByRole("heading", { name: "System Status: Online (5/5 services active)" })).toBeVisible();

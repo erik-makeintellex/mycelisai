@@ -35,6 +35,8 @@ Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint
     - Focused Go tests (`./pkg/protocol`, `./internal/server` `-run "TestBuild|TestConfirmAction|TestHandleMCP|TestGroup"`) -> `PASS` (`0.260s`).
     - Focused TypeScript & Vitest (`npx tsc --noEmit` + 7 touched suites / `53` tests) -> `PASS`.
     - Focused Python tests (`tests/test_service_tiers_tasks.py`, `tests/test_k8s_tasks.py`, `tests/test_docs_links.py`) -> `75 passed` (`1.39s`).
+    - Focused Chromium E2E user-delivery suite (`v8-operator-first-ux.spec.ts`, `organization-starters.spec.ts`, `deployments.spec.ts`, `codex-package-retention.spec.ts`) -> `17 passed, 0 failed` (fixed `fetchArtifacts` in `cortexStoreResourceCatalogSlice.ts` to unwrap `{ ok, data }` envelopes for `DurableFilesOperatorView`).
+    - Live-backend Chromium user-delivery proof (`e2e/specs/soma-governance-live.spec.ts` against `Ubuntu-26.04` Compose stack `http://127.0.0.1:3000` + `http://localhost:8081` + live Postgres/NATS + Windows Ollama `qwen2.5-coder:7b-instruct` via WSL relay) -> `compose.health` `ALL OK` (`text=online`), `compose.storage-health` `12/12 OK`, and `4/4` scenarios `PASS` (`1.0m`: Scenario A direct answer, Scenario B proposal routing after answer, Scenario C+D side-effect-free proposal & persistent cancel, Scenario E governed confirm writes verified file to WSL workspace disk, renders `Execution verified` + `Workflow started — View Progress`, and persists across reload).
 
 ## Current Delivery Plan (2026-09-25)
 

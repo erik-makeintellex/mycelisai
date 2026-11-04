@@ -106,13 +106,13 @@ async function createOrganization(page: Page, name: string) {
 
 async function openWorkspace(page: Page, organizationId: string) {
     await page.goto(`/organizations/${organizationId}`, { waitUntil: 'domcontentloaded' });
-    await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({
+    await page.getByPlaceholder(/Describe the outcome you need from Soma|Tell Soma what you want to plan, review, create, or execute/i).waitFor({
         timeout: 30_000,
     });
 }
 
 async function submitWorkspaceChat(page: Page, content: string) {
-    const input = page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i);
+    const input = page.getByPlaceholder(/Describe the outcome you need from Soma|Tell Soma what you want to plan, review, create, or execute/i);
     await input.fill(content);
     const responsePromise = page.waitForResponse(
         (response) => response.url().includes('/api/v1/chat') && response.request().method() === 'POST',
@@ -209,7 +209,7 @@ test.describe('Soma governed mutation live contract', () => {
             expect(anyTargetExists(targetPaths)).toBeFalsy();
 
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+            await page.getByPlaceholder(/Describe the outcome you need from Soma|Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
             await expect(page.getByText(/Proposal cancelled\. No action executed\./i)).toBeVisible({ timeout: 30_000 });
             expect(anyTargetExists(targetPaths)).toBeFalsy();
         } finally {
@@ -251,12 +251,12 @@ test.describe('Soma governed mutation live contract', () => {
                 .toBeTruthy();
 
             await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
-            await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByRole('link', { name: /Workflow started|Mission activated/i })).toBeVisible({ timeout: 30_000 });
 
             await page.reload({ waitUntil: 'domcontentloaded' });
-            await page.getByPlaceholder(/Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
+            await page.getByPlaceholder(/Describe the outcome you need from Soma|Tell Soma what you want to plan, review, create, or execute/i).waitFor({ timeout: 30_000 });
             await expect(page.getByText(/Execution verified/i)).toBeVisible({ timeout: 30_000 });
-            await expect(page.getByRole('link', { name: /Mission activated/i })).toBeVisible({ timeout: 30_000 });
+            await expect(page.getByRole('link', { name: /Workflow started|Mission activated/i })).toBeVisible({ timeout: 30_000 });
         } finally {
             removeExistingTargets(targetPaths);
         }
