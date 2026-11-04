@@ -78,6 +78,7 @@ func inferCodexTaskBundlePlanFromRequest(text string) ([]protocol.PlannedToolCal
 				"## Delivery Contract\n" +
 				"- Work inside the approved repository and keep changes scoped to this task.\n" +
 				"- Preserve existing user changes and update owning docs when behavior changes.\n" +
+				"- Keep tool caches, temp files, scratch scripts, and build intermediates out of the ultimate delivery and working tree; clean up any ephemeral files before handoff.\n" +
 				"- Return implementation notes, changed files, and validation output.\n",
 		},
 		{
@@ -86,6 +87,7 @@ func inferCodexTaskBundlePlanFromRequest(text string) ([]protocol.PlannedToolCal
 			content: "# Validation Checklist\n\n" +
 				"- Confirm proposal approval happens before any workspace mutation.\n" +
 				"- Confirm generated files are retained under the workspace package folder.\n" +
+				"- Confirm no temporary files, tool caches, or stray debug logs remain in `git status` or the delivery package folder.\n" +
 				"- Run focused unit tests for the touched runtime path.\n" +
 				"- Run matching interface or browser proof when UI behavior changes.\n",
 		},

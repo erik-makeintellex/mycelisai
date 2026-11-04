@@ -115,3 +115,11 @@ Channel rules:
 - Go runtime logs should be structured and component-identified.
 - Python task output should be operator-readable, fail fast on broken prerequisites, and avoid false-success messaging.
 - UI surfaces should show normalized error states, not raw backend noise.
+
+
+## Agentry Workspace, Cache & Delivery Hygiene Contract
+
+- **Cache Routing:** Route all build, test, package, and browser caches through `ops/cache.py` (`workspace/tool-cache/` or the host-local `MycelisCache` directory). Never allow `.pytest_cache`, `GOCACHE`, `GOMODCACHE`, `.next/cache`, `node_modules/.cache`, or Playwright browser binaries to land inside tracked source directories or committed paths.
+- **Ephemeral File Exclusion:** Temporary scratch scripts, ad-hoc debug harnesses, coverage profiles (`coverage.out`, `.coverage`), raw command dumps, `.log`/`.tmp`/`.bak` files, and intermediate agent work files do not belong to the ultimate delivery. Delete any self-created temporary files before subagent handoff or slice commit.
+- **Clean Delivery Packages (`DeliveryPackage` / `OutputRef`):** When Soma, Team Leads, or coding agents generate a `DeliveryPackage` (such as `codex_task_bundle`) or retained `OutputRef` artifacts, include only canonical deliverables (task specs, validation checklists, affected-file summaries, recommended slices, `proof.md`, and intentional source/document outputs). Never bundle transient caches, temp files, or build intermediates into workspace deliverable folders.
+- **Team & State Hygiene:** Terminate completed subagents immediately upon handoff (`manage_subagents` `kill`), verify `git status --short` shows zero untracked temp/cache artifacts before committing, and update `.state/V8_DEV_STATE.md` (`NEXT` -> `COMPLETE`) in the same slice so completed work is never re-executed.
