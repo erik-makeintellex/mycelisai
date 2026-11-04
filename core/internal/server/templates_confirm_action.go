@@ -85,6 +85,13 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		data["delivery_package"] = deliveryPackageFromPackageSummary(packageSummary)
 		data["output_refs"] = packageSummary.OutputRefs
 		data["execution_summary"] = executionSummaryFromPackageSummary(packageSummary)
+	} else if nonPackageSummary := buildTeamWorkConfirmExecutionSummary(scope.PlannedToolCalls, "", "", runID, proofID); nonPackageSummary != nil {
+		data["artifacts"] = nonPackageSummary.ArtifactRefs
+		data["output_refs"] = nonPackageSummary.OutputRefs
+		if len(nonPackageSummary.TeamOutputRefs) > 0 {
+			data["team_output_refs"] = nonPackageSummary.TeamOutputRefs
+		}
+		data["execution_summary"] = nonPackageSummary
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(data))
 }

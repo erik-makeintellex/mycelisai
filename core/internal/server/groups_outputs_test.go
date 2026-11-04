@@ -90,6 +90,13 @@ func TestHandleGroupOutputs_ReturnsRetainedArtifacts(t *testing.T) {
 	if first["title"] != "Launch Brief" {
 		t.Fatalf("title = %v, want Launch Brief", first["title"])
 	}
+	outputRefs, ok := payload["output_refs"].([]any)
+	if !ok || len(outputRefs) != 1 {
+		t.Fatalf("expected 1 normalized output_ref on group outputs response, got %#v", payload["output_refs"])
+	}
+	if payload["execution_summary"] == nil {
+		t.Fatalf("expected execution_summary on group outputs response, got %#v", payload)
+	}
 
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatalf("sql expectations: %v", err)

@@ -1,6 +1,9 @@
 package server
 
-import "github.com/mycelis/core/internal/bootstrap"
+import (
+	"github.com/mycelis/core/internal/bootstrap"
+	"github.com/mycelis/core/pkg/protocol"
+)
 
 type OrganizationStartMode string
 
@@ -244,4 +247,6 @@ type TeamLeadGuidanceResponse struct {
 	PrioritySteps      []string                   `json:"priority_steps"`
 	SuggestedFollowUps []string                   `json:"suggested_follow_ups"`
 	ExecutionContract  *TeamLeadExecutionContract `json:"execution_contract,omitempty"`
+	OutputRefs         []protocol.OutputRef       `json:"output_refs,omitempty"`
+	ExecutionSummary   *protocol.ExecutionSummary `json:"execution_summary,omitempty"`
 }

@@ -40,8 +40,10 @@ func TestHandleMCPActivity_ReturnsPersistedMCPUsage(t *testing.T) {
 	assertStatus(t, rr, http.StatusOK)
 
 	var resp struct {
-		OK   bool                     `json:"ok"`
-		Data []map[string]interface{} `json:"data"`
+		OK               bool                     `json:"ok"`
+		Data             []map[string]interface{} `json:"data"`
+		OutputRefs       []map[string]interface{} `json:"output_refs"`
+		ExecutionSummary map[string]interface{}   `json:"execution_summary"`
 	}
 	assertJSON(t, rr, &resp)
 	if !resp.OK {
@@ -49,6 +51,12 @@ func TestHandleMCPActivity_ReturnsPersistedMCPUsage(t *testing.T) {
 	}
 	if len(resp.Data) != 1 {
 		t.Fatalf("len(data) = %d, want 1", len(resp.Data))
+	}
+	if len(resp.OutputRefs) != 1 || resp.ExecutionSummary == nil {
+		t.Fatalf("expected output_refs and execution_summary in response: refs=%d summary=%v", len(resp.OutputRefs), resp.ExecutionSummary)
+	}
+	if resp.Data[0]["output_ref"] == nil {
+		t.Fatalf("expected output_ref on mcpActivityEntry: %#v", resp.Data[0])
 	}
 	if resp.Data[0]["server_id"] != "srv-001" {
 		t.Fatalf("server_id = %v, want srv-001", resp.Data[0]["server_id"])

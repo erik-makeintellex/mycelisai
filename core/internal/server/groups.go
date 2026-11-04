@@ -224,5 +224,14 @@ func (s *AdminServer) HandleGroupOutputs(w http.ResponseWriter, r *http.Request)
 	if outputs == nil {
 		outputs = []artifacts.Artifact{}
 	}
+	if summary := buildGroupOutputsExecutionSummary(group, outputs); summary != nil {
+		respondJSON(w, map[string]any{
+			"ok":                true,
+			"data":              outputs,
+			"output_refs":       summary.OutputRefs,
+			"execution_summary": summary,
+		})
+		return
+	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(outputs))
 }

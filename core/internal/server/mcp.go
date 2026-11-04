@@ -129,15 +129,22 @@ func (s *AdminServer) handleMCPToolCall(w http.ResponseWriter, r *http.Request) 
 		if text := strings.TrimSpace(extractMCPResultSummary(result)); text != "" {
 			summary = text
 		}
+		serverName := serversNameOrFallback(s.MCP, ctx, serverID)
+		toolSummary := buildMCPToolCallExecutionSummary(serverID.String(), serverName, toolName, summary, "", "", result)
+		resultPayload := map[string]any{"arguments": body.Arguments, "result": result}
+		if toolSummary != nil {
+			resultPayload["output_refs"] = toolSummary.OutputRefs
+			resultPayload["execution_summary"] = toolSummary
+		}
 		_, _ = s.Exchange.PublishMCPResult(ctx, exchange.MCPNormalizationInput{
 			ServerID:      serverID.String(),
-			ServerName:    serversNameOrFallback(s.MCP, ctx, serverID),
+			ServerName:    serverName,
 			ToolName:      toolName,
 			Summary:       summary,
 			ResultPreview: summary,
 			TargetRole:    "soma",
 			Status:        "completed",
-			Result:        map[string]any{"arguments": body.Arguments, "result": result},
+			Result:        resultPayload,
 		})
 	}
 

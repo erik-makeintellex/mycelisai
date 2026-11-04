@@ -8,21 +8,23 @@ import (
 	"time"
 
 	"github.com/mycelis/core/internal/exchange"
+	"github.com/mycelis/core/pkg/protocol"
 )
 
 type mcpActivityEntry struct {
-	ID          string `json:"id"`
-	ServerID    string `json:"server_id,omitempty"`
-	ServerName  string `json:"server_name"`
-	ToolName    string `json:"tool_name"`
-	State       string `json:"state"`
-	Summary     string `json:"summary"`
-	Message     string `json:"message"`
-	ChannelName string `json:"channel_name"`
-	RunID       string `json:"run_id,omitempty"`
-	TeamID      string `json:"team_id,omitempty"`
-	AgentID     string `json:"agent_id,omitempty"`
-	Timestamp   string `json:"timestamp"`
+	ID          string              `json:"id"`
+	ServerID    string              `json:"server_id,omitempty"`
+	ServerName  string              `json:"server_name"`
+	ToolName    string              `json:"tool_name"`
+	State       string              `json:"state"`
+	Summary     string              `json:"summary"`
+	Message     string              `json:"message"`
+	ChannelName string              `json:"channel_name"`
+	RunID       string              `json:"run_id,omitempty"`
+	TeamID      string              `json:"team_id,omitempty"`
+	AgentID     string              `json:"agent_id,omitempty"`
+	Timestamp   string              `json:"timestamp"`
+	OutputRef   *protocol.OutputRef `json:"output_ref,omitempty"`
 }
 
 // handleMCPActivity returns persisted MCP activity across managed exchange channels.
@@ -65,7 +67,21 @@ func (s *AdminServer) handleMCPActivity(w http.ResponseWriter, r *http.Request) 
 		entries = entries[:limit]
 	}
 
-	respondJSON(w, map[string]any{"ok": true, "data": entries})
+	activitySummary := executionSummaryFromMCPActivityEntries(entries)
+	if activitySummary != nil {
+		for index := range entries {
+			if index < len(activitySummary.OutputRefs) {
+				ref := activitySummary.OutputRefs[index]
+				entries[index].OutputRef = &ref
+			}
+		}
+	}
+	resp := map[string]any{"ok": true, "data": entries}
+	if activitySummary != nil {
+		resp["output_refs"] = activitySummary.OutputRefs
+		resp["execution_summary"] = activitySummary
+	}
+	respondJSON(w, resp)
 }
 
 func normalizeMCPActivityItem(item exchange.ExchangeItem) (mcpActivityEntry, bool) {
