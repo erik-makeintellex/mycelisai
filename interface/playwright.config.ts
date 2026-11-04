@@ -8,6 +8,7 @@ const baseURL = `http://${baseUrlHost}:${interfacePort}`;
 const shouldManageWebServer = !process.env.PLAYWRIGHT_SKIP_WEBSERVER;
 const defaultWebServerCommand = `node ./scripts/playwright-webserver.mjs`;
 const webServerCommand = process.env.PLAYWRIGHT_UI_SERVER_COMMAND ?? defaultWebServerCommand;
+const slowMo = Number(process.env.PLAYWRIGHT_SLOW_MO || 0);
 
 /**
  * Playwright E2E configuration for Mycelis Interface.
@@ -31,6 +32,7 @@ export default defineConfig({
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
+        launchOptions: slowMo > 0 ? { slowMo } : undefined,
     },
 
     webServer: shouldManageWebServer
