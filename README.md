@@ -100,7 +100,7 @@ Delivery rule:
 
 ## V8.1 Foundation And Compatibility Baseline
 
-[V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) defines the Soma-primary compatibility baseline: AI Organizations, Team Leads, Advisors, Departments, Specialists, runtime capabilities, response contracts, continuity, and bounded automations.
+[V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) defines the Soma-primary compatibility baseline: AI Organizations, Team Leads, Advisors, Departments, Specialists, runtime capabilities, response contracts, continuity, and bundle-defined `review` + `learning` loop automations.
 
 V8.1 remains the foundation and compatibility baseline. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 

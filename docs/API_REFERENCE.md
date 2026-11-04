@@ -54,7 +54,7 @@
 | `/api/v1/sensors` | GET | Sensor library (static + dynamic) |
 | `/api/v1/homepage` | GET | Return the sanitized deployer-editable homepage template from `core/config/homepage.yaml` or `MYCELIS_HOMEPAGE_CONFIG_PATH`, falling back to Soma orchestration defaults when missing or invalid |
 | **Memory & Search** | | |
-| `/api/v1/memory/search` | GET | Semantic vector search over durable memory, with optional team/agent/type scope filters across Soma-personal, team-shared, and governed memory lanes |
+| `/api/v1/memory/search` | GET | Semantic vector search over durable memory with optional `team_id`/`agent_id`/`type`/`layer_filter` and retrieval-time arbitration (`arbitration`, `contradiction_halts`, `GOVERNED_DOCTRINE` > `PROJECT_MEMORY` > `AGENT_MEMORY` > `SOMA_MEMORY` > `REFLECTION_MEMORY`) |
 | `/api/v1/search/status` | GET | Current Mycelis Search provider posture for UI/Soma capability answers, including provider, configured/enabled flags, direct `web_search` support, token requirements, and blocker/next-action copy |
 | `/api/v1/search` | POST | Governed Mycelis Search API over `local_sources`, optional self-hosted `searxng`, optional hosted search/MCP bridge posture, or structured disabled-provider blockers |
 | `/api/v1/memory/deployment-context` | GET/POST | List or load governed user/private content, deployment knowledge, admin-owned Soma context, and reflection/synthesis observations into separate `user_private_context`, `customer_context`, `company_knowledge`, `soma_operating_context`, and `reflection_synthesis` pgvector stores; POST supports text content plus metadata such as `content_domain` and `target_goal_sets`. This is governed source/doctrine intake, not implicit team-shared `AGENT_MEMORY`. |
@@ -95,7 +95,7 @@
 | `/api/v1/artifacts/{id}` | GET | Artifact detail |
 | `/api/v1/artifacts/{id}/download` | GET | Download a stored or inline artifact as a file attachment for chat/operator review |
 | `/api/v1/artifacts/{id}/status` | PUT | Update artifact status |
-| `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) |
+| `/api/v1/artifacts/{id}/save` | POST | Persist cached image artifact to workspace folder (`saved-media` default) with verified SHA-256 disk readback and `OutputProofEnvelope` metadata |
 | **MCP Ingress** | | |
 | `/api/v1/mcp/install` | POST | Raw MCP install endpoint — **disabled by Phase 0 security** (`403`), use library install |
 | `/api/v1/mcp/servers` | GET | List installed MCP servers |
@@ -122,8 +122,8 @@
 | `/api/v1/teams/{id}/connectors` | POST | Install connector on team |
 | `/api/v1/teams/{id}/wiring` | GET | Get team wiring graph |
 | **Identity** | | |
-| `/api/v1/user/me` | GET | Current user identity, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`) plus the deploy-owned People & Access contract surfaced read-only through `settings` (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
-| `/api/v1/user/settings` | GET/PUT | Read or update persisted user preferences such as assistant name/theme; GET overlays the deploy-owned People & Access contract (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`), while PUT ignores/preserves those deploy-owned fields instead of persisting them |
+| `/api/v1/user/me` | GET | Current user identity, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`; supports `MYCELIS_API_KEY`, `MYCELIS_BREAK_GLASS_API_KEY`, `MYCELIS_OPERATOR_API_KEY`, `MYCELIS_VIEWER_API_KEY`) plus the deploy-owned People & Access contract surfaced read-only through `settings` (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
+| `/api/v1/user/settings` | GET/PUT | Read or update persisted user preferences (`viewer` is read-only `403` on PUT; `operator` updates general preferences; `admin`/`owner` required for access-posture keys); GET overlays the deploy-owned People & Access contract (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`), while PUT ignores/preserves those deploy-owned fields instead of persisting them |
 | `/api/v1/groups` | GET/POST | List/create root-admin collaboration groups (DB-backed, tenant scoped) |
 | `/api/v1/groups/{id}` | PUT | Update root-admin collaboration group |
 | `/api/v1/groups/{id}/broadcast` | POST | Publish group coordination message to group + team NATS channels |
@@ -288,6 +288,7 @@ Provider inventory and auth contract:
 | `openai` | `production_gpt4` | `Authorization: Bearer $OPENAI_API_KEY` | `endpoint=https://api.openai.com/v1`, `api_key_env=OPENAI_API_KEY` |
 | `anthropic` | `production_claude` | `x-api-key: $ANTHROPIC_API_KEY` plus `anthropic-version` | `api_key_env=ANTHROPIC_API_KEY`, optional custom endpoint |
 | `google` | `production_gemini` | `x-goog-api-key: $GEMINI_API_KEY` | `api_key_env=GEMINI_API_KEY`, endpoint defaults to the Gemini `models` REST root |
+| `media` (`openai_compatible`, `openai_hosted`, `stability_compatible`, `replicate_compatible`) | `media` | Optional `Authorization: Bearer $<auth_key_env>` | Normalized generation endpoint (`/images/generations` or `/v1/predictions`); remote/leaves-org boundaries enforce `require_approval` |
 
 Implementation notes:
 - use `/api/v1/brains` and `/api/v1/cognitive/providers/{id}` to manage the provider inventory exposed in the product
