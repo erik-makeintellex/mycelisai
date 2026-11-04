@@ -9,14 +9,6 @@
 charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
 core/config/mcp-library.yaml=342
 core/config/templates/v8-migration-standing-team-bridge.yaml=570
-interface/__tests__/workspace/LaunchCrewModal.test.tsx=326
-interface/app/(app)/system/page.tsx=476
-interface/components/automations/ApprovalsTab.tsx=591
-interface/components/matrix/MatrixGrid.tsx=407
-interface/components/missions/ArtifactViewer.tsx=513
-interface/components/organizations/OrganizationContextShell.tsx=2389
-interface/components/resources/DeploymentContextPanel.tsx=505
-interface/components/resources/WorkspaceExplorer.tsx=353
 interface/components/settings/BrainsPage.tsx=908
 interface/components/settings/MissionProfilesPage.tsx=551
 interface/components/settings/UsersPage.tsx=593

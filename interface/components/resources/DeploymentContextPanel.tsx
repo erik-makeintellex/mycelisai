@@ -3,88 +3,22 @@
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { BookOpenText, RefreshCw, ShieldCheck, Upload } from "lucide-react";
-
-type DeploymentContextEntry = {
-    artifact_id: string;
-    knowledge_class: string;
-    title: string;
-    source_label: string;
-    source_kind: string;
-    visibility: string;
-    sensitivity_class: string;
-    trust_class: string;
-    chunk_count: number;
-    vector_count: number;
-    content_preview: string;
-    content_length: number;
-    content_domain?: string;
-    target_goal_sets?: string[];
-    created_at: string;
-};
-
-type LoadResponse = {
-    artifact_id: string;
-    knowledge_class: string;
-    title: string;
-    chunk_count: number;
-    vector_count: number;
-};
-
-const KNOWLEDGE_CLASS_OPTIONS = [
-    { value: "user_private_context", label: "Private user content" },
-    { value: "customer_context", label: "Customer context" },
-    { value: "company_knowledge", label: "Approved company knowledge" },
-    { value: "soma_operating_context", label: "Admin-shaped Soma context" },
-    { value: "reflection_synthesis", label: "Reflection / synthesis memory" },
-];
-
-const SOURCE_KIND_OPTIONS = [
-    { value: "user_document", label: "User document" },
-    { value: "user_note", label: "User note" },
-    { value: "user_record", label: "User/private record" },
-    { value: "diary_entry", label: "Diary entry" },
-    { value: "finance_record", label: "Finance record" },
-    { value: "lesson", label: "Distilled lesson" },
-    { value: "inferred_pattern", label: "Inferred pattern" },
-    { value: "contradiction", label: "Contradiction" },
-    { value: "trajectory_shift", label: "Trajectory shift" },
-    { value: "meta_observation", label: "Meta-observation" },
-    { value: "synthesis_note", label: "Synthesis note" },
-    { value: "workspace_file", label: "Workspace file" },
-    { value: "web_research", label: "Web research" },
-];
-
-const CONTENT_DOMAIN_OPTIONS = [
-    { value: "private_records", label: "Private records" },
-    { value: "diary", label: "Diary / journal" },
-    { value: "finance", label: "Finance" },
-    { value: "health", label: "Health" },
-    { value: "legal", label: "Legal" },
-    { value: "creative", label: "Creative" },
-    { value: "operations", label: "Operations" },
-    { value: "reflection", label: "Reflection / synthesis" },
-];
-
-const VISIBILITY_OPTIONS = [
-    { value: "global", label: "Global" },
-    { value: "team", label: "Team" },
-    { value: "private", label: "Private" },
-];
-
-const SENSITIVITY_OPTIONS = [
-    { value: "role_scoped", label: "Role scoped" },
-    { value: "team_scoped", label: "Team scoped" },
-    { value: "restricted", label: "Restricted" },
-];
-
-const TRUST_OPTIONS = [
-    { value: "user_provided", label: "User provided" },
-    { value: "validated_external", label: "Validated external" },
-    { value: "bounded_external", label: "Bounded external" },
-    { value: "trusted_internal", label: "Trusted internal" },
-];
-
-const INPUT_CLASS = "w-full rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main placeholder:text-cortex-text-muted/60 focus:outline-none focus:border-cortex-primary";
+import { DeploymentContextEntryList } from "./DeploymentContextEntryList";
+import {
+    CONTENT_DOMAIN_OPTIONS,
+    type DeploymentContextEntry,
+    INITIAL_DEPLOYMENT_CONTEXT_FORM,
+    INPUT_CLASS,
+    KNOWLEDGE_CLASS_OPTIONS,
+    type LoadResponse,
+    SENSITIVITY_OPTIONS,
+    SOURCE_KIND_OPTIONS,
+    TRUST_OPTIONS,
+    VISIBILITY_OPTIONS,
+    applyKnowledgeClassPreset,
+    knowledgeClassLabel,
+    readFileAsText,
+} from "./deploymentContextTypes";
 
 export default function DeploymentContextPanel() {
     const [entries, setEntries] = useState<DeploymentContextEntry[]>([]);
@@ -92,20 +26,7 @@ export default function DeploymentContextPanel() {
     const [submitting, setSubmitting] = useState(false);
     const [status, setStatus] = useState("Ready");
     const [error, setError] = useState<string | null>(null);
-    const [form, setForm] = useState({
-        knowledge_class: "user_private_context",
-        title: "",
-        source_label: "",
-        content: "",
-        content_type: "text/markdown",
-        source_kind: "user_record",
-        visibility: "private",
-        sensitivity_class: "restricted",
-        trust_class: "user_provided",
-        content_domain: "private_records",
-        target_goal_sets: "",
-        tags: "user-private-context",
-    });
+    const [form, setForm] = useState(INITIAL_DEPLOYMENT_CONTEXT_FORM);
 
     const canSubmit = useMemo(() => {
         return form.title.trim().length > 0 && form.content.trim().length > 0 && !submitting;
@@ -171,49 +92,7 @@ export default function DeploymentContextPanel() {
     };
 
     const applyKnowledgeClass = (knowledgeClass: string) => {
-        setForm((current) => {
-            if (knowledgeClass === "user_private_context") {
-                return {
-                    ...current,
-                    knowledge_class: knowledgeClass,
-                    source_kind: current.source_kind === "user_document" || isReflectionSourceKind(current.source_kind) ? "user_record" : current.source_kind,
-                    visibility: "private",
-                    sensitivity_class: "restricted",
-                    content_domain: current.content_domain || "private_records",
-                    tags: current.tags.trim() ? current.tags : "user-private-context",
-                };
-            }
-            if (knowledgeClass === "reflection_synthesis") {
-                return {
-                    ...current,
-                    knowledge_class: knowledgeClass,
-                    source_kind: current.source_kind === "user_document" || current.source_kind === "user_record" ? "synthesis_note" : current.source_kind,
-                    visibility: "private",
-                    sensitivity_class: "restricted",
-                    trust_class: "trusted_internal",
-                    content_domain: "reflection",
-                    tags: current.tags.trim() ? current.tags : "reflection-synthesis-memory",
-                };
-            }
-            if (knowledgeClass === "soma_operating_context") {
-                return {
-                    ...current,
-                    knowledge_class: knowledgeClass,
-                    source_kind: current.source_kind === "user_record" || isReflectionSourceKind(current.source_kind) ? "user_note" : current.source_kind,
-                    visibility: "global",
-                    sensitivity_class: "restricted",
-                    trust_class: "trusted_internal",
-                    tags: current.tags.trim() ? current.tags : "soma-operating-context",
-                };
-            }
-            return {
-                ...current,
-                knowledge_class: knowledgeClass,
-                visibility: current.visibility === "private" ? "global" : current.visibility,
-                sensitivity_class: current.sensitivity_class === "restricted" ? "role_scoped" : current.sensitivity_class,
-                source_kind: current.source_kind === "user_record" || isReflectionSourceKind(current.source_kind) ? "user_document" : current.source_kind,
-            };
-        });
+        setForm((current) => applyKnowledgeClassPreset(current, knowledgeClass));
     };
 
     const loadFile = async (file: File | undefined) => {
@@ -402,89 +281,10 @@ export default function DeploymentContextPanel() {
                     ) : null}
                 </section>
 
-                <section className="rounded-2xl border border-cortex-border bg-cortex-surface p-5">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <h2 className="text-sm font-semibold text-cortex-text-main">Loaded Governed Context</h2>
-                            <p className="text-xs text-cortex-text-muted mt-1">
-                                Recent governed context entries Soma can recall separately from Soma memory during planning and answer generation.
-                            </p>
-                        </div>
-                        <span className="text-[11px] font-mono text-cortex-text-muted">{entries.length} entries</span>
-                    </div>
-
-                    <div className="mt-4 space-y-3">
-                        {loading ? (
-                            <p className="text-xs font-mono text-cortex-text-muted animate-pulse">Loading knowledge…</p>
-                        ) : entries.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-cortex-border p-4 text-xs text-cortex-text-muted">
-                                No knowledge loaded yet.
-                            </div>
-                        ) : (
-                            entries.map((entry) => (
-                                <article key={entry.artifact_id} className="rounded-xl border border-cortex-border bg-cortex-bg/60 p-4 space-y-2">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div>
-                                            <h3 className="text-sm font-semibold text-cortex-text-main">{entry.title}</h3>
-                                            <p className="text-[11px] text-cortex-text-muted mt-1">
-                                                {entry.source_label} · {entry.source_kind.replaceAll("_", " ")}
-                                            </p>
-                                        </div>
-                                        <span className="text-[10px] font-mono uppercase px-2 py-1 rounded bg-cortex-primary/10 text-cortex-primary">
-                                            {entry.vector_count} vectors
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-cortex-text-main leading-relaxed">{entry.content_preview}</p>
-                                    <div className="flex flex-wrap gap-2 text-[10px] font-mono text-cortex-text-muted">
-                                        <Badge>{entry.knowledge_class.replaceAll("_", " ")}</Badge>
-                                        <Badge>{entry.visibility}</Badge>
-                                        <Badge>{entry.sensitivity_class}</Badge>
-                                        <Badge>{entry.trust_class}</Badge>
-                                        {entry.content_domain ? <Badge>{entry.content_domain.replaceAll("_", " ")}</Badge> : null}
-                                        {(entry.target_goal_sets ?? []).map((goal) => (
-                                            <Badge key={`${entry.artifact_id}-${goal}`}>goal: {goal}</Badge>
-                                        ))}
-                                        <Badge>{entry.chunk_count} chunks</Badge>
-                                    </div>
-                                </article>
-                            ))
-                        )}
-                    </div>
-                </section>
+                <DeploymentContextEntryList entries={entries} loading={loading} />
             </div>
         </div>
     );
-}
-
-function readFileAsText(file: File): Promise<string> {
-    if (typeof file.text === "function") {
-        return file.text();
-    }
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-        reader.onerror = () => reject(reader.error ?? new Error("Unable to read uploaded file."));
-        reader.readAsText(file);
-    });
-}
-
-function knowledgeClassLabel(value: string) {
-    switch (value) {
-        case "company_knowledge":
-            return "approved company knowledge";
-        case "soma_operating_context":
-            return "admin-shaped Soma context";
-        case "user_private_context":
-            return "private user content";
-        case "reflection_synthesis":
-            return "reflection / synthesis memory";
-        default:
-            return "customer context";
-    }
-}
-
-function isReflectionSourceKind(value: string) {
-    return ["lesson", "inferred_pattern", "contradiction", "trajectory_shift", "meta_observation", "synthesis_note"].includes(value);
 }
 
 function Field({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
@@ -493,13 +293,5 @@ function Field({ label, children, className = "" }: { label: string; children: R
             <span className="block text-[11px] font-mono uppercase tracking-widest text-cortex-text-muted mb-1.5">{label}</span>
             {children}
         </label>
-    );
-}
-
-function Badge({ children }: { children: ReactNode }) {
-    return (
-        <span className="px-2 py-1 rounded border border-cortex-border bg-cortex-surface/70">
-            {children}
-        </span>
     );
 }

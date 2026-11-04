@@ -32,6 +32,26 @@ function resetStore(overrides?: Partial<ReturnType<typeof useCortexStore.getStat
     });
 }
 
+function submitIntent(text: string) {
+    fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
+        target: { value: text },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+}
+
+function proposalHistory(intent: string, proposal: ProposalData) {
+    return [
+        { role: 'user' as const, content: intent },
+        {
+            role: 'council' as const,
+            content: 'I have a proposal ready.',
+            source_node: 'admin',
+            mode: 'proposal' as const,
+            proposal,
+        },
+    ];
+}
+
 describe('LaunchCrewModal', () => {
     beforeEach(() => {
         resetStore();
@@ -42,11 +62,7 @@ describe('LaunchCrewModal', () => {
         resetStore({ sendMissionChat });
 
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Design a crew for workflow onboarding' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Design a crew for workflow onboarding');
 
         expect(sendMissionChat).toHaveBeenCalledWith('Design a crew for workflow onboarding');
         expect(screen.getByText(/is evaluating your request/i)).toBeDefined();
@@ -55,27 +71,14 @@ describe('LaunchCrewModal', () => {
     it('renders the proposal outcome when Launch Crew receives a proposal', async () => {
         const proposal = baseProposal();
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Assemble a team for docs cleanup' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Assemble a team for docs cleanup');
 
         act(() => {
             useCortexStore.setState({
                 isMissionChatting: false,
                 activeMode: 'proposal',
                 pendingProposal: proposal,
-                missionChat: [
-                    { role: 'user', content: 'Assemble a team for docs cleanup' },
-                    {
-                        role: 'council',
-                        content: 'I have a proposal ready.',
-                        source_node: 'admin',
-                        mode: 'proposal',
-                        proposal,
-                    },
-                ],
+                missionChat: proposalHistory('Assemble a team for docs cleanup', proposal),
             });
         });
 
@@ -92,24 +95,11 @@ describe('LaunchCrewModal', () => {
             cancelProposal,
             pendingProposal: proposal,
             activeMode: 'proposal',
-            missionChat: [
-                { role: 'user', content: 'Assemble a team for docs cleanup' },
-                {
-                    role: 'council',
-                    content: 'I have a proposal ready.',
-                    source_node: 'admin',
-                    mode: 'proposal',
-                    proposal,
-                },
-            ],
+            missionChat: proposalHistory('Assemble a team for docs cleanup', proposal),
         });
 
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Assemble a team for docs cleanup' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Assemble a team for docs cleanup');
 
         act(() => {
             useCortexStore.setState({
@@ -134,11 +124,7 @@ describe('LaunchCrewModal', () => {
 
     it('renders a direct answer outcome when no crew launch is needed', async () => {
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Summarize our current architecture goals' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Summarize our current architecture goals');
 
         act(() => {
             useCortexStore.setState({
@@ -164,11 +150,7 @@ describe('LaunchCrewModal', () => {
 
     it('renders an actionable blocker outcome when the request fails', async () => {
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Launch a crew for deployment' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Launch a crew for deployment');
 
         act(() => {
             useCortexStore.setState({
@@ -200,14 +182,7 @@ describe('LaunchCrewModal', () => {
                 activeRunId: 'run-12345',
                 activeMode: 'execution_result',
                 missionChat: [
-                    { role: 'user', content: 'Launch a docs crew' },
-                    {
-                        role: 'council',
-                        content: 'I have a proposal ready.',
-                        source_node: 'admin',
-                        mode: 'proposal',
-                        proposal,
-                    },
+                    ...proposalHistory('Launch a docs crew', proposal),
                     {
                         role: 'system',
                         content: 'Weekly summary report created and saved for review.',
@@ -231,24 +206,11 @@ describe('LaunchCrewModal', () => {
             pendingProposal: proposal,
             activeMode: 'proposal',
             confirmProposal,
-            missionChat: [
-                { role: 'user', content: 'Launch a docs crew' },
-                {
-                    role: 'council',
-                    content: 'I have a proposal ready.',
-                    source_node: 'admin',
-                    mode: 'proposal',
-                    proposal,
-                },
-            ],
+            missionChat: proposalHistory('Launch a docs crew', proposal),
         });
 
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Launch a docs crew' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Launch a docs crew');
 
         act(() => {
             useCortexStore.setState({
@@ -282,24 +244,11 @@ describe('LaunchCrewModal', () => {
             pendingProposal: proposal,
             activeMode: 'proposal',
             confirmProposal,
-            missionChat: [
-                { role: 'user', content: 'Launch a docs crew' },
-                {
-                    role: 'council',
-                    content: 'I have a proposal ready.',
-                    source_node: 'admin',
-                    mode: 'proposal',
-                    proposal,
-                },
-            ],
+            missionChat: proposalHistory('Launch a docs crew', proposal),
         });
 
         render(<LaunchCrewModal onClose={vi.fn()} />);
-
-        fireEvent.change(screen.getByPlaceholderText(/Describe the outcome you need/i), {
-            target: { value: 'Launch a docs crew' },
-        });
-        fireEvent.click(screen.getByRole('button', { name: /Send to Soma/i }));
+        submitIntent('Launch a docs crew');
 
         act(() => {
             useCortexStore.setState({
