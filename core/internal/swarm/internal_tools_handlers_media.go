@@ -3,6 +3,7 @@ package swarm
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -36,7 +37,7 @@ func (r *InternalToolRegistry) handleGenerateImage(ctx context.Context, args map
 	}
 
 	reqBody, _ := json.Marshal(map[string]any{"prompt": prompt, "n": 1, "size": size, "response_format": "b64_json", "model": media.ModelID})
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, media.Endpoint+"/images/generations", bytes.NewReader(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, media.GenerationEndpointURL(), bytes.NewReader(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to create image request: %w", err)
 	}
@@ -124,14 +125,18 @@ func (r *InternalToolRegistry) handleSaveCachedImage(ctx context.Context, args m
 	if err != nil {
 		return "", fmt.Errorf("decode cached image: %w", err)
 	}
+	if strings.TrimSpace(contentType) == "" {
+		contentType = "image/png"
+	}
 	rel, filename, err := writeSavedImageFile(title, id, contentType, stringValue(args["folder"]), stringValue(args["filename"]), data)
 	if err != nil {
 		return "", err
 	}
-	if _, err := r.db.ExecContext(ctx, `UPDATE artifacts SET file_path = $1, file_size_bytes = $2, metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('saved', true, 'saved_path', $1, 'saved_at', NOW()) WHERE id = $3::uuid`, rel, int64(len(data)), id); err != nil {
+	sumHex := fmt.Sprintf("%x", sha256.Sum256(data))
+	if _, err := r.db.ExecContext(ctx, `UPDATE artifacts SET file_path = $1, file_size_bytes = $2, metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('saved', true, 'saved_path', $1, 'saved_at', NOW(), 'bytes', $2, 'sha256', $3, 'content_type', $4, 'verified', true) WHERE id = $5::uuid`, rel, int64(len(data)), sumHex, contentType, id); err != nil {
 		return "", fmt.Errorf("update image save metadata: %w", err)
 	}
-	return mustJSON(map[string]any{"message": fmt.Sprintf("Saved cached image to %s", rel), "artifact": map[string]any{"id": id, "type": "file", "title": filename, "saved_path": rel}}), nil
+	return mustJSON(map[string]any{"message": fmt.Sprintf("Saved cached image to %s", rel), "artifact": map[string]any{"id": id, "type": "image", "title": filename, "saved_path": rel, "content_type": contentType, "bytes": len(data), "sha256": sumHex, "verified": true}}), nil
 }
 
 func writeSavedImageFile(title, id, contentType, folder, filename string, data []byte) (string, string, error) {
@@ -141,7 +146,11 @@ func writeSavedImageFile(title, id, contentType, folder, filename string, data [
 	if strings.TrimSpace(filename) == "" {
 		filename = sanitizeImageFilename(title)
 		if filename == "" {
-			filename = fmt.Sprintf("image-%s", id[:8])
+			prefix := id
+			if len(prefix) > 8 {
+				prefix = prefix[:8]
+			}
+			filename = fmt.Sprintf("image-%s", prefix)
 		}
 	}
 	if filepath.Ext(filename) == "" {
@@ -156,6 +165,13 @@ func writeSavedImageFile(title, id, contentType, folder, filename string, data [
 	}
 	if err := os.WriteFile(targetPath, data, 0o644); err != nil {
 		return "", "", fmt.Errorf("write target file: %w", err)
+	}
+	readBack, err := os.ReadFile(targetPath)
+	if err != nil {
+		return "", "", fmt.Errorf("verify saved image readback: %w", err)
+	}
+	if len(readBack) != len(data) || sha256.Sum256(readBack) != sha256.Sum256(data) {
+		return "", "", fmt.Errorf("verify saved image readback: checksum mismatch")
 	}
 	workspace := os.Getenv("MYCELIS_WORKSPACE")
 	if workspace == "" {

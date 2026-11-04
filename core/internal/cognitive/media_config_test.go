@@ -92,6 +92,73 @@ func TestNormalizeMediaConfig_PartialConfigIsNotGenerationReady(t *testing.T) {
 	}
 }
 
+func TestMediaProviderConfig_GenerationEndpointURLAndApprovalPolicy(t *testing.T) {
+	cases := []struct {
+		name         string
+		provider     MediaProviderConfig
+		wantEndpoint string
+		wantApproval bool
+	}{
+		{
+			name: "default local openai_compatible appends images/generations",
+			provider: MediaProviderConfig{
+				Type:     MediaProviderTypeOpenAICompat,
+				Endpoint: "http://127.0.0.1:8001/v1/",
+				ModelID:  "sdxl",
+			},
+			wantEndpoint: "http://127.0.0.1:8001/v1/images/generations",
+			wantApproval: false,
+		},
+		{
+			name: "openai_hosted preserves existing images/generations path and requires approval",
+			provider: MediaProviderConfig{
+				Type:     MediaProviderTypeOpenAIHosted,
+				Endpoint: "https://api.openai.com/v1/images/generations/",
+				ModelID:  "gpt-image-1",
+			},
+			wantEndpoint: "https://api.openai.com/v1/images/generations",
+			wantApproval: true,
+		},
+		{
+			name: "stability_compatible normalizes base endpoint and requires approval on leaves_org",
+			provider: MediaProviderConfig{
+				Type:         MediaProviderTypeStabilityCompat,
+				Endpoint:     "https://api.stability.ai/v1",
+				ModelID:      "sd3",
+				DataBoundary: DefaultMediaHostedBoundary,
+				UsagePolicy:  DefaultMediaLocalUsagePolicy,
+			},
+			wantEndpoint: "https://api.stability.ai/v1/images/generations",
+			wantApproval: true,
+		},
+		{
+			name: "replicate_compatible preserves v1/predictions endpoint and requires approval on policy",
+			provider: MediaProviderConfig{
+				Type:         MediaProviderTypeReplicateCompat,
+				Endpoint:     "https://api.replicate.com/v1/predictions/",
+				ModelID:      "flux-schnell",
+				Location:     DefaultMediaLocalLocation,
+				DataBoundary: DefaultMediaLocalBoundary,
+				UsagePolicy:  DefaultMediaHostUsagePolicy,
+			},
+			wantEndpoint: "https://api.replicate.com/v1/predictions",
+			wantApproval: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := NormalizeMediaConfig(MediaConfig{Provider: tc.provider}).Provider
+			if got := cfg.GenerationEndpointURL(); got != tc.wantEndpoint {
+				t.Fatalf("GenerationEndpointURL() = %q, want %q", got, tc.wantEndpoint)
+			}
+			if got := cfg.RequiresApprovalByPolicy(); got != tc.wantApproval {
+				t.Fatalf("RequiresApprovalByPolicy() = %v, want %v", got, tc.wantApproval)
+			}
+		})
+	}
+}
+
 func boolPtr(value bool) *bool {
 	return &value
 }

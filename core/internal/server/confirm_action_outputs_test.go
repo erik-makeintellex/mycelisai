@@ -1,7 +1,10 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -68,58 +71,20 @@ func TestExecutionSummaryFromPlannedToolCalls_NormalizesWriteFileOutputs(t *test
 
 func TestBuildMCPToolCallAndActivityExecutionSummary_PopulatesNormalizedOutputRefs(t *testing.T) {
 	toolSummary := buildMCPToolCallExecutionSummary(
-		"srv-1",
-		"filesystem",
-		"read_file",
-		"Read workspace brief successfully.",
-		"exch-item-1",
-		"run-mcp-1",
+		"srv-1", "filesystem", "read_file", "Read workspace brief successfully.", "exch-item-1", "run-mcp-1",
 		map[string]any{"summary": "Read workspace brief successfully.", "bytes": 128},
 	)
-	if toolSummary == nil {
-		t.Fatal("expected MCP tool call execution summary")
-	}
-	if len(toolSummary.OutputRefs) != 1 || len(toolSummary.Outputs) != 1 {
-		t.Fatalf("mcp tool summary refs/outputs = %d/%d, want 1/1", len(toolSummary.OutputRefs), len(toolSummary.Outputs))
+	if toolSummary == nil || len(toolSummary.OutputRefs) != 1 || len(toolSummary.Outputs) != 1 {
+		t.Fatalf("mcp tool summary = %#v", toolSummary)
 	}
 	ref := toolSummary.OutputRefs[0]
-	if ref.ID != "exch-item-1" || ref.Kind != "document" || ref.Label != "read_file" {
+	if ref.ID != "exch-item-1" || ref.Kind != "document" || ref.Label != "read_file" || ref.StorageRef != "mcp://filesystem/read_file/exch-item-1" || ref.OpenURL == "" || ref.SourceRunID != "run-mcp-1" || ref.Role != "primary" || ref.Status != "recorded" || ref.ProofEnvelope == nil {
 		t.Fatalf("mcp tool output ref = %#v", ref)
-	}
-	if ref.StorageRef != "mcp://filesystem/read_file/exch-item-1" || ref.OpenURL == "" || ref.SourceRunID != "run-mcp-1" {
-		t.Fatalf("mcp tool output ref linkage = %#v", ref)
-	}
-	if ref.Role != "primary" || ref.Status != "recorded" || ref.ProofEnvelope == nil {
-		t.Fatalf("mcp tool output ref posture = %#v", ref)
 	}
 
 	activitySummary := executionSummaryFromMCPActivityEntries([]mcpActivityEntry{
-		{
-			ID:          "act-1",
-			ServerID:    "srv-1",
-			ServerName:  "filesystem",
-			ToolName:    "read_file",
-			State:       "completed",
-			Summary:     "Read architecture summary",
-			Message:     "Read architecture summary",
-			ChannelName: "browser.research.results",
-			RunID:       "run-act-1",
-			TeamID:      "team-alpha",
-			Timestamp:   "2026-10-25T12:00:00Z",
-		},
-		{
-			ID:          "act-2",
-			ServerID:    "srv-2",
-			ServerName:  "media",
-			ToolName:    "generate_image",
-			State:       "completed",
-			Summary:     "Generated concept image",
-			Message:     "Generated concept image",
-			ChannelName: "media.image.output",
-			RunID:       "run-act-1",
-			TeamID:      "team-alpha",
-			Timestamp:   "2026-10-25T12:01:00Z",
-		},
+		{ID: "act-1", ServerID: "srv-1", ServerName: "filesystem", ToolName: "read_file", State: "completed", Summary: "Read architecture summary", Message: "Read architecture summary", ChannelName: "browser.research.results", RunID: "run-act-1", TeamID: "team-alpha", Timestamp: "2026-10-25T12:00:00Z"},
+		{ID: "act-2", ServerID: "srv-2", ServerName: "media", ToolName: "generate_image", State: "completed", Summary: "Generated concept image", Message: "Generated concept image", ChannelName: "media.image.output", RunID: "run-act-1", TeamID: "team-alpha", Timestamp: "2026-10-25T12:01:00Z"},
 	})
 	if activitySummary == nil || len(activitySummary.OutputRefs) != 2 || len(activitySummary.Outputs) != 2 {
 		t.Fatalf("unexpected activity summary: %#v", activitySummary)
@@ -143,27 +108,12 @@ func TestBuildTeamWorkConfirmExecutionSummary_PopulatesOutputRefsAndTeamOutputRe
 	}
 
 	planned := []protocol.PlannedToolCall{
-		{
-			Name: "write_file",
-			Arguments: map[string]any{
-				"path":  targetRel,
-				"title": "Deliverable Plan",
-			},
-		},
-		{
-			Name: "create_team",
-			Arguments: map[string]any{
-				"name": "Delivery Squad",
-				"goal": "Ship normalized output refs",
-			},
-		},
+		{Name: "write_file", Arguments: map[string]any{"path": targetRel, "title": "Deliverable Plan"}},
+		{Name: "create_team", Arguments: map[string]any{"name": "Delivery Squad", "goal": "Ship normalized output refs"}},
 	}
 
 	summary := buildTeamWorkConfirmExecutionSummary(planned, "team-delivery", "work-1", "run-team-1", "proof-team-1")
-	if summary == nil {
-		t.Fatal("expected team work confirm execution summary")
-	}
-	if len(summary.OutputRefs) != 2 || len(summary.Outputs) != 2 || len(summary.TeamOutputRefs) != 2 || len(summary.ArtifactRefs) != 1 {
+	if summary == nil || len(summary.OutputRefs) != 2 || len(summary.Outputs) != 2 || len(summary.TeamOutputRefs) != 2 || len(summary.ArtifactRefs) != 1 {
 		t.Fatalf("unexpected summary slice lengths: %#v", summary)
 	}
 	if summary.OutputRefs[0].Kind != "code" || summary.OutputRefs[0].Role != "primary" || summary.OutputRefs[0].ProofEnvelope == nil {
@@ -174,48 +124,64 @@ func TestBuildTeamWorkConfirmExecutionSummary_PopulatesOutputRefsAndTeamOutputRe
 	}
 }
 
+func TestConfirmActionMediaOutputs_ProjectsEphemeralAndSavedMediaWithProofEnvelope(t *testing.T) {
+	imgBytes := []byte("verified-media-image")
+	imgB64 := base64.StdEncoding.EncodeToString(imgBytes)
+	wantSHA := fmt.Sprintf("%x", sha256.Sum256(imgBytes))
+
+	ephemeralRaw := `{"message":"Image generated","artifact":{"id":"art-eph-1","type":"image","title":"Generated: Hero","content_type":"image/png","content":"` + imgB64 + `","cached":true}}`
+	ephRef, _, ephArt, ok := extractOutputsFromToolResult(ephemeralRaw, "run-media-1", "proof-media-1", "primary")
+	if !ok {
+		t.Fatal("expected ephemeral generate_image output extraction")
+	}
+	if ephRef.Kind != "image" || ephRef.StorageRef != "artifact://art-eph-1" || ephRef.ContentType != "image/png" || ephRef.Bytes != len(imgBytes) || ephRef.SHA256 != wantSHA {
+		t.Fatalf("unexpected ephemeral OutputRef: %#v", ephRef)
+	}
+	if ephRef.Proof == nil || ephRef.Proof.ExecutionStatus != "cached" || !ephArt.Cached {
+		t.Fatalf("expected cached proof posture on ephemeral media: ref=%#v art=%#v", ephRef, ephArt)
+	}
+
+	planned := []protocol.PlannedToolCall{
+		{
+			Name: "generate_image",
+			Arguments: map[string]any{
+				"artifact": map[string]any{"id": "art-eph-2", "type": "image", "title": "Concept Sketch", "content_type": "image/png", "content": imgB64, "cached": true},
+			},
+		},
+		{
+			Name: "save_cached_image",
+			Arguments: map[string]any{
+				"artifact": map[string]any{
+					"id": "art-saved-1", "type": "image", "title": "hero.png",
+					"saved_path": "saved-media/hero.png", "content_type": "image/png",
+					"bytes": len(imgBytes), "sha256": wantSHA, "verified": true,
+				},
+			},
+		},
+	}
+
+	summary := buildTeamWorkConfirmExecutionSummary(planned, "team-media", "work-media-1", "run-media-2", "proof-media-2")
+	if summary == nil || len(summary.OutputRefs) != 2 || len(summary.ArtifactRefs) != 2 {
+		t.Fatalf("unexpected media confirm summary: %#v", summary)
+	}
+	savedRef := summary.OutputRefs[1]
+	if savedRef.Kind != "image" || savedRef.StorageRef != "saved-media/hero.png" || savedRef.ContentType != "image/png" || savedRef.Bytes != len(imgBytes) || savedRef.SHA256 != wantSHA {
+		t.Fatalf("unexpected saved media OutputRef: %#v", savedRef)
+	}
+	if savedRef.Proof == nil || savedRef.Proof.ExecutionStatus != "verified" || savedRef.Proof.ReadbackStatus != "verified" || savedRef.Proof.Checksum != wantSHA {
+		t.Fatalf("unexpected saved media OutputProofEnvelope: %#v", savedRef.Proof)
+	}
+}
+
 func TestBuildTeamAndGroupExecutionSummaries_PopulateNormalizedOutputRefs(t *testing.T) {
 	teamID := uuid.MustParse("11111111-1111-1111-1111-111111111111")
 	artID1 := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1")
 	artID2 := uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2")
-	meta, _ := json.Marshal(map[string]any{
-		"source_contract_id": "contract-grp-1",
-		"package_id":         "pkg-grp-1",
-	})
-	group := &CollaborationGroup{
-		ID:      "group-alpha",
-		Name:    "Alpha Launch Group",
-		TeamIDs: []string{teamID.String()},
-	}
+	meta, _ := json.Marshal(map[string]any{"source_contract_id": "contract-grp-1", "package_id": "pkg-grp-1"})
+	group := &CollaborationGroup{ID: "group-alpha", Name: "Alpha Launch Group", TeamIDs: []string{teamID.String()}}
 	items := []artifacts.Artifact{
-		{
-			ID:           artID1,
-			TeamID:       &teamID,
-			AgentID:      "lead-agent",
-			TraceID:      "run-grp-1",
-			ArtifactType: artifacts.TypeDocument,
-			Title:        "Launch Brief",
-			ContentType:  "text/markdown",
-			Content:      "# Launch Brief",
-			FilePath:     "groups/alpha/launch_brief.md",
-			Metadata:     meta,
-			Status:       "approved",
-			CreatedAt:    time.Now().UTC(),
-		},
-		{
-			ID:           artID2,
-			TeamID:       &teamID,
-			AgentID:      "lead-agent",
-			TraceID:      "run-grp-1",
-			ArtifactType: artifacts.TypeDocument,
-			Title:        "Package Proof",
-			ContentType:  "text/markdown",
-			Content:      "# Proof",
-			FilePath:     "groups/alpha/proof.md",
-			Metadata:     meta,
-			Status:       "approved",
-			CreatedAt:    time.Now().UTC(),
-		},
+		{ID: artID1, TeamID: &teamID, AgentID: "lead-agent", TraceID: "run-grp-1", ArtifactType: artifacts.TypeDocument, Title: "Launch Brief", ContentType: "text/markdown", Content: "# Launch Brief", FilePath: "groups/alpha/launch_brief.md", Metadata: meta, Status: "approved", CreatedAt: time.Now().UTC()},
+		{ID: artID2, TeamID: &teamID, AgentID: "lead-agent", TraceID: "run-grp-1", ArtifactType: artifacts.TypeDocument, Title: "Package Proof", ContentType: "text/markdown", Content: "# Proof", FilePath: "groups/alpha/proof.md", Metadata: meta, Status: "approved", CreatedAt: time.Now().UTC()},
 	}
 
 	groupSummary := buildGroupOutputsExecutionSummary(group, items)
@@ -230,19 +196,11 @@ func TestBuildTeamAndGroupExecutionSummaries_PopulateNormalizedOutputRefs(t *tes
 	}
 
 	guidance := TeamLeadGuidanceResponse{
-		Action:   TeamLeadGuidedActionResumeRetainedPackage,
-		Headline: "Resume Alpha Launch Group",
-		Summary:  "Resume from retained outputs.",
+		Action: TeamLeadGuidedActionResumeRetainedPackage, Headline: "Resume Alpha Launch Group", Summary: "Resume from retained outputs.",
 		ExecutionContract: &TeamLeadExecutionContract{
-			ExecutionMode: TeamLeadExecutionModeContinuityResume,
-			OwnerLabel:    "Team Lead",
-			TeamName:      "Alpha Team",
-			Summary:       "Continue from retained launch package.",
-			TargetOutputs: []string{"Launch Brief", "Remaining Checklist"},
-			WorkflowGroup: &TeamLeadWorkflowGroupDraft{
-				GroupID: "group-alpha",
-				Name:    "Alpha Launch Group",
-			},
+			ExecutionMode: TeamLeadExecutionModeContinuityResume, OwnerLabel: "Team Lead", TeamName: "Alpha Team",
+			Summary: "Continue from retained launch package.", TargetOutputs: []string{"Launch Brief", "Remaining Checklist"},
+			WorkflowGroup: &TeamLeadWorkflowGroupDraft{GroupID: "group-alpha", Name: "Alpha Launch Group"},
 		},
 	}
 	guidanceSummary := buildTeamLeadGuidanceExecutionSummary(guidance, "Resume launch", "run-guide-1", "contract-guide-1")
