@@ -167,6 +167,7 @@ func (s *AdminServer) buildOrganizationHome(req OrganizationCreateRequest, templ
 		// owner decision 2).
 		home.Departments = append([]OrganizationDepartmentSummary(nil), template.Departments...)
 		home.DeliveryDefaults = template.DeliveryDefaults
+		home.LoopProfiles = append([]bootstrap.TemplateLoopProfile(nil), template.LoopProfiles...)
 		if template.Starter != nil {
 			home.SomaIntro = template.Starter.SomaIntro
 		}

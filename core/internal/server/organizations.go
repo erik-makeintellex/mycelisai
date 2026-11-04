@@ -179,8 +179,9 @@ type OrganizationHomePayload struct {
 	// DeliveryDefaults and SomaIntro (RC-004B) are copied from the starter
 	// catalog entry at creation. Departments stay planned; no teams are
 	// instantiated from a starter at organization creation.
-	DeliveryDefaults *bootstrap.DeliveryDefaults `json:"delivery_defaults,omitempty"`
-	SomaIntro        string                      `json:"soma_intro,omitempty"`
+	DeliveryDefaults *bootstrap.DeliveryDefaults     `json:"delivery_defaults,omitempty"`
+	SomaIntro        string                          `json:"soma_intro,omitempty"`
+	LoopProfiles     []bootstrap.TemplateLoopProfile `json:"loop_profiles,omitempty"`
 }
 
 type TeamLeadGuidedAction string

@@ -10,7 +10,8 @@ type LoopOwnerType string
 type ReviewLoopEventKind string
 
 const (
-	LoopProfileTypeReview LoopProfileType = "review"
+	LoopProfileTypeReview   LoopProfileType = "review"
+	LoopProfileTypeLearning LoopProfileType = "learning"
 
 	LoopOwnerTypeTeam      LoopOwnerType = "team"
 	LoopOwnerTypeAgentType LoopOwnerType = "agent_type"
@@ -217,7 +218,7 @@ func (s *LoopProfileStore) EnsureDefaults(home OrganizationHomePayload) {
 		return
 	}
 
-	defaults := defaultReviewLoopProfiles(home)
+	defaults := resolveDefaultLoopProfiles(home)
 	if len(defaults) == 0 {
 		return
 	}

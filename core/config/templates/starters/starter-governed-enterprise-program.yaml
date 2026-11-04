@@ -94,3 +94,26 @@ teams:
       - swarm.team.governed-program.internal.command
     deliveries:
       - swarm.team.governed-program.signal.status
+loops:
+  - id: governed-program-review
+    name: Governed program compliance review
+    type: review
+    description: Reviews proposal evidence coverage, full-audit posture, and local-only engine compliance.
+    owner_type: team
+    owner_id: governed-program
+    interval_seconds: 300
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed
+      - organization_ai_engine_changed
+      - response_contract_changed
+  - id: compliance-evidence-learning
+    name: Compliance evidence learning loop
+    type: learning
+    description: Identifies recurring compliance findings so decision memos and evidence packs stay complete.
+    owner_type: agent_type
+    owner_id: compliance-reviewer
+    interval_seconds: 900
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed

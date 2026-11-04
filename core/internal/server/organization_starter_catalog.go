@@ -6,12 +6,46 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mycelis/core/internal/bootstrap"
 	"github.com/mycelis/core/internal/governance"
 	"github.com/mycelis/core/pkg/protocol"
 )
+
+var (
+	starterLoopsMu           sync.RWMutex
+	starterLoopsByTemplateID = map[string][]bootstrap.TemplateLoopProfile{}
+)
+
+func registerStarterLoopProfiles(templateID string, loops []bootstrap.TemplateLoopProfile) {
+	templateID = strings.TrimSpace(templateID)
+	if templateID == "" {
+		return
+	}
+	starterLoopsMu.Lock()
+	defer starterLoopsMu.Unlock()
+	if len(loops) == 0 {
+		delete(starterLoopsByTemplateID, templateID)
+		return
+	}
+	starterLoopsByTemplateID[templateID] = append([]bootstrap.TemplateLoopProfile(nil), loops...)
+}
+
+func lookupStarterLoopProfiles(templateID string) []bootstrap.TemplateLoopProfile {
+	templateID = strings.TrimSpace(templateID)
+	if templateID == "" {
+		return nil
+	}
+	starterLoopsMu.RLock()
+	defer starterLoopsMu.RUnlock()
+	loops := starterLoopsByTemplateID[templateID]
+	if len(loops) == 0 {
+		return nil
+	}
+	return append([]bootstrap.TemplateLoopProfile(nil), loops...)
+}
 
 const operatorCatalogTimeout = 3 * time.Second
 
@@ -33,9 +67,10 @@ type OrganizationStarterTemplate struct {
 	SourceTemplateID  string                      `json:"source_template_id,omitempty"`
 	Available         bool                        `json:"available"`
 	UnavailableReason string                      `json:"unavailable_reason,omitempty"`
-	Starter           *bootstrap.StarterLabels    `json:"starter,omitempty"`
-	DeliveryDefaults  *bootstrap.DeliveryDefaults `json:"delivery_defaults,omitempty"`
-	DeliverySummary   *StarterDeliverySummary     `json:"delivery_summary,omitempty"`
+	Starter           *bootstrap.StarterLabels        `json:"starter,omitempty"`
+	DeliveryDefaults  *bootstrap.DeliveryDefaults     `json:"delivery_defaults,omitempty"`
+	DeliverySummary   *StarterDeliverySummary         `json:"delivery_summary,omitempty"`
+	LoopProfiles      []bootstrap.TemplateLoopProfile `json:"loop_profiles,omitempty"`
 }
 
 // StarterDeliverySummary is the plain-language delivery posture for chips.
@@ -156,6 +191,7 @@ func (s *AdminServer) starterPolicyGroups() map[string]struct{} {
 }
 
 func projectStarterBundle(bundle *bootstrap.TemplateBundle, source string) OrganizationStarterTemplate {
+	registerStarterLoopProfiles(bundle.ID, bundle.Loops)
 	return OrganizationStarterTemplate{
 		OrganizationTemplateSummary: summarizeStarterBundle(bundle),
 		Source:                      source,
@@ -163,6 +199,7 @@ func projectStarterBundle(bundle *bootstrap.TemplateBundle, source string) Organ
 		Starter:                     bundle.Starter,
 		DeliveryDefaults:            bundle.DeliveryDefaults,
 		DeliverySummary:             summarizeDelivery(bundle.DeliveryDefaults),
+		LoopProfiles:                append([]bootstrap.TemplateLoopProfile(nil), bundle.Loops...),
 	}
 }
 

@@ -91,3 +91,26 @@ teams:
       - swarm.team.product-delivery.internal.command
     deliveries:
       - swarm.team.product-delivery.signal.status
+loops:
+  - id: product-delivery-review
+    name: Product delivery readiness review
+    type: review
+    description: Reviews delivery priorities, proposed change readiness, and verification posture without taking action.
+    owner_type: team
+    owner_id: product-delivery
+    interval_seconds: 300
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed
+      - organization_ai_engine_changed
+      - response_contract_changed
+  - id: verifier-proof-learning
+    name: Verification proof learning loop
+    type: learning
+    description: Captures recurring verification patterns so change packages stay clear and reviewable.
+    owner_type: agent_type
+    owner_id: verifier
+    interval_seconds: 900
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed

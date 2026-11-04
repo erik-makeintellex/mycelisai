@@ -94,3 +94,26 @@ teams:
       - swarm.team.ops-desk.internal.command
     deliveries:
       - swarm.team.ops-desk.signal.status
+loops:
+  - id: ops-desk-readiness-review
+    name: Operations desk readiness review
+    type: review
+    description: Reviews connected-system check coverage and bounded runbook posture without changing state.
+    owner_type: team
+    owner_id: ops-desk
+    interval_seconds: 300
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed
+      - organization_ai_engine_changed
+      - response_contract_changed
+  - id: monitor-signal-learning
+    name: Operational signal learning loop
+    type: learning
+    description: Synthesizes recurring status patterns from daily operational checks.
+    owner_type: agent_type
+    owner_id: monitor
+    interval_seconds: 900
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed

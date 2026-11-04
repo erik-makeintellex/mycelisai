@@ -90,3 +90,26 @@ teams:
       - swarm.team.studio-delivery.internal.command
     deliveries:
       - swarm.team.studio-delivery.signal.status
+loops:
+  - id: studio-delivery-review
+    name: Studio deliverable readiness review
+    type: review
+    description: Reviews client draft readiness and outbound approval posture without sending anything externally.
+    owner_type: team
+    owner_id: studio-delivery
+    interval_seconds: 300
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed
+      - organization_ai_engine_changed
+      - response_contract_changed
+  - id: client-review-learning
+    name: Client review quality learning loop
+    type: learning
+    description: Tracks recurring draft feedback and tone alignment across client deliverables.
+    owner_type: agent_type
+    owner_id: reviewer
+    interval_seconds: 900
+    event_triggers:
+      - organization_created
+      - team_lead_action_completed

@@ -25,8 +25,9 @@ type TemplateBundle struct {
 	// Starter and DeliveryDefaults are optional (RC-004A). Starter carries
 	// beginner-facing labels only; DeliveryDefaults shapes organization
 	// delivery posture. See template_starter.go.
-	Starter          *StarterLabels    `yaml:"starter,omitempty"`
-	DeliveryDefaults *DeliveryDefaults `yaml:"delivery_defaults,omitempty"`
+	Starter          *StarterLabels        `yaml:"starter,omitempty"`
+	DeliveryDefaults *DeliveryDefaults     `yaml:"delivery_defaults,omitempty"`
+	Loops            []TemplateLoopProfile `yaml:"loops,omitempty" json:"loops,omitempty"`
 }
 
 type TemplateKernel struct {
@@ -146,7 +147,10 @@ func (b *TemplateBundle) Validate() error {
 	}
 
 	b.Teams = normalized
-	return b.validateStarterBlocks()
+	if err := b.validateStarterBlocks(); err != nil {
+		return err
+	}
+	return b.validateLoops()
 }
 
 func (b *TemplateBundle) LoadTeamManifests() ([]*swarm.TeamManifest, error) {

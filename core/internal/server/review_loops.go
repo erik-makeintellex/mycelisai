@@ -7,7 +7,49 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/mycelis/core/internal/bootstrap"
+	"github.com/mycelis/core/pkg/protocol"
 )
+
+func resolveDefaultLoopProfiles(home OrganizationHomePayload) []LoopProfile {
+	templateLoops := home.LoopProfiles
+	if len(templateLoops) == 0 && strings.TrimSpace(home.TemplateID) != "" {
+		templateLoops = lookupStarterLoopProfiles(home.TemplateID)
+	}
+	if len(templateLoops) > 0 {
+		return loopProfilesFromTemplates(templateLoops)
+	}
+	return defaultReviewLoopProfiles(home)
+}
+
+func loopProfilesFromTemplates(items []bootstrap.TemplateLoopProfile) []LoopProfile {
+	profiles := make([]LoopProfile, 0, len(items))
+	for _, item := range items {
+		triggers := make([]ReviewLoopEventKind, 0, len(item.EventTriggers))
+		for _, trigger := range item.EventTriggers {
+			if trimmed := strings.TrimSpace(trigger); trimmed != "" {
+				triggers = append(triggers, ReviewLoopEventKind(trimmed))
+			}
+		}
+		profile := LoopProfile{
+			ID:          strings.TrimSpace(item.ID),
+			Name:        strings.TrimSpace(item.Name),
+			Type:        LoopProfileType(strings.TrimSpace(item.Type)),
+			Description: strings.TrimSpace(item.Description),
+			Owner: LoopOwnerRef{
+				Type: LoopOwnerType(strings.TrimSpace(item.OwnerType)),
+				ID:   strings.TrimSpace(item.OwnerID),
+			},
+			IntervalSeconds: item.IntervalSeconds,
+			EventTriggers:   triggers,
+		}
+		if err := validateLoopProfile(profile); err != nil {
+			continue
+		}
+		profiles = append(profiles, profile)
+	}
+	return profiles
+}
 
 func defaultReviewLoopProfiles(home OrganizationHomePayload) []LoopProfile {
 	home = normalizeOrganizationHome(home)
@@ -71,9 +113,10 @@ func resolveLoopOwner(home OrganizationHomePayload, profile LoopProfile) (LoopOw
 		}
 		return LoopOwnerResolution{}, fmt.Errorf("loop owner team not found")
 	case LoopOwnerTypeAgentType:
+		mappedID, _, _ := agentTypeProfileIdentity(protocol.AgentManifest{ID: profile.Owner.ID, Role: profile.Owner.ID}, 0)
 		for _, department := range home.Departments {
 			for _, agentType := range department.AgentTypeProfiles {
-				if agentType.ID == profile.Owner.ID {
+				if agentType.ID == profile.Owner.ID || (mappedID != "" && agentType.ID == mappedID) {
 					return LoopOwnerResolution{
 						Type:      LoopOwnerTypeAgentType,
 						ID:        agentType.ID,
@@ -198,8 +241,8 @@ func summarizeActivityFromError(err error) (LoopActivityStatus, string) {
 }
 
 func validateLoopProfile(profile LoopProfile) error {
-	if profile.Type != LoopProfileTypeReview {
-		return fmt.Errorf("loop profile must be a review loop")
+	if profile.Type != LoopProfileTypeReview && profile.Type != LoopProfileTypeLearning {
+		return fmt.Errorf("loop profile must be a review loop or learning loop")
 	}
 	if strings.TrimSpace(profile.ID) == "" {
 		return fmt.Errorf("loop profile id is required")
