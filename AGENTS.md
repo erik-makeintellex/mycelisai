@@ -123,3 +123,10 @@ Channel rules:
 - **Ephemeral File Exclusion:** Temporary scratch scripts, ad-hoc debug harnesses, coverage profiles (`coverage.out`, `.coverage`), raw command dumps, `.log`/`.tmp`/`.bak` files, and intermediate agent work files do not belong to the ultimate delivery. Delete any self-created temporary files before subagent handoff or slice commit.
 - **Clean Delivery Packages (`DeliveryPackage` / `OutputRef`):** When Soma, Team Leads, or coding agents generate a `DeliveryPackage` (such as `codex_task_bundle`) or retained `OutputRef` artifacts, include only canonical deliverables (task specs, validation checklists, affected-file summaries, recommended slices, `proof.md`, and intentional source/document outputs). Never bundle transient caches, temp files, or build intermediates into workspace deliverable folders.
 - **Team & State Hygiene:** Terminate completed subagents immediately upon handoff (`manage_subagents` `kill`), verify `git status --short` shows zero untracked temp/cache artifacts before committing, and update `.state/V8_DEV_STATE.md` (`NEXT` -> `COMPLETE`) in the same slice so completed work is never re-executed.
+
+## Git Branching, Staging & Tagging Contract
+
+- `dev` is the active development and integration branch for ongoing slices and worker waves.
+- `main` is the clean staging and release-candidate branch.
+- As features and waves stabilize on `dev` (all quality, unit, and GUI checks green with zero untracked temp/cache files), fast-forward or merge `dev` into `main` and mark stabilized milestones on `main` with an annotated git tag (`git tag -a v... -m "..."`).
+- Prune merged temporary/backup branches so local branch topology stays clean around `dev` and `main`.
