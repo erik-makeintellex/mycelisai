@@ -112,9 +112,27 @@ func filepathExt(targetPath string) string {
 	return strings.ToLower(targetPath[lastDot:])
 }
 
+func isRunnablePlannedToolCall(call protocol.PlannedToolCall) bool {
+	if strings.TrimSpace(call.Name) == "" {
+		return false
+	}
+	if strings.TrimSpace(call.Name) == "write_file" {
+		return firstNonEmptyString(call.Arguments["path"]) != "" && firstNonEmptyString(call.Arguments["content"]) != ""
+	}
+	return true
+}
+
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
-	if call, ok := parsePlannedToolCall(agentResult.Text); ok {
+	if call, ok := parsePlannedToolCall(agentResult.Text); ok && isRunnablePlannedToolCall(call) {
+		if call.Name == "write_file" {
+			if calls, ok := inferCodexTaskBundlePlanFromRequest(latestRequest); ok {
+				return calls
+			}
+			if calls, ok := inferUserDeliverableBundlePlanFromRequest(latestRequest); ok {
+				return calls
+			}
+		}
 		planned = append(planned, normalizePlannedToolCall(call))
 	}
 	if len(planned) == 0 {
@@ -124,8 +142,17 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 					planned = append(planned, calls...)
 					break
 				}
+				if calls, ok := inferUserDeliverableBundlePlanFromRequest(latestRequest); ok {
+					planned = append(planned, calls...)
+					break
+				}
 				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
 					planned = append(planned, normalizePlannedToolCall(call))
+					break
+				}
+				if call, ok := inferFallbackDeliverableWritePlan(latestRequest, agentResult.Text); ok {
+					planned = append(planned, normalizePlannedToolCall(call))
+					break
 				}
 			}
 		}

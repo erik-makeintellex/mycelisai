@@ -42,7 +42,7 @@ type packageOutputSummary struct {
 }
 
 func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx, planned []protocol.PlannedToolCall, runID, proofID string) (*packageOutputSummary, error) {
-	basePath, slug, ok := codexPackageBaseFromCalls(planned)
+	basePath, slug, packageKind, ok := deliverablePackageMetadataFromCalls(planned)
 	if !ok {
 		return nil, nil
 	}
@@ -68,9 +68,9 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx,
 	artifacts = append(artifacts, proofArtifact)
 
 	summary := &packageOutputSummary{
-		PackageKind: "codex_task_bundle",
+		PackageKind: packageKind,
 		PackageSlug: slug,
-		PackageID:   "codex_task_bundle:" + slug,
+		PackageID:   packageKind + ":" + slug,
 		BasePath:    basePath,
 		ProofPath:   proofPath,
 		RunID:       runID,
@@ -103,10 +103,11 @@ func packageFileFromPlannedCall(call protocol.PlannedToolCall) (packageOutputFil
 	if title == "" {
 		title = filepath.Base(relativePath)
 	}
-	return packageOutputFileFromBytes(relativePath, title, data), protocol.ChatArtifactRef{
-		Type:        "document",
+	file := packageOutputFileFromBytes(relativePath, title, data)
+	return file, protocol.ChatArtifactRef{
+		Type:        packageArtifactTypeForPath(relativePath),
 		Title:       title,
-		ContentType: "text/markdown",
+		ContentType: file.ContentType,
 		Content:     string(data),
 		SavedPath:   filepath.ToSlash(relativePath),
 	}, nil
@@ -132,48 +133,80 @@ func writeCodexPackageProof(proofPath, proofContent string) (packageOutputFile, 
 	}, nil
 }
 
+func packageContentTypeForPath(relativePath string) string {
+	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(relativePath)), ".html") {
+		return "text/html"
+	}
+	return "text/markdown"
+}
+
+func packageArtifactTypeForPath(relativePath string) string {
+	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(relativePath)), ".html") {
+		return "code"
+	}
+	return "document"
+}
+
 func packageOutputFileFromBytes(relativePath, title string, data []byte) packageOutputFile {
 	sum := sha256.Sum256(data)
 	return packageOutputFile{
 		Path:        filepath.ToSlash(relativePath),
 		Title:       title,
-		ContentType: "text/markdown",
+		ContentType: packageContentTypeForPath(relativePath),
 		Bytes:       len(data),
 		SHA256:      fmt.Sprintf("%x", sum),
 	}
 }
 
-func codexPackageBaseFromCalls(planned []protocol.PlannedToolCall) (string, string, bool) {
-	if len(planned) < 2 {
-		return "", "", false
+func isSupportedDeliverablePackageKind(kind string) bool {
+	switch strings.TrimSpace(kind) {
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle":
+		return true
+	default:
+		return false
 	}
-	basePath := ""
-	slug := ""
+}
+
+func codexPackageBaseFromCalls(planned []protocol.PlannedToolCall) (string, string, bool) {
+	basePath, slug, _, ok := deliverablePackageMetadataFromCalls(planned)
+	return basePath, slug, ok
+}
+
+func deliverablePackageMetadataFromCalls(planned []protocol.PlannedToolCall) (string, string, string, bool) {
+	if len(planned) < 2 {
+		return "", "", "", false
+	}
+	basePath, slug, packageKind := "", "", ""
 	for _, call := range planned {
 		if strings.TrimSpace(call.Name) != "write_file" {
-			return "", "", false
+			return "", "", "", false
 		}
-		if firstStringArgument(call.Arguments, "package_kind") != "codex_task_bundle" {
-			return "", "", false
+		kind := firstStringArgument(call.Arguments, "package_kind")
+		if !isSupportedDeliverablePackageKind(kind) {
+			return "", "", "", false
 		}
 		relativePath := filepath.ToSlash(firstStringArgument(call.Arguments, "path"))
 		dir := path.Dir(relativePath)
 		if dir == "." || dir == "" {
-			return "", "", false
+			return "", "", "", false
 		}
 		if basePath == "" {
 			basePath = dir
 			slug = firstStringArgument(call.Arguments, "package_slug")
+			packageKind = kind
 			continue
 		}
-		if dir != basePath {
-			return "", "", false
+		if dir != basePath || kind != packageKind {
+			return "", "", "", false
 		}
+	}
+	if packageKind == "" {
+		packageKind = "codex_task_bundle"
 	}
 	if slug == "" {
 		slug = path.Base(basePath)
 	}
-	return basePath, slug, true
+	return basePath, slug, packageKind, true
 }
 
 func workspacePathForServer(rawPath string) (string, error) {
