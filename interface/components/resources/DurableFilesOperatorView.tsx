@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-    Download,
-    Eye,
-    EyeOff,
-    FileCode2,
-    FileText,
-    FolderOpen,
-    RefreshCw,
-    Sliders,
-} from "lucide-react";
+import { Download, Eye, EyeOff, FileCode2, FileText, FolderOpen, Play, RefreshCw, Sliders } from "lucide-react";
 import { useCortexStore, type Artifact } from "@/store/useCortexStore";
 import { councilLabel } from "@/lib/labels";
 
@@ -23,6 +14,10 @@ interface DeliverableItem {
     producer: string;
     createdAt?: string;
     saved: boolean;
+}
+
+export function isPlayableHtmlDeliverable(item: DeliverableItem): boolean {
+    return item.contentType.toLowerCase().includes("html") || Boolean(item.filePath?.toLowerCase().endsWith(".html"));
 }
 
 function triggerDownload(item: DeliverableItem) {
@@ -47,6 +42,7 @@ export default function DurableFilesOperatorView() {
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
 
     const [previewId, setPreviewId] = useState<string | null>(null);
+    const [playModeId, setPlayModeId] = useState<string | null>(null);
     const [openedNotice, setOpenedNotice] = useState<string | null>(null);
 
     useEffect(() => {
@@ -157,7 +153,9 @@ export default function DurableFilesOperatorView() {
                     <div className="space-y-3">
                         {items.map((item) => {
                             const isPreviewOpen = previewId === item.id;
-                            const Icon = item.contentType.includes("code") || item.filePath?.match(/\.(ts|tsx|py|go|json|yaml|md)$/i)
+                            const isPlayable = isPlayableHtmlDeliverable(item);
+                            const isPlaying = playModeId === item.id && isPlayable;
+                            const Icon = item.contentType.includes("code") || item.filePath?.match(/\.(ts|tsx|py|go|json|yaml|md|html)$/i)
                                 ? FileCode2
                                 : FileText;
                             return (
@@ -189,6 +187,21 @@ export default function DurableFilesOperatorView() {
                                         </div>
 
                                         <div className="flex items-center gap-2">
+                                            {isPlayable && (
+                                                <button
+                                                    type="button"
+                                                    data-testid={`play-deliverable-${item.id}`}
+                                                    onClick={() => {
+                                                        const nextPlay = playModeId === item.id ? null : item.id;
+                                                        setPlayModeId(nextPlay);
+                                                        if (nextPlay) setPreviewId(item.id);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 rounded-md border border-cortex-success/35 bg-cortex-success/10 px-2.5 py-1.5 text-xs font-mono text-cortex-success hover:bg-cortex-success/20 transition-colors"
+                                                >
+                                                    <Play className="w-3.5 h-3.5" />
+                                                    Play / Live Preview
+                                                </button>
+                                            )}
                                             <button
                                                 type="button"
                                                 data-testid={`preview-deliverable-${item.id}`}
@@ -220,6 +233,16 @@ export default function DurableFilesOperatorView() {
                                             </button>
                                         </div>
                                     </div>
+
+                                    {isPlaying && (
+                                        <iframe
+                                            data-testid={`deliverable-iframe-${item.id}`}
+                                            sandbox="allow-scripts"
+                                            srcDoc={item.content || ""}
+                                            title={item.title}
+                                            className="w-full h-80 rounded-lg border border-cortex-border bg-white"
+                                        />
+                                    )}
 
                                     {isPreviewOpen && (
                                         <div
