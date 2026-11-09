@@ -16,5 +16,9 @@ interface/coverage
 interface/test-results
 interface/playwright-report
 interface/tsconfig.tsbuildinfo
+.state/*
+!.state/V8_DEV_STATE.md
+!.state/V7_DEV_STATE.md
+dist
 .DS_Store
 *.log

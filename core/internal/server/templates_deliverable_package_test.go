@@ -151,3 +151,17 @@ func TestFinalizeCodexTaskBundleTx_SupportsMarketingAndGameBundles(t *testing.T)
 
 	_ = protocol.PlannedToolCall{}
 }
+
+func TestInferMutationToolsFromText_IncludesWriteFileForPuzzleAndMarketingBundles(t *testing.T) {
+	prompts := []string{
+		"Create a simple browser sliding-tile puzzle game with playable HTML, game rules, and controls.",
+		"Build a playable sliding-tile puzzle game in the browser.",
+		"Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.",
+	}
+	for _, prompt := range prompts {
+		tools := inferMutationToolsFromText(prompt)
+		if !containsString(tools, "write_file") {
+			t.Fatalf("inferMutationToolsFromText(%q) = %v, want write_file included", prompt, tools)
+		}
+	}
+}

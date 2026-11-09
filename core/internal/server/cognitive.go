@@ -126,9 +126,12 @@ func inferMutationToolsFromText(text string) []string {
 	if isCodexTaskBundleRequest(lower) {
 		tools = append(tools, "write_file")
 	}
+	if _, ok := inferUserDeliverableBundlePlanFromRequest(text); ok {
+		tools = append(tools, "write_file")
+	}
 
-	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft"}
-	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase"}
+	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft", "build", "make", "produce"}
+	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase", "html", "game", "puzzle", "bundle", "kit", "brief", "faq", "deliverable"}
 	if requestContainsAny(lower, fileActions) && requestContainsAny(lower, fileTargets) {
 		tools = append(tools, "write_file")
 	}
