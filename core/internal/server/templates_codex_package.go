@@ -59,7 +59,7 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx,
 	}
 
 	proofPath := filepath.ToSlash(path.Join(basePath, "proof.md"))
-	proofContent := buildCodexPackageProof(runID, proofID, basePath, files)
+	proofContent := buildDeliverablePackageProof(packageKind, runID, proofID, basePath, files)
 	proofFile, proofArtifact, err := writeCodexPackageProof(proofPath, proofContent)
 	if err != nil {
 		return nil, err
@@ -99,7 +99,7 @@ func packageFileFromPlannedCall(call protocol.PlannedToolCall) (packageOutputFil
 	if err != nil {
 		return packageOutputFile{}, protocol.ChatArtifactRef{}, fmt.Errorf("read package artifact %s: %w", relativePath, err)
 	}
-	title := firstStringArgument(call.Arguments, "artifact_role")
+	title := firstNonEmptyString(call.Arguments["title"], call.Arguments["artifact_role"])
 	if title == "" {
 		title = filepath.Base(relativePath)
 	}
@@ -158,9 +158,11 @@ func packageOutputFileFromBytes(relativePath, title string, data []byte) package
 	}
 }
 
+func isDeliverablePackageKind(kind string) bool { return isSupportedDeliverablePackageKind(kind) }
+
 func isSupportedDeliverablePackageKind(kind string) bool {
 	switch strings.TrimSpace(kind) {
-	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle":
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle":
 		return true
 	default:
 		return false
@@ -235,10 +237,23 @@ func workspacePathForServer(rawPath string) (string, error) {
 	return target, nil
 }
 
+func deliverablePackageProofTitle(packageKind string) string {
+	switch strings.TrimSpace(packageKind) {
+	case "marketing_launch_bundle": return "Marketing Launch Bundle Proof"
+	case "interactive_game_bundle": return "Interactive Game Bundle Proof"
+	case "customer_onboarding_bundle": return "Customer Onboarding Bundle Proof"
+	case "kpi_dashboard_bundle": return "KPI Dashboard Bundle Proof"
+	default: return "Codex Task Bundle Proof"
+	}
+}
 func buildCodexPackageProof(runID, proofID, basePath string, files []packageOutputFile) string {
+	return buildDeliverablePackageProof("codex_task_bundle", runID, proofID, basePath, files)
+}
+
+func buildDeliverablePackageProof(packageKind, runID, proofID, basePath string, files []packageOutputFile) string {
 	var b strings.Builder
-	b.WriteString("# Codex Task Bundle Proof\n\n")
-	b.WriteString("- Package kind: `codex_task_bundle`\n")
+	b.WriteString("# " + deliverablePackageProofTitle(packageKind) + "\n\n")
+	b.WriteString("- Package kind: `" + packageKind + "`\n")
 	b.WriteString("- Base path: `" + basePath + "`\n")
 	b.WriteString("- Run ID: `" + runID + "`\n")
 	b.WriteString("- Intent proof ID: `" + proofID + "`\n\n")

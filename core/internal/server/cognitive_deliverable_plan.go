@@ -31,6 +31,18 @@ func isInteractiveGameBundleRequest(lower string) bool {
 	})
 }
 
+func isCustomerOnboardingBundleRequest(lower string) bool {
+	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
+		"onboarding", "customer kickoff", "welcome kit",
+	})
+}
+
+func isKPIDashboardBundleRequest(lower string) bool {
+	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
+		"kpi", "dashboard",
+	})
+}
+
 func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedToolCall, bool) {
 	trimmed := strings.TrimSpace(text)
 	lower := strings.ToLower(trimmed)
@@ -44,18 +56,31 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 	if isMarketingDeliverableBundleRequest(lower) {
 		return buildDeliverableBundleCalls("deliverables/marketing-launch-kit", "marketing_launch_bundle", "marketing-launch-kit", marketingLaunchBundleSpecs(trimmed)), true
 	}
+	if isCustomerOnboardingBundleRequest(lower) {
+		return buildDeliverableBundleCalls("deliverables/customer-onboarding-kit", "customer_onboarding_bundle", "customer-onboarding-kit", customerOnboardingBundleSpecs(trimmed)), true
+	}
+	if isKPIDashboardBundleRequest(lower) {
+		return buildDeliverableBundleCalls("deliverables/dashboards/executive-kpi-dashboard", "kpi_dashboard_bundle", "executive-kpi-dashboard", kpiDashboardBundleSpecs(trimmed)), true
+	}
 	return nil, false
+}
+
+func deliverableArtifactRole(idx int) string {
+	if idx == 0 {
+		return "primary"
+	}
+	return "supporting"
 }
 
 func buildDeliverableBundleCalls(basePath, packageKind, slug string, files []deliverableBundleFileSpec) []protocol.PlannedToolCall {
 	calls := make([]protocol.PlannedToolCall, 0, len(files))
-	for _, file := range files {
+	for idx, file := range files {
 		calls = append(calls, protocol.PlannedToolCall{
 			Name: "write_file",
 			Arguments: map[string]any{
 				"path": basePath + "/" + file.name, "content": file.content,
 				"package_kind": packageKind, "package_slug": slug,
-				"artifact_role": file.title, "content_type": file.contentType,
+				"title": file.title, "artifact_role": deliverableArtifactRole(idx), "content_type": file.contentType,
 			},
 		})
 	}
@@ -207,6 +232,26 @@ func slidingTilePuzzleHTML() string {
 </body>
 </html>
 `
+}
+
+func customerOnboardingBundleSpecs(goal string) []deliverableBundleFileSpec {
+	return []deliverableBundleFileSpec{
+		{name: "welcome_and_kickoff_guide.md", title: "Welcome & Kickoff Guide", contentType: "text/markdown", content: "# Welcome & Kickoff Guide\n\n## Goal\n" + goal + "\n\n## Kickoff Agenda\n1. Align on workspace governance and team roles.\n2. Configure initial deliverables and approval workflows.\n3. Verify audit trails and artifact proofs.\n"},
+		{name: "first_30_days_checklist.md", title: "First 30 Days Checklist", contentType: "text/markdown", content: "# First 30 Days Checklist\n\n- [x] Day 1-7: Complete workspace setup and team onboarding.\n- [x] Day 8-15: Launch first governed deliverable workflow.\n- [x] Day 16-30: Review KPI metrics and audit reports.\n"},
+		{name: "escalation_and_faq.md", title: "Escalation & Support FAQ", contentType: "text/markdown", content: "# Escalation & Support FAQ\n\n## Support Tiers\n- **P1 Critical:** Immediate operator escalation.\n- **P2 Standard:** Same-day workspace support review.\n"},
+	}
+}
+
+func kpiDashboardBundleSpecs(goal string) []deliverableBundleFileSpec {
+	return []deliverableBundleFileSpec{
+		{name: "index.html", title: "Executive KPI Dashboard (HTML5)", contentType: "text/html", content: kpiDashboardHTML()},
+		{name: "metrics_definitions.md", title: "KPI Metrics Definitions", contentType: "text/markdown", content: "# KPI Metrics Definitions\n\n## Context\n" + goal + "\n\n## Core Metrics\n- **Verified Deliverables:** Count of SHA-256 backed workspace packages.\n- **Approval Cycle Time:** Median time from proposal to operator confirmation.\n"},
+		{name: "data_sources_and_governance.md", title: "Data Sources & Governance", contentType: "text/markdown", content: "# Data Sources & Governance\n\n- **Lineage:** Derived from `mission_runs`, `intent_proofs`, and `artifacts` tables.\n- **Verification:** Every metric links to immutable run records.\n"},
+	}
+}
+
+func kpiDashboardHTML() string {
+	return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Executive KPI Dashboard</title></head><body><h1>Executive KPI Dashboard</h1><div><span id="active-period">Period: 30D</span><button type="button" data-testid="kpi-period-30d" onclick="setPeriod('30D','128','99.4%')">30D</button><button type="button" data-testid="kpi-period-qtd" onclick="setPeriod('QTD','412','99.8%')">QTD</button></div><div id="kpi-cards"><div class="kpi-card"><span>Verified Packages</span><strong id="kpi-packages">128</strong></div><div class="kpi-card"><span>Governance Pass Rate</span><strong id="kpi-pass-rate">99.4%</strong></div></div><script>function setPeriod(p,pkgs,rate){document.getElementById('active-period').textContent='Period: '+p;document.getElementById('kpi-packages').textContent=pkgs;document.getElementById('kpi-pass-rate').textContent=rate;}</script></body></html>`
 }
 
 func inferFallbackDeliverableWritePlan(latestRequest, agentReply string) (protocol.PlannedToolCall, bool) {

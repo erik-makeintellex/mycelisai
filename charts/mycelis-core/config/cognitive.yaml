@@ -101,6 +101,7 @@ profiles:
     chat: local-ollama-dev
     coder: local-ollama-dev
     creative: local-ollama-dev
+    embed: ollama
     overseer: local-ollama-dev
     sentry: local-ollama-dev
 media:

@@ -81,6 +81,59 @@ func TestInferUserDeliverableBundlePlanFromRequest_MarketingAndGame(t *testing.T
 	})
 }
 
+func TestInferUserDeliverableBundlePlanFromRequest_OnboardingAndKPIDashboard(t *testing.T) {
+	t.Run("customer onboarding bundle", func(t *testing.T) {
+		calls, ok := inferUserDeliverableBundlePlanFromRequest("Create a customer onboarding welcome kit with kickoff guide, checklist, and support FAQ.")
+		if !ok || len(calls) != 3 {
+			t.Fatalf("ok=%v len=%d, want true & 3", ok, len(calls))
+		}
+		wantPaths := []string{
+			"deliverables/customer-onboarding-kit/welcome_and_kickoff_guide.md",
+			"deliverables/customer-onboarding-kit/first_30_days_checklist.md",
+			"deliverables/customer-onboarding-kit/escalation_and_faq.md",
+		}
+		wantRoles := []string{"primary", "supporting", "supporting"}
+		for i, call := range calls {
+			if call.Arguments["path"] != wantPaths[i] || call.Arguments["package_kind"] != "customer_onboarding_bundle" || call.Arguments["package_slug"] != "customer-onboarding-kit" {
+				t.Fatalf("call[%d] args = %#v", i, call.Arguments)
+			}
+			if call.Arguments["artifact_role"] != wantRoles[i] || call.Arguments["content_type"] != "text/markdown" {
+				t.Fatalf("call[%d] role/type = %v/%v", i, call.Arguments["artifact_role"], call.Arguments["content_type"])
+			}
+		}
+	})
+
+	t.Run("kpi dashboard bundle", func(t *testing.T) {
+		calls, ok := inferUserDeliverableBundlePlanFromRequest("Build an executive KPI dashboard with interactive period filters and metric definitions.")
+		if !ok || len(calls) != 3 {
+			t.Fatalf("ok=%v len=%d, want true & 3", ok, len(calls))
+		}
+		wantPaths := []string{
+			"deliverables/dashboards/executive-kpi-dashboard/index.html",
+			"deliverables/dashboards/executive-kpi-dashboard/metrics_definitions.md",
+			"deliverables/dashboards/executive-kpi-dashboard/data_sources_and_governance.md",
+		}
+		for i, call := range calls {
+			if call.Arguments["path"] != wantPaths[i] || call.Arguments["package_kind"] != "kpi_dashboard_bundle" || call.Arguments["package_slug"] != "executive-kpi-dashboard" {
+				t.Fatalf("call[%d] args = %#v", i, call.Arguments)
+			}
+		}
+		if calls[0].Arguments["content_type"] != "text/html" || calls[0].Arguments["artifact_role"] != "primary" {
+			t.Fatalf("call[0] html metadata = %#v", calls[0].Arguments)
+		}
+		htmlContent, _ := calls[0].Arguments["content"].(string)
+		for _, snippet := range []string{
+			"<h1>Executive KPI Dashboard</h1>",
+			`<span id="active-period">Period: 30D</span>`,
+			`data-testid="kpi-period-qtd"`,
+		} {
+			if !strings.Contains(htmlContent, snippet) {
+				t.Fatalf("index.html missing required snippet %q", snippet)
+			}
+		}
+	})
+}
+
 func TestBuildPlannedToolCalls_FallbackDeliverableWritePlan(t *testing.T) {
 	calls := buildPlannedToolCalls(
 		chatAgentResult{Text: "Here is a structured launch summary covering goals, audience, and next steps."},
@@ -157,6 +210,8 @@ func TestInferMutationToolsFromText_IncludesWriteFileForPuzzleAndMarketingBundle
 		"Create a simple browser sliding-tile puzzle game with playable HTML, game rules, and controls.",
 		"Build a playable sliding-tile puzzle game in the browser.",
 		"Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.",
+		"Prepare a customer onboarding welcome kit for enterprise accounts.",
+		"Generate an executive KPI dashboard for governance metrics.",
 	}
 	for _, prompt := range prompts {
 		tools := inferMutationToolsFromText(prompt)

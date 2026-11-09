@@ -248,27 +248,47 @@ func (r *Router) Infer(req InferRequest) (*InferResponse, error) {
 }
 
 // Embed generates a text embedding vector using the first available EmbedProvider.
-// Resolution order: "embed" profile → first Ollama-compatible adapter → first adapter.
+// Resolution order: "embed" profile → enabled "ollama" → enabled adapters → fallback adapter.
 func (r *Router) Embed(ctx context.Context, text string, model string) ([]float64, error) {
 	if model == "" {
 		model = DefaultEmbedModel
 	}
 
-	// 1. Try "embed" profile if configured
+	var lastErr error
+	tryProvider := func(providerID string) ([]float64, bool) {
+		if ep, ok := r.Adapters[providerID].(EmbedProvider); ok {
+			vec, err := ep.Embed(ctx, text, model)
+			if err == nil {
+				return vec, true
+			}
+			lastErr = err
+		}
+		return nil, false
+	}
 	if providerID, ok := r.Config.Profiles["embed"]; ok {
-		if adapter, ok := r.Adapters[providerID]; ok {
-			if ep, ok := adapter.(EmbedProvider); ok {
-				return ep.Embed(ctx, text, model)
+		if vec, ok := tryProvider(providerID); ok {
+			return vec, nil
+		}
+	}
+	if r.Config.Providers["ollama"].Enabled {
+		if vec, ok := tryProvider("ollama"); ok {
+			return vec, nil
+		}
+	}
+	for id := range r.Adapters {
+		if r.Config.Providers[id].Enabled {
+			if vec, ok := tryProvider(id); ok {
+				return vec, nil
 			}
 		}
 	}
-
-	// 2. Try any adapter that implements EmbedProvider
-	for _, adapter := range r.Adapters {
-		if ep, ok := adapter.(EmbedProvider); ok {
-			return ep.Embed(ctx, text, model)
+	for id := range r.Adapters {
+		if vec, ok := tryProvider(id); ok {
+			return vec, nil
 		}
 	}
-
+	if lastErr != nil {
+		return nil, lastErr
+	}
 	return nil, fmt.Errorf("no embedding provider available (need OpenAI-compatible adapter)")
 }
