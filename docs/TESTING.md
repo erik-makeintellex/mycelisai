@@ -190,24 +190,11 @@ Current `MYC-RC-003A` proof adds backend assertions for package-file checksum, b
 
 ## Tier 1: Backend Unit Tests
 
-Run:
-
-```bash
-uv run inv core.test
-```
-
-Use focused Go package tests during implementation, then rerun the managed task before close-out.
+Run `uv run inv core.test`. Use focused Go package tests during implementation, then rerun the managed task before close-out.
 
 ## Tier 2: Frontend Unit Tests
 
-Run:
-
-```bash
-uv run inv interface.test
-uv run inv interface.typecheck
-```
-
-The Interface Vitest gate is intentionally sequential for deterministic full-page jsdom workflows.
+Run `uv run inv interface.test` and `uv run inv interface.typecheck`. The Interface Vitest gate is intentionally sequential for deterministic full-page jsdom workflows.
 
 ## Tier 3: End-to-End Tests
 
@@ -219,6 +206,8 @@ uv run inv interface.e2e --project=chromium --workers=1 --server-mode=start --sp
 **Windows e2e harness rules:** never run two `uv run inv interface.e2e` invocations at once (they share port 3100 and the webserver log, producing unrelated "worker process exited unexpectedly" cascades), and never run Vitest during an e2e run (its Interface process cleanup can kill the Vitest process mid-suite); specs that assert state after `page.reload()` must wait for the relevant network response with a bounded retry, because the throttled managed dev server can occasionally stall one reload round-trip (see `settings.spec.ts`).
 
 `catalogue.spec.ts`, `wiring-active-delete.spec.ts`, and `wiring-edit.spec.ts` cover real MVP surfaces (Role Library and Automations "Workflow Builder" behind Advanced Mode) by seeding `mycelis-advanced-mode=true` via `page.addInitScript` and asserting the current `New Agent` and `Workflow Builder` controls directly.
+
+**Visible Windows Chrome E2E Grading:** `interface/playwright.config.ts` supports `PLAYWRIGHT_CHANNEL=chrome` and `PLAYWRIGHT_SLOW_MO` for visible Windows Chrome E2E grading across `user-deliverable-journeys.spec.ts` (deliverable starters + sandboxed `<iframe sandbox="allow-scripts">` **`Play / Live Preview`**), `mvp-settings-and-modals.spec.ts`, and `v8-operator-first-ux.spec.ts`.
 
 ## Tier 4: Integration Tests
 
@@ -235,13 +224,7 @@ uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterpr
 
 ## Tier 5: Governance Smoke Tests
 
-Run:
-
-```bash
-uv run inv core.smoke
-```
-
-Also run `logging.check-schema` and `logging.check-topics` when event, log, or NATS subject behavior changes.
+Run `uv run inv core.smoke`. Also run `logging.check-schema` and `logging.check-topics` when event, log, or NATS subject behavior changes.
 
 ## Memory Restart Validation
 
@@ -284,7 +267,7 @@ Deployment proof contracts:
 - `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.
 - prove the deployed Core image can launch the curated `filesystem` stdio MCP server through `npx` and runtime workspace normalization for filesystem installs.
 
-Guarded WSL tasks: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`.
+Guarded WSL tasks: `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`. Clean Docker build context rules: `.dockerignore` excludes untracked `.state/*` dumps while keeping tracked `.state/V8_DEV_STATE.md` and `.state/V7_DEV_STATE.md`.
 
 Release-proof sequencing rule: validate WSL git auth repair/report behavior for `wsl.refresh`; run `uv run inv wsl.validate` from the refreshed WSL proof checkout before trusting browser-gap or certification evidence; that task intentionally runs `ci.release-preflight --lane=runtime --no-e2e` first; keep the newly closed focused browser proof gaps green: `/runs` workflow depth and guided Soma retry/recovery both have focused Chromium proof in production `start` mode; rerun the broader headed Chromium certification pass only after the focused proof-hardening slice is committed and refreshed into WSL.
 

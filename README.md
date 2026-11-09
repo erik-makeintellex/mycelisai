@@ -68,7 +68,7 @@ Fresh-agent rules:
 
 ## User Guidance
 
-For product use rather than implementation, start with [Docs Navigation](docs/README.md), then the user docs under `docs/user/`.
+For product use rather than implementation, start with [Docs Navigation](docs/README.md), [User Guide](docs/USER_GUIDE.md), and the user docs under `docs/user/`.
 
 The in-app `/docs` surface should expose the same canonical operator-facing documents through `interface/lib/docsManifest.ts`. When a docs-only slice requires a manifest change outside ownership, report it rather than editing interface files.
 
@@ -100,7 +100,7 @@ Delivery rule:
 
 ## V8.1 Foundation And Compatibility Baseline
 
-[V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) defines the Soma-primary compatibility baseline: AI Organizations, Team Leads, Advisors, Departments, Specialists, runtime capabilities, response contracts, continuity, and bundle-defined `review` + `learning` loop automations.
+[V8.1 Living Organization Architecture](docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md) defines the Soma-primary compatibility baseline: AI Organizations, Team Leads, Advisors, Departments, Specialists, runtime capabilities, response contracts, continuity, and bundle-defined `review` + `learning` loop automations across all 4 company starters (`GET /api/v1/organizations/{id}/learning-insights`).
 
 V8.1 remains the foundation and compatibility baseline. Actual implementation state lives in [.state/V8_DEV_STATE.md](.state/V8_DEV_STATE.md).
 
@@ -138,7 +138,7 @@ source-of-truth layers remain separate:
 - runtime state
 - state and architecture docs
 
-managed exchange foundation: channels, threads, schemas, and normalized outputs remain the governed substrate. managed exchange is permissioned; normalization into managed exchange does not imply unrestricted trust. The free-node release now includes foundational security boundaries.
+managed exchange foundation: channels, threads, schemas, and normalized outputs remain the governed substrate. managed exchange is permissioned; normalization into managed exchange does not imply unrestricted trust. The free-node release now includes foundational security boundaries, multi-role RBAC (`owner`, `admin`, `operator`, `viewer`), and retrieval-time Trusted-Memory Arbitration on `GET /api/v1/memory/search` (`GOVERNED_DOCTRINE`, `PROJECT_MEMORY`, `AGENT_MEMORY`, `SOMA_MEMORY`, `REFLECTION_MEMORY` + `/memory` UI layer filter, verification badges, and contradiction warnings).
 
 ## Architecture Terms To Operator Terms
 
@@ -278,9 +278,9 @@ Refresh WSL from git; do not copy source trees across the host boundary.
 
 ## Development Workflow
 
-Use [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md) for first-time setup, deployment selection, ports, health checks, cognitive engine setup, and troubleshooting.
+Use [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md) for first-time setup, deployment selection, ports, health checks, cognitive engine setup, and troubleshooting. Use [Operations](docs/architecture/OPERATIONS.md) for task ownership, lifecycle, Compose, Kubernetes, CI, and release-lane sequencing.
 
-Use [Operations](docs/architecture/OPERATIONS.md) for task ownership, lifecycle, Compose, Kubernetes, CI, and release-lane sequencing.
+Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1`, `v0.8.0-rc2`, `v0.8.0-rc3`) as waves stabilize, with `0` UI component legacy line-limit caps remaining.
 
 ## Licensing And Releases
 

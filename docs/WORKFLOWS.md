@@ -21,6 +21,7 @@ Use these documents instead of rebuilding a large workflow spec here:
 
 | Need | Current source |
 | --- | --- |
+| End-to-end non-expert & operator guide | [User & Operator Guide](USER_GUIDE.md) |
 | Daily operator entrypoint | [User Docs Home](user/README.md) |
 | Soma chat, protected prompts, generated outputs, and recovery | [Using Soma Chat](user/soma-chat.md) |
 | Choosing direct Soma, one agent, compact teams, or multi-lane work | [Workflow Variants And Plan Memory](user/workflow-variants-and-plan-memory.md) |
@@ -38,11 +39,11 @@ Use these documents instead of rebuilding a large workflow spec here:
 
 The current product center is Soma-first:
 
-1. Start in the Soma workspace or an AI Organization home.
+1. Start in the Soma workspace or an AI Organization home, or pick one of the **Popular deliverable starters** in the `Start with Soma` suggestion bar (`Marketing Launch Kit`, `Playable Puzzle Game`, `Customer Onboarding Kit`, `Interactive KPI Dashboard`, `Engineering Task Pack`).
 2. Describe the outcome in natural language.
 3. Let Soma answer directly, propose a compact team, or split broad work into lanes.
-4. Confirm governed actions before mutation, private-data use, credentialed service use, recurring behavior, or durable memory promotion.
-5. Review visible outputs in the chat response, team lead surface, Groups, retained artifacts, Activity, or Run Timeline.
+4. Confirm governed actions (`POST /api/v1/intent/confirm-action`) before mutation, private-data use, credentialed service use, recurring behavior, or durable memory promotion to materialize multi-file deliverable bundles (`marketing_launch_bundle`, `interactive_game_bundle`, `customer_onboarding_bundle`, `kpi_dashboard_bundle`, `codex_task_bundle`, plus fallback `deliverables/soma-draft.md`) with `proof.md` and `OutputProofEnvelope` verification.
+5. Review visible outputs in the chat response, team lead surface, Groups, retained artifacts on `/resources` (`DurableFilesOperatorView` with **`Play / Live Preview`** mounting a sandboxed `<iframe sandbox="allow-scripts">` for interactive HTML5 games and dashboards), Activity, or Run Timeline.
 
 Use the smallest workflow that preserves clarity and recovery:
 

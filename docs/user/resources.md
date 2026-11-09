@@ -7,6 +7,10 @@
 
 ## Overview
 
+In default Operator Mode (`mycelis-advanced-mode` off), `/resources` opens **Durable Files & Deliverables** (`DurableFilesOperatorView`):
+- Inspect retained workspace deliverables and multi-file bundles (`marketing_launch_bundle`, `interactive_game_bundle`, `customer_onboarding_bundle`, `kpi_dashboard_bundle`, `codex_task_bundle`) with `Preview`, `Open`, and `Download` actions.
+- For playable HTML deliverables (`.html` / `text/html`, such as the Sliding-Tile Puzzle Game or Executive KPI Dashboard), click **`Play / Live Preview`** to mount an interactive sandboxed `<iframe sandbox="allow-scripts">` directly inside `/resources`.
+
 Open `/resources` after turning on Advanced mode.
 
 Current tabs:

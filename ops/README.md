@@ -32,6 +32,8 @@ Recommended host posture:
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
 Proof-checkout contract:
+- `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1`, `v0.8.0-rc2`, `v0.8.0-rc3`) as waves stabilize
+- `.dockerignore` excludes untracked `.state/*` dumps while keeping tracked `.state/V8_DEV_STATE.md` and `.state/V7_DEV_STATE.md` so Docker build contexts remain clean across Windows and WSL
 - the Windows repo is not the authoritative proof environment; use it to edit, review, and push
 - after a Windows-side commit/push, refresh the WSL proof checkout from git before running authoritative evidence
 - keep destructive cleanup such as `git reset --hard` and source `git clean` scoped to the dedicated WSL proof checkout; `wsl.refresh` preserves generated `workspace/tool-cache`, `workspace/logs`, and `workspace/docker-compose` roots so permission-owned runtime/cache mounts do not block source refresh
@@ -170,6 +172,7 @@ Owns deterministic local bring-up, teardown, and deep health checks.
 - `uv run inv interface.e2e` now defaults to managed `dev` mode for stable mocked browser proof. Use `--server-mode=start` when you need the built `next start` path for stricter or live-backend proof; `uv run inv interface.build` still retries once after stale repo-local Next build locks, stale `.next/standalone` cleanup locks, incomplete built-server packaging, or transient missing `.next/types` output before failing, start-mode E2E inherits that same recovery behavior, Windows managed Playwright servers bind to `127.0.0.1` for stable loopback readiness/browser navigation, and managed `dev` runs clear an orphaned `interface/.next/dev/lock` only when no repo-local Next worker remains.
 - Live backend browser specs that assert filesystem side effects may need `MYCELIS_BACKEND_WORKSPACE_ROOT` (or `PLAYWRIGHT_BACKEND_WORKSPACE_ROOT`) when the spec checkout and the running Core checkout differ; use the backend's actual workspace root, such as `core/workspace` for a repo-local Core process or `workspace/docker-compose/data/workspace` for the supported compose stack.
 - Runtime file/tool requests may also use `workspace/...` as a friendly alias for the configured workspace root; the backend normalizes that prefix away so Compose-backed `/data/workspace` and repo-local `./workspace` do not produce doubled `workspace/workspace/...` paths.
+- `interface/playwright.config.ts` honors `PLAYWRIGHT_CHANNEL=chrome` and `PLAYWRIGHT_SLOW_MO` for visible Windows Chrome E2E grading across `user-deliverable-journeys.spec.ts`, `mvp-settings-and-modals.spec.ts`, and `v8-operator-first-ux.spec.ts`.
 
 ### `test.py` (Root Test Aliases)
 - **All**: `uv run inv test.all`

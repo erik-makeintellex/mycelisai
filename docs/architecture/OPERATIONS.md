@@ -34,11 +34,7 @@ Task modules live under `ops/*.py` and are registered through `tasks.py`. App-ti
 
 ### Master Registry
 
-List tasks:
-
-```bash
-uv run inv -l
-```
+List tasks with `uv run inv -l`.
 
 ### Core Tasks (`ops/core.py`)
 
@@ -181,7 +177,7 @@ Choose the runtime lane first:
 - source lifecycle for implementation
 - WSL proof checkout for release-style validation from Windows
 
-Windows edit -> git push -> WSL refresh -> WSL validate is the release-proof path:
+Windows edit -> git push -> WSL refresh -> WSL validate is the release-proof path (`dev` is the active development/integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags `v0.8.0-rc1`, `v0.8.0-rc2`, `v0.8.0-rc3` as waves stabilize):
 
 ```bash
 uv run inv wsl.status
@@ -240,7 +236,7 @@ Local CI tasks:
 
 GitHub CI proves repo health without hosted agentry. Live service/browser proof is local, WSL, Compose, or target-cluster evidence.
 
-Invoke manages the Next.js server lifecycle for browser proof. Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`.
+Invoke manages the Next.js server lifecycle for browser proof (`interface/playwright.config.ts` honors `PLAYWRIGHT_CHANNEL=chrome` and `PLAYWRIGHT_SLOW_MO` for visible Windows Chrome E2E grading across `user-deliverable-journeys.spec.ts`, `mvp-settings-and-modals.spec.ts`, and `v8-operator-first-ux.spec.ts`). Merge gates use the built production Interface server path, while CI also keeps a mocked Chromium homepage smoke. Use `uv run inv ci.service-check` for the currently running stack. `ci.release-preflight` supports `--lane=baseline|runtime|service|release`; `--lane=release` is the recommended full runtime/operator gate. Guarded WSL tasks are `wsl.status`, `wsl.refresh`, `wsl.validate`, `wsl.cycle`.
 
 ## VII. Deployment Architecture
 
@@ -256,7 +252,7 @@ Docker Compose is rapid local development/proof only and must not become the pro
 
 use a reachable Windows IP or hostname such as `http://192.168.x.x:11434/v1`, not `localhost`; Compose can auto-start a WSL-host relay for `MYCELIS_COMPOSE_OLLAMA_HOST`.
 
-the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root.
+the compose Core image includes Node/npm/npx so manual curated stdio MCP installs can launch from the shipped container; manual `filesystem` installs from the curated library are runtime-normalized to the configured `MYCELIS_WORKSPACE` root. `.dockerignore` excludes untracked `.state/*` dumps while keeping `.state/V8_DEV_STATE.md` and `.state/V7_DEV_STATE.md` so Docker build contexts stay clean.
 
 ### Persistent Storage Contract
 
