@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Compass, FileText, Gamepad2, Megaphone, Search, Settings2, Sparkles, Terminal } from "lucide-react";
+import { BarChart3, ClipboardCheck, Compass, FileText, Gamepad2, Megaphone, Search, Settings2, Sparkles, Terminal } from "lucide-react";
 
 export type SomaSuggestion = {
   label: string;
@@ -60,6 +60,18 @@ export const POPULAR_DELIVERABLE_STARTERS: SomaSuggestion[] = [
     prompt: "Create a Codex task package for MYC-RC-005 with task steps and validation checklist.",
     icon: Terminal,
   },
+  {
+    label: "Customer Onboarding Kit",
+    detail: "Welcome guide, 30-day checklist, and FAQ.",
+    prompt: "Create a customer onboarding kit with a welcome guide, first 30 days checklist, and escalation FAQ.",
+    icon: ClipboardCheck,
+  },
+  {
+    label: "Interactive KPI Dashboard",
+    detail: "Live HTML5 metrics view and definitions.",
+    prompt: "Create an interactive browser KPI dashboard with playable HTML, metrics definitions, and governance notes.",
+    icon: BarChart3,
+  },
 ];
 
 export function SomaSuggestionBar({
@@ -105,7 +117,7 @@ export function SomaSuggestionBar({
           <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
             Popular deliverable starters
           </p>
-          <div className="mt-2 grid gap-2 md:grid-cols-3">
+          <div className="mt-2 grid gap-2 md:grid-cols-5">
             {starters.map((item, index) => {
               const Icon = item.icon ?? Sparkles;
               return (

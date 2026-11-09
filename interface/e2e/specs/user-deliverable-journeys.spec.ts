@@ -151,6 +151,9 @@ test.describe("Non-expert user deliverable journeys", () => {
 
         const starterBtn = page.getByRole("button", { name: /Marketing Launch Kit/i });
         await expect(starterBtn).toBeVisible();
+        await expect(page.getByRole("button", { name: /Playable Puzzle Game/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Customer Onboarding Kit/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Interactive KPI Dashboard/i })).toBeVisible();
         await starterBtn.click();
 
         const expectedPrompt = "Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.";
