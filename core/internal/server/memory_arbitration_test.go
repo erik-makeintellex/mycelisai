@@ -141,3 +141,88 @@ func TestHandleMemorySearch_BoundedGrowthPerLayerParam(t *testing.T) {
 		t.Fatalf("expected 1 overflow trimmed, got %d", resp.Arbitration.OverflowTrimmed)
 	}
 }
+
+func TestHandleMemoryPromote_LayersAndValidation(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	s := newTestServer()
+	s.Mem = memory.NewServiceWithDB(db)
+
+	now := time.Now().UTC()
+	metaPromoted, _ := json.Marshal(map[string]any{
+		"memory_layer":        "GOVERNED_DOCTRINE",
+		"verification_status": "verified",
+		"verified":            true,
+	})
+	mock.ExpectQuery("UPDATE context_vectors").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "content", "metadata", "score", "created_at"}).
+			AddRow("vec-1", "Standard rule", metaPromoted, 1.0, now))
+
+	rr := doRequest(t, http.HandlerFunc(s.HandleMemoryPromote), http.MethodPost, "/api/v1/memory/promote",
+		`{"id":"vec-1","target_layer":"GOVERNED_DOCTRINE","verification_status":"verified","promoted_by":"operator"}`)
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp struct {
+		OK                 bool           `json:"ok"`
+		ID                 string         `json:"id"`
+		MemoryLayer        string         `json:"memory_layer"`
+		VerificationStatus string         `json:"verification_status"`
+		Metadata           map[string]any `json:"metadata"`
+	}
+	assertJSON(t, rr, &resp)
+	if !resp.OK || resp.ID != "vec-1" || resp.MemoryLayer != "GOVERNED_DOCTRINE" || resp.VerificationStatus != "verified" {
+		t.Fatalf("unexpected promote response: %+v", resp)
+	}
+
+	// Default target_layer = PROJECT_MEMORY in synthetic/no-DB fallback
+	sNoDB := newTestServer()
+	rrProj := doRequest(t, http.HandlerFunc(sNoDB.HandleMemoryPromote), http.MethodPost, "/api/v1/memory/promote", `{"id":"vec-2"}`)
+	assertStatus(t, rrProj, http.StatusOK)
+	assertJSON(t, rrProj, &resp)
+	if resp.MemoryLayer != "PROJECT_MEMORY" || resp.VerificationStatus != "verified" {
+		t.Fatalf("expected PROJECT_MEMORY & verified defaults, got %+v", resp)
+	}
+
+	// Validation errors
+	rrMissingID := doRequest(t, http.HandlerFunc(s.HandleMemoryPromote), http.MethodPost, "/api/v1/memory/promote", `{"target_layer":"PROJECT_MEMORY"}`)
+	assertStatus(t, rrMissingID, http.StatusBadRequest)
+
+	rrBadLayer := doRequest(t, http.HandlerFunc(s.HandleMemoryPromote), http.MethodPost, "/api/v1/memory/promote", `{"id":"vec-1","target_layer":"INVALID_LAYER"}`)
+	assertStatus(t, rrBadLayer, http.StatusBadRequest)
+}
+
+func TestHandleMemoryResolveConflict_KeepSupersedeAndValidation(t *testing.T) {
+	s := newTestServer()
+
+	rrKeep := doRequest(t, http.HandlerFunc(s.HandleMemoryResolveConflict), http.MethodPost, "/api/v1/memory/resolve-conflict",
+		`{"id":"vec-conflict-1","resolution":"keep","reason":"Verified with architecture owner"}`)
+	assertStatus(t, rrKeep, http.StatusOK)
+
+	var resp struct {
+		OK                 bool           `json:"ok"`
+		ID                 string         `json:"id"`
+		Resolution         string         `json:"resolution"`
+		VerificationStatus string         `json:"verification_status"`
+		Metadata           map[string]any `json:"metadata"`
+	}
+	assertJSON(t, rrKeep, &resp)
+	if !resp.OK || resp.Resolution != "keep" || resp.VerificationStatus != "verified" || resp.Metadata["contradicted"] != false {
+		t.Fatalf("unexpected keep resolution response: %+v", resp)
+	}
+
+	rrSup := doRequest(t, http.HandlerFunc(s.HandleMemoryResolveConflict), http.MethodPost, "/api/v1/memory/resolve-conflict",
+		`{"id":"vec-conflict-2","resolution":"supersede","reason":"Outdated draft"}`)
+	assertStatus(t, rrSup, http.StatusOK)
+	assertJSON(t, rrSup, &resp)
+	if !resp.OK || resp.Resolution != "supersede" || resp.VerificationStatus != "superseded" || resp.Metadata["superseded"] != true {
+		t.Fatalf("unexpected supersede resolution response: %+v", resp)
+	}
+
+	rrBad := doRequest(t, http.HandlerFunc(s.HandleMemoryResolveConflict), http.MethodPost, "/api/v1/memory/resolve-conflict",
+		`{"id":"vec-conflict-2","resolution":"ignore"}`)
+	assertStatus(t, rrBad, http.StatusBadRequest)
+}

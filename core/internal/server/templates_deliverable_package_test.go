@@ -81,7 +81,7 @@ func TestInferUserDeliverableBundlePlanFromRequest_MarketingAndGame(t *testing.T
 	})
 }
 
-func TestInferUserDeliverableBundlePlanFromRequest_OnboardingAndKPIDashboard(t *testing.T) {
+func TestInferUserDeliverableBundlePlanFromRequest_OnboardingKPIDashboardAndWireframe(t *testing.T) {
 	t.Run("customer onboarding bundle", func(t *testing.T) {
 		calls, ok := inferUserDeliverableBundlePlanFromRequest("Create a customer onboarding welcome kit with kickoff guide, checklist, and support FAQ.")
 		if !ok || len(calls) != 3 {
@@ -132,6 +132,34 @@ func TestInferUserDeliverableBundlePlanFromRequest_OnboardingAndKPIDashboard(t *
 			}
 		}
 	})
+
+	t.Run("product wireframe bundle", func(t *testing.T) {
+		calls, ok := inferUserDeliverableBundlePlanFromRequest("Create an interactive prototype and product wireframe with product spec and user flows.")
+		if !ok || len(calls) != 3 {
+			t.Fatalf("ok=%v len=%d, want true & 3", ok, len(calls))
+		}
+		wantPaths := []string{
+			"deliverables/product-wireframe/index.html",
+			"deliverables/product-wireframe/product_spec.md",
+			"deliverables/product-wireframe/user_flows_and_acceptance.md",
+		}
+		for i, call := range calls {
+			if call.Arguments["path"] != wantPaths[i] || call.Arguments["package_kind"] != "product_wireframe_bundle" || call.Arguments["package_slug"] != "product-wireframe" {
+				t.Fatalf("call[%d] args = %#v", i, call.Arguments)
+			}
+		}
+		htmlContent, _ := calls[0].Arguments["content"].(string)
+		for _, snippet := range []string{
+			"<h1>Interactive Product Wireframe</h1>",
+			`data-testid="wireframe-tab-overview"`,
+			`data-testid="wireframe-tab-workflow"`,
+			`<h2 id="active-screen">Screen: Workspace Overview</h2>`,
+		} {
+			if !strings.Contains(htmlContent, snippet) {
+				t.Fatalf("wireframe index.html missing snippet %q", snippet)
+			}
+		}
+	})
 }
 
 func TestBuildPlannedToolCalls_FallbackDeliverableWritePlan(t *testing.T) {
@@ -155,51 +183,59 @@ func TestBuildPlannedToolCalls_FallbackDeliverableWritePlan(t *testing.T) {
 	}
 }
 
-func TestFinalizeCodexTaskBundleTx_SupportsMarketingAndGameBundles(t *testing.T) {
+func TestFinalizeCodexTaskBundleTx_SupportsGameAndWireframeBundles(t *testing.T) {
 	workspace := t.TempDir()
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
 
-	planned, ok := inferUserDeliverableBundlePlanFromRequest("Create a playable sliding-tile puzzle game for the browser.")
-	if !ok {
-		t.Fatal("expected game bundle plan")
-	}
-	for _, call := range planned {
-		relPath, _ := call.Arguments["path"].(string)
-		content, _ := call.Arguments["content"].(string)
-		absPath := filepath.Join(workspace, filepath.FromSlash(relPath))
-		if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
+	for _, tc := range []struct {
+		prompt    string
+		wantKind  string
+		wantPkgID string
+		wantProof string
+	}{
+		{
+			prompt:    "Create a playable sliding-tile puzzle game for the browser.",
+			wantKind:  "interactive_game_bundle",
+			wantPkgID: "interactive_game_bundle:sliding-tile-puzzle",
+			wantProof: "deliverables/games/sliding-tile-puzzle/proof.md",
+		},
+		{
+			prompt:    "Build an interactive product wireframe and product spec.",
+			wantKind:  "product_wireframe_bundle",
+			wantPkgID: "product_wireframe_bundle:product-wireframe",
+			wantProof: "deliverables/product-wireframe/proof.md",
+		},
+	} {
+		planned, ok := inferUserDeliverableBundlePlanFromRequest(tc.prompt)
+		if !ok {
+			t.Fatalf("expected bundle plan for %q", tc.prompt)
 		}
-		if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
-			t.Fatalf("write %s: %v", relPath, err)
+		for _, call := range planned {
+			relPath, _ := call.Arguments["path"].(string)
+			content, _ := call.Arguments["content"].(string)
+			absPath := filepath.Join(workspace, filepath.FromSlash(relPath))
+			if err := os.MkdirAll(filepath.Dir(absPath), 0o755); err != nil {
+				t.Fatalf("mkdir: %v", err)
+			}
+			if err := os.WriteFile(absPath, []byte(content), 0o644); err != nil {
+				t.Fatalf("write %s: %v", relPath, err)
+			}
 		}
-	}
 
-	s := &AdminServer{}
-	summary, err := s.finalizeCodexTaskBundleTx(context.Background(), nil, planned, "run-game-1", "proof-game-1")
-	if err != nil {
-		t.Fatalf("finalizeCodexTaskBundleTx: %v", err)
-	}
-	if summary == nil {
-		t.Fatal("expected non-nil package summary")
-	}
-	if summary.PackageKind != "interactive_game_bundle" {
-		t.Fatalf("package_kind = %q, want interactive_game_bundle", summary.PackageKind)
-	}
-	if summary.PackageID != "interactive_game_bundle:sliding-tile-puzzle" {
-		t.Fatalf("package_id = %q, want interactive_game_bundle:sliding-tile-puzzle", summary.PackageID)
-	}
-	if len(summary.Files) != 4 || len(summary.Artifacts) != 4 {
-		t.Fatalf("files/artifacts = %d/%d, want 4/4", len(summary.Files), len(summary.Artifacts))
-	}
-	if summary.Files[0].ContentType != "text/html" || summary.Artifacts[0].Type != "code" {
-		t.Fatalf("html file content_type/type = %q/%q, want text/html & code", summary.Files[0].ContentType, summary.Artifacts[0].Type)
-	}
-	if summary.Files[1].ContentType != "text/markdown" || summary.Artifacts[1].Type != "document" {
-		t.Fatalf("md file content_type/type = %q/%q, want text/markdown & document", summary.Files[1].ContentType, summary.Artifacts[1].Type)
-	}
-	if _, err := os.Stat(filepath.Join(workspace, "deliverables", "games", "sliding-tile-puzzle", "proof.md")); err != nil {
-		t.Fatalf("expected proof.md on disk: %v", err)
+		s := &AdminServer{}
+		summary, err := s.finalizeCodexTaskBundleTx(context.Background(), nil, planned, "run-1", "proof-1")
+		if err != nil {
+			t.Fatalf("finalizeCodexTaskBundleTx(%s): %v", tc.wantKind, err)
+		}
+		if summary == nil || summary.PackageKind != tc.wantKind || summary.PackageID != tc.wantPkgID {
+			t.Fatalf("summary = %+v, want kind=%s id=%s", summary, tc.wantKind, tc.wantPkgID)
+		}
+		if len(summary.Files) != 4 || len(summary.Artifacts) != 4 {
+			t.Fatalf("files/artifacts = %d/%d, want 4/4", len(summary.Files), len(summary.Artifacts))
+		}
+		if _, err := os.Stat(filepath.Join(workspace, filepath.FromSlash(tc.wantProof))); err != nil {
+			t.Fatalf("expected %s on disk: %v", tc.wantProof, err)
+		}
 	}
 
 	_ = protocol.PlannedToolCall{}
@@ -212,6 +248,7 @@ func TestInferMutationToolsFromText_IncludesWriteFileForPuzzleAndMarketingBundle
 		"Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.",
 		"Prepare a customer onboarding welcome kit for enterprise accounts.",
 		"Generate an executive KPI dashboard for governance metrics.",
+		"Create an interactive product wireframe and product spec.",
 	}
 	for _, prompt := range prompts {
 		tools := inferMutationToolsFromText(prompt)

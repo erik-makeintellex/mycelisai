@@ -1,9 +1,11 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, ClipboardCheck, Compass, FileText, Gamepad2, Megaphone, Search, Settings2, Sparkles, Terminal } from "lucide-react";
+import { BarChart3, ClipboardCheck, Compass, FileText, Gamepad2, LayoutTemplate, Megaphone, Search, Settings2, Sparkles, Terminal } from "lucide-react";
 
 export type SomaSuggestion = {
+  id?: string;
   label: string;
   detail: string;
+  summary?: string;
   prompt: string;
   icon?: LucideIcon;
 };
@@ -72,6 +74,14 @@ export const POPULAR_DELIVERABLE_STARTERS: SomaSuggestion[] = [
     prompt: "Create an interactive browser KPI dashboard with playable HTML, metrics definitions, and governance notes.",
     icon: BarChart3,
   },
+  {
+    id: "product-wireframe",
+    label: "Product Spec & Wireframe",
+    detail: "Interactive HTML5 clickable wireframe prototype, product requirements spec, and user flows",
+    summary: "Interactive HTML5 clickable wireframe prototype, product requirements spec, and user flows",
+    prompt: "Create an interactive product wireframe prototype and product spec in the workspace with clickable screens and user flows.",
+    icon: LayoutTemplate,
+  },
 ];
 
 export function SomaSuggestionBar({
@@ -117,7 +127,7 @@ export function SomaSuggestionBar({
           <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
             Popular deliverable starters
           </p>
-          <div className="mt-2 grid gap-2 md:grid-cols-5">
+          <div className="mt-2 grid gap-2 md:grid-cols-6">
             {starters.map((item, index) => {
               const Icon = item.icon ?? Sparkles;
               return (
@@ -133,7 +143,7 @@ export function SomaSuggestionBar({
                     {item.label}
                   </span>
                   <span className="mt-1 block text-xs leading-4 text-cortex-text-muted">
-                    {item.detail}
+                    {item.detail || item.summary}
                   </span>
                 </button>
               );

@@ -213,3 +213,40 @@ func (s *Service) ListSitReps(ctx context.Context, teamID string, limit int) ([]
 	}
 	return results, nil
 }
+
+// UpdateVectorGovernance merges governance metadata onto a context_vector row and returns the updated record.
+func (s *Service) UpdateVectorGovernance(ctx context.Context, id string, updates map[string]any) (*VectorResult, error) {
+	trimmedID := strings.TrimSpace(id)
+	if trimmedID == "" {
+		return nil, fmt.Errorf("vector id is required")
+	}
+	if s == nil || s.db == nil {
+		return &VectorResult{
+			ID:        trimmedID,
+			Metadata:  updates,
+			Score:     1.0,
+			CreatedAt: time.Now().UTC(),
+		}, nil
+	}
+
+	metaJSON, err := json.Marshal(updates)
+	if err != nil {
+		return nil, fmt.Errorf("marshal governance metadata: %w", err)
+	}
+
+	var r VectorResult
+	var rawMeta []byte
+	err = s.db.QueryRowContext(ctx, `
+		UPDATE context_vectors
+		SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+		WHERE id = $1
+		RETURNING id, content, metadata, 1.0 AS score, created_at
+	`, trimmedID, metaJSON).Scan(&r.ID, &r.Content, &rawMeta, &r.Score, &r.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	if len(rawMeta) > 0 {
+		_ = json.Unmarshal(rawMeta, &r.Metadata)
+	}
+	return &r, nil
+}

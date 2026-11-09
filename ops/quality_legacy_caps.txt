@@ -22,7 +22,5 @@ ops/wsl_runtime.py=706
 tests/test_compose_tasks.py=776
 tests/test_docs_links.py=1307
 tests/test_interface_e2e_tasks.py=539
-tests/test_interface_tasks.py=485
 tests/test_lifecycle_tasks.py=601
 tests/test_runtime_deploy_contract_text.py=507
-tests/test_wsl_runtime_tasks.py=336

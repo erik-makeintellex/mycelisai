@@ -154,6 +154,7 @@ test.describe("Non-expert user deliverable journeys", () => {
         await expect(page.getByRole("button", { name: /Playable Puzzle Game/i })).toBeVisible();
         await expect(page.getByRole("button", { name: /Customer Onboarding Kit/i })).toBeVisible();
         await expect(page.getByRole("button", { name: /Interactive KPI Dashboard/i })).toBeVisible();
+        await expect(page.getByRole("button", { name: /Product Spec & Wireframe/i })).toBeVisible();
         await starterBtn.click();
 
         const expectedPrompt = "Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.";
@@ -223,5 +224,16 @@ test.describe("Non-expert user deliverable journeys", () => {
 
         await frame.getByTestId("puzzle-tile").click();
         await expect(frame.getByText("Moves: 1")).toBeVisible();
+
+        const refineBtn = page.getByTestId("refine-deliverable-art-puzzle-game-1");
+        await expect(refineBtn).toBeVisible();
+        await refineBtn.click();
+        const refineInput = page.getByTestId("refine-input-art-puzzle-game-1");
+        await expect(refineInput).toBeVisible();
+        await refineInput.fill("Add a 4x4 expert mode toggle");
+        await page.getByTestId("refine-submit-art-puzzle-game-1").click();
+        await expect(page.getByTestId("durable-files-open-notice")).toContainText("Add a 4x4 expert mode toggle");
+
+        await expect(page.getByTestId("export-deliverable-bundle")).toBeVisible();
     });
 });

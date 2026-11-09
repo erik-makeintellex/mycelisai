@@ -7,9 +7,9 @@ Mycelis is an AI Organization platform where you collaborate with **Soma** to pl
 
 - [1. Start With Soma & Deliverable Starters](#1-start-with-soma--deliverable-starters)
 - [2. Governed Confirmation & Deliverable Bundles](#2-governed-confirmation--deliverable-bundles)
-- [3. Durable Files & Live HTML5 Preview](#3-durable-files--live-html5-preview)
+- [3. Durable Files, Live HTML5 Preview & Iteration](#3-durable-files-live-html5-preview--iteration)
 - [4. AI Organizations & Learning Loops](#4-ai-organizations--learning-loops)
-- [5. Trusted-Memory Arbitration](#5-trusted-memory-arbitration)
+- [5. Trusted-Memory Arbitration & Promotion](#5-trusted-memory-arbitration--promotion)
 - [6. Multi-Role RBAC & Navigation Modes](#6-multi-role-rbac--navigation-modes)
 
 ## 1. Start With Soma & Deliverable Starters
@@ -20,6 +20,7 @@ When you open the Soma workspace (`/dashboard` or `/organizations/[id]`), Soma's
 - **Playable Puzzle Game** (`interactive_game_bundle`)
 - **Customer Onboarding Kit** (`customer_onboarding_bundle`)
 - **Interactive KPI Dashboard** (`kpi_dashboard_bundle`)
+- **Product Spec & Wireframe** (`product_wireframe_bundle`)
 - **Engineering Task Pack** (`codex_task_bundle`)
 
 Selecting a starter or typing a natural-language goal routes through Soma:
@@ -32,21 +33,23 @@ Clicking **Confirm** (`POST /api/v1/intent/confirm-action`) executes the governe
 
 | Deliverable Starter | Template ID | Materialized Files |
 | --- | --- | --- |
-| Marketing Launch Kit | `marketing_launch_bundle` | `campaign-brief.md`, `landing-page.html`, `channel-plan.md`, `proof.md` |
-| Playable Puzzle Game | `interactive_game_bundle` | `index.html`, `game-design.md`, `proof.md` |
-| Customer Onboarding Kit | `customer_onboarding_bundle` | `welcome-guide.md`, `onboarding-checklist.html`, `escalation-playbook.md`, `proof.md` |
-| Interactive KPI Dashboard | `kpi_dashboard_bundle` | `index.html`, `executive-summary.md`, `metrics-snapshot.json`, `proof.md` |
+| Marketing Launch Kit | `marketing_launch_bundle` | `positioning_brief.md`, `launch_email_and_copy.md`, `customer_faq.md`, `proof.md` |
+| Playable Puzzle Game | `interactive_game_bundle` | `index.html`, `game_design_and_rules.md`, `qa_and_controls.md`, `proof.md` |
+| Customer Onboarding Kit | `customer_onboarding_bundle` | `welcome_and_kickoff_guide.md`, `first_30_days_checklist.md`, `escalation_and_faq.md`, `proof.md` |
+| Interactive KPI Dashboard | `kpi_dashboard_bundle` | `index.html`, `metrics_definitions.md`, `data_sources_and_governance.md`, `proof.md` |
+| Product Spec & Wireframe | `product_wireframe_bundle` | `index.html`, `product_spec.md`, `user_flows_and_acceptance.md`, `proof.md` |
 | Engineering Task Pack | `codex_task_bundle` | `task.md`, `validation-checklist.md`, `affected-files.md`, `recommended-slices.md`, `proof.md` |
 | General Soma Draft | fallback draft | `deliverables/soma-draft.md`, `proof.md` |
 
 Every confirmed package records an **`OutputProofEnvelope`** verifying SHA-256 checksum, byte count, workspace path-boundary safety, artifact ID linkage, and source run/contract lineage.
 
-## 3. Durable Files & Live HTML5 Preview
+## 3. Durable Files, Live HTML5 Preview & Iteration
 
-Navigate to **Durable Files** (`/resources`, backed by `DurableFilesOperatorView`) to browse, inspect, and interact with retained deliverables:
+Navigate to **Durable Files** (`/resources`, backed by `DurableFilesOperatorView`) to browse, inspect, iterate on, and export retained deliverables:
 
-- **Preview / Open / Download:** Inspect Markdown, JSON, and text deliverables with full proof metadata (`OutputProofEnvelope` verification badge, SHA-256 hash, byte size, and creation timestamp).
-- **`Play / Live Preview` (Interactive HTML5 Sandbox):** When inspecting an HTML5 deliverable (such as `index.html` from a **Playable Puzzle Game** or **Interactive KPI Dashboard**), click **`Play / Live Preview`** in the modal header to toggle from source view into a sandboxed `<iframe sandbox="allow-scripts">`. You can play the puzzle game or filter live KPI charts directly in-app while scripts remain isolated from host credentials and parent storage.
+- **Preview / Open / Download / Export Bundle:** Inspect Markdown, JSON, and text deliverables with full proof metadata, download individual artifacts, or click **`Export Bundle`** to download a combined workspace deliverables bundle (`workspace-deliverables-bundle.md`).
+- **`Play / Live Preview` (Interactive HTML5 Sandbox):** When inspecting an HTML5 deliverable (`index.html` from a **Playable Puzzle Game**, **Interactive KPI Dashboard**, or **Product Spec & Wireframe**), click **`Play / Live Preview`** to toggle into a sandboxed `<iframe sandbox="allow-scripts">`. You can play the puzzle game, filter KPI charts, or switch wireframe tabs directly in-app while scripts remain isolated from host credentials.
+- **`Ask Soma to Refine` (Inline Iteration):** Click **`Ask Soma to Refine`** on any deliverable card to open an inline revision input and send targeted follow-up instructions to Soma without leaving `/resources`.
 
 ## 4. AI Organizations & Learning Loops
 
@@ -55,7 +58,7 @@ All 4 company starter templates (`engineering-starter`, `marketing-starter`, `re
 - **Review Loops:** Periodically evaluate team outputs against organization quality gates.
 - **Learning Loops (`GET /api/v1/organizations/{id}/learning-insights`):** Capture candidate lessons and reflection insights from completed runs for operator-reviewed promotion—never silently rewriting core prompts or doctrine.
 
-## 5. Trusted-Memory Arbitration
+## 5. Trusted-Memory Arbitration & Promotion
 
 The **Memory & Continuity** surface (`/memory`) and `GET /api/v1/memory/search` enforce retrieval-time **Trusted-Memory Arbitration** across five canonical memory layers:
 
@@ -65,7 +68,7 @@ The **Memory & Continuity** surface (`/memory`) and `GET /api/v1/memory/search` 
 4. `SOMA_MEMORY` (conversational continuity and session context)
 5. `REFLECTION_MEMORY` (candidate insights from learning loops)
 
-In `/memory`, operators can filter by memory layer, inspect verification badges, and review automatic **contradiction warnings** whenever lower-precedence memories conflict with `GOVERNED_DOCTRINE`.
+In `/memory` (`MemoryDetailPanel`), operators can filter by memory layer, promote `candidate` memories to verified `PROJECT_MEMORY` or `GOVERNED_DOCTRINE` (`POST /api/v1/memory/promote`), and resolve `contradicted` memory halts (`Approve & Clear Conflict` or `Mark Superseded` via `POST /api/v1/memory/resolve-conflict`).
 
 ## 6. Multi-Role RBAC & Navigation Modes
 

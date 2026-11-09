@@ -162,7 +162,7 @@ func isDeliverablePackageKind(kind string) bool { return isSupportedDeliverableP
 
 func isSupportedDeliverablePackageKind(kind string) bool {
 	switch strings.TrimSpace(kind) {
-	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle":
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle":
 		return true
 	default:
 		return false
@@ -243,6 +243,7 @@ func deliverablePackageProofTitle(packageKind string) string {
 	case "interactive_game_bundle": return "Interactive Game Bundle Proof"
 	case "customer_onboarding_bundle": return "Customer Onboarding Bundle Proof"
 	case "kpi_dashboard_bundle": return "KPI Dashboard Bundle Proof"
+	case "product_wireframe_bundle": return "Product Wireframe Bundle Proof"
 	default: return "Codex Task Bundle Proof"
 	}
 }

@@ -103,6 +103,8 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/trust/threshold", s.HandleTrustThreshold)
 	mux.HandleFunc("GET /api/v1/homepage", s.HandleHomepageConfig)
 	mux.HandleFunc("GET /api/v1/memory/search", s.HandleMemorySearch)
+	mux.HandleFunc("POST /api/v1/memory/promote", s.HandleMemoryPromote)
+	mux.HandleFunc("POST /api/v1/memory/resolve-conflict", s.HandleMemoryResolveConflict)
 	mux.HandleFunc("GET /api/v1/search/status", s.HandleSearchStatus)
 	mux.HandleFunc("POST /api/v1/search", s.HandleSearch)
 	mux.HandleFunc("GET /api/v1/memory/sitreps", s.HandleListSitReps)

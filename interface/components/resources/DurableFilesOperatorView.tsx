@@ -1,37 +1,17 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Download, Eye, EyeOff, FileCode2, FileText, FolderOpen, Play, RefreshCw, Sliders } from "lucide-react";
-import { useCortexStore, type Artifact } from "@/store/useCortexStore";
-import { councilLabel } from "@/lib/labels";
+import { Download, Eye, EyeOff, FileCode2, FileText, FolderOpen, Package, Play, RefreshCw, Sliders, Sparkles } from "lucide-react";
+import { useCortexStore } from "@/store/useCortexStore";
+import {
+    buildDeliverableItems,
+    isPlayableHtmlDeliverable,
+    triggerBundleExport,
+    triggerDownload,
+    type DeliverableItem,
+} from "./durableFilesHelpers";
 
-interface DeliverableItem {
-    id: string;
-    title: string;
-    contentType: string;
-    filePath?: string;
-    content?: string;
-    producer: string;
-    createdAt?: string;
-    saved: boolean;
-}
-
-export function isPlayableHtmlDeliverable(item: DeliverableItem): boolean {
-    return item.contentType.toLowerCase().includes("html") || Boolean(item.filePath?.toLowerCase().endsWith(".html"));
-}
-
-function triggerDownload(item: DeliverableItem) {
-    const body = item.content ?? `Saved workspace file: ${item.filePath ?? item.title}\n`;
-    const blob = new Blob([body], { type: item.contentType || "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = item.filePath?.split("/").pop() || item.title || "deliverable.txt";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-}
+export { isPlayableHtmlDeliverable, type DeliverableItem } from "./durableFilesHelpers";
 
 export default function DurableFilesOperatorView() {
     const artifacts = useCortexStore((s) => s.artifacts) ?? [];
@@ -44,43 +24,17 @@ export default function DurableFilesOperatorView() {
     const [previewId, setPreviewId] = useState<string | null>(null);
     const [playModeId, setPlayModeId] = useState<string | null>(null);
     const [openedNotice, setOpenedNotice] = useState<string | null>(null);
+    const [refineId, setRefineId] = useState<string | null>(null);
+    const [refinePrompt, setRefinePrompt] = useState<string>("");
 
     useEffect(() => {
         fetchArtifacts?.({ limit: 50 });
     }, [fetchArtifacts]);
 
-    const items = useMemo<DeliverableItem[]>(() => {
-        const list: DeliverableItem[] = artifacts.map((art: Artifact) => ({
-            id: art.id,
-            title: art.title || art.file_path || "Generated Deliverable",
-            contentType: art.content_type || "text/plain",
-            filePath: art.file_path,
-            content: art.content,
-            producer: councilLabel(art.agent_id || "admin", assistantName).name,
-            createdAt: art.created_at,
-            saved: Boolean(art.file_path) || art.status === "approved",
-        }));
-
-        const seenIds = new Set(list.map((i) => i.id));
-        for (const msg of missionChat) {
-            if (!Array.isArray(msg.artifacts)) continue;
-            for (const chatArt of msg.artifacts) {
-                const artId = chatArt.id || chatArt.saved_path || chatArt.title || "workspace-artifact";
-                if (seenIds.has(artId)) continue;
-                seenIds.add(artId);
-                list.push({
-                    id: artId,
-                    title: chatArt.title || chatArt.saved_path || "Workspace Artifact",
-                    contentType: chatArt.content_type || "text/plain",
-                    filePath: chatArt.saved_path,
-                    content: chatArt.content,
-                    producer: assistantName,
-                    saved: Boolean(chatArt.saved_path),
-                });
-            }
-        }
-        return list;
-    }, [artifacts, missionChat, assistantName]);
+    const items = useMemo<DeliverableItem[]>(
+        () => buildDeliverableItems(artifacts, missionChat, assistantName),
+        [artifacts, missionChat, assistantName],
+    );
 
     return (
         <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6" data-testid="durable-files-operator-view">
@@ -98,7 +52,21 @@ export default function DurableFilesOperatorView() {
                             Browse, preview, open, and download files and deliverables produced across your workspace.
                         </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {items.length > 0 && (
+                            <button
+                                type="button"
+                                data-testid="export-deliverable-bundle"
+                                onClick={() => {
+                                    triggerBundleExport(items);
+                                    setOpenedNotice(`Exported bundle (${items.length} deliverables)`);
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
+                            >
+                                <Package className="w-3.5 h-3.5" />
+                                Export Bundle
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={() => fetchArtifacts({ limit: 50 })}
@@ -125,11 +93,7 @@ export default function DurableFilesOperatorView() {
                         className="rounded-lg border border-cortex-info/30 bg-cortex-info/10 px-4 py-2.5 text-xs font-mono text-cortex-info flex items-center justify-between"
                     >
                         <span>Workspace path ready: {openedNotice}</span>
-                        <button
-                            type="button"
-                            onClick={() => setOpenedNotice(null)}
-                            className="text-cortex-text-muted hover:text-cortex-text-main"
-                        >
+                        <button type="button" onClick={() => setOpenedNotice(null)} className="text-cortex-text-muted hover:text-cortex-text-main">
                             Dismiss
                         </button>
                     </div>
@@ -142,9 +106,7 @@ export default function DurableFilesOperatorView() {
                 ) : items.length === 0 ? (
                     <div className="rounded-2xl border border-cortex-border bg-cortex-surface p-8 text-center space-y-2">
                         <FileText className="w-8 h-8 text-cortex-primary mx-auto opacity-80" />
-                        <h2 className="text-base font-semibold text-cortex-text-main">
-                            No durable deliverables saved yet
-                        </h2>
+                        <h2 className="text-base font-semibold text-cortex-text-main">No durable deliverables saved yet</h2>
                         <p className="text-sm text-cortex-text-muted max-w-lg mx-auto">
                             Ask {assistantName} or a team in your workspace to produce a brief, report, code file, or document and it will appear here for one-click preview and download.
                         </p>
@@ -155,15 +117,10 @@ export default function DurableFilesOperatorView() {
                             const isPreviewOpen = previewId === item.id;
                             const isPlayable = isPlayableHtmlDeliverable(item);
                             const isPlaying = playModeId === item.id && isPlayable;
-                            const Icon = item.contentType.includes("code") || item.filePath?.match(/\.(ts|tsx|py|go|json|yaml|md|html)$/i)
-                                ? FileCode2
-                                : FileText;
+                            const isRefining = refineId === item.id;
+                            const Icon = item.contentType.includes("code") || item.filePath?.match(/\.(ts|tsx|py|go|json|yaml|md|html)$/i) ? FileCode2 : FileText;
                             return (
-                                <div
-                                    key={item.id}
-                                    data-testid={`durable-file-card-${item.id}`}
-                                    className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-3"
-                                >
+                                <div key={item.id} data-testid={`durable-file-card-${item.id}`} className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-3">
                                     <div className="flex flex-wrap items-start justify-between gap-3">
                                         <div className="flex items-start gap-3 min-w-0">
                                             <div className="p-2 rounded-lg bg-cortex-primary/10 border border-cortex-primary/20 text-cortex-primary">
@@ -171,22 +128,16 @@ export default function DurableFilesOperatorView() {
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <h3 className="text-sm font-semibold text-cortex-text-main truncate">
-                                                        {item.title}
-                                                    </h3>
+                                                    <h3 className="text-sm font-semibold text-cortex-text-main truncate">{item.title}</h3>
                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/25">
                                                         Produced by {item.producer}
                                                     </span>
                                                 </div>
-                                                {item.filePath && (
-                                                    <p className="text-xs font-mono text-cortex-text-muted mt-0.5 truncate">
-                                                        {item.filePath}
-                                                    </p>
-                                                )}
+                                                {item.filePath && <p className="text-xs font-mono text-cortex-text-muted mt-0.5 truncate">{item.filePath}</p>}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
                                             {isPlayable && (
                                                 <button
                                                     type="button"
@@ -202,6 +153,18 @@ export default function DurableFilesOperatorView() {
                                                     Play / Live Preview
                                                 </button>
                                             )}
+                                            <button
+                                                type="button"
+                                                data-testid={`refine-deliverable-${item.id}`}
+                                                onClick={() => {
+                                                    setRefineId(isRefining ? null : item.id);
+                                                    setRefinePrompt("");
+                                                }}
+                                                className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/30 bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/10 transition-colors"
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5" />
+                                                Ask {assistantName} to Refine
+                                            </button>
                                             <button
                                                 type="button"
                                                 data-testid={`preview-deliverable-${item.id}`}
@@ -233,6 +196,31 @@ export default function DurableFilesOperatorView() {
                                             </button>
                                         </div>
                                     </div>
+
+                                    {isRefining && (
+                                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-cortex-primary/30 bg-cortex-bg p-2.5">
+                                            <input
+                                                type="text"
+                                                data-testid={`refine-input-${item.id}`}
+                                                value={refinePrompt}
+                                                onChange={(e) => setRefinePrompt(e.target.value)}
+                                                placeholder="Describe what to change (e.g., add difficulty levels or Q4 metrics)..."
+                                                className="flex-1 min-w-[220px] rounded-md border border-cortex-border bg-cortex-surface px-3 py-1.5 text-xs text-cortex-text-main placeholder:text-cortex-text-muted focus:border-cortex-primary focus:outline-none"
+                                            />
+                                            <button
+                                                type="button"
+                                                data-testid={`refine-submit-${item.id}`}
+                                                onClick={() => {
+                                                    setOpenedNotice(`Refinement request sent to ${assistantName} for ${item.title}: "${refinePrompt}"`);
+                                                    setRefineId(null);
+                                                    setRefinePrompt("");
+                                                }}
+                                                className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/40 bg-cortex-primary/15 px-3 py-1.5 text-xs font-mono font-semibold text-cortex-primary hover:bg-cortex-primary/25 transition-colors"
+                                            >
+                                                Send to {assistantName}
+                                            </button>
+                                        </div>
+                                    )}
 
                                     {isPlaying && (
                                         <iframe
