@@ -14,15 +14,35 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+func buildTeamOutputsExecutionSummary(teamID string, items []artifacts.Artifact) *protocol.ExecutionSummary {
+	if len(items) == 0 {
+		return nil
+	}
+	firstRunID := ""
+	for _, item := range items {
+		if rid := firstNonEmptyString(item.TraceID, lookupString([]map[string]any{decodeArtifactMetadata(item.Metadata)}, "run_id"), uuidPtrString(item.MissionID)); rid != "" {
+			firstRunID = rid
+			break
+		}
+	}
+	pkgSummary := AssembleTeamSignalDeliveryPackage(teamID, firstRunID, "Retained team outputs", items)
+	if pkgSummary == nil {
+		return nil
+	}
+	return &protocol.ExecutionSummary{
+		Title: firstNonEmptyString(pkgSummary.Title, "Retained team outputs"), Summary: pkgSummary.Summary,
+		Status: pkgSummary.Status, RunID: pkgSummary.RunID, ProofID: pkgSummary.ProofID,
+		OutputRefs: pkgSummary.OutputRefs, Outputs: pkgSummary.Outputs, TeamOutputRefs: pkgSummary.TeamOutputRefs,
+		DeliveryPackage: pkgSummary.DeliveryPackage,
+	}
+}
+
 func buildGroupOutputsExecutionSummary(group *CollaborationGroup, items []artifacts.Artifact) *protocol.ExecutionSummary {
 	if group == nil || len(items) == 0 {
 		return nil
 	}
-	outputRefs := make([]protocol.OutputRef, 0, len(items))
-	outputs := make([]protocol.ExecutionOutput, 0, len(items))
-	teamRefs := make([]protocol.TeamOutputRef, 0, len(items))
+	outputRefs, outputs, teamRefs := make([]protocol.OutputRef, 0, len(items)), make([]protocol.ExecutionOutput, 0, len(items)), make([]protocol.TeamOutputRef, 0, len(items))
 	runID := ""
-
 	for index, item := range items {
 		role := "primary"
 		if index > 0 {
@@ -36,24 +56,18 @@ func buildGroupOutputsExecutionSummary(group *CollaborationGroup, items []artifa
 		if runID == "" && outRef.SourceRunID != "" {
 			runID = outRef.SourceRunID
 		}
-		teamRefs = append(teamRefs, teamRef)
-		outputRefs = append(outputRefs, outRef)
-		outputs = append(outputs, executionOutputFromOutputRef(
-			outRef,
-			fmt.Sprintf("Retained group output from %s.", firstNonEmptyString(item.AgentID, group.Name)),
-			true,
-		))
+		teamRefs, outputRefs = append(teamRefs, teamRef), append(outputRefs, outRef)
+		outputs = append(outputs, executionOutputFromOutputRef(outRef, fmt.Sprintf("Retained group output from %s.", firstNonEmptyString(item.AgentID, group.Name)), true))
 	}
-
+	pkgSummary := AssembleTeamSignalDeliveryPackage(group.ID, runID, firstNonEmptyString(group.Name, "Group retained outputs"), items)
+	var dp *protocol.DeliveryPackageSummary
+	if pkgSummary != nil {
+		dp = pkgSummary.DeliveryPackage
+	}
 	return &protocol.ExecutionSummary{
-		Title:          firstNonEmptyString(group.Name, "Group retained outputs"),
-		Summary:        fmt.Sprintf("%d retained output(s) recorded for %s.", len(outputRefs), firstNonEmptyString(group.Name, group.ID)),
-		Status:         outputRefs[0].Status,
-		RunID:          runID,
-		ProofID:        outputRefs[0].ProofArtifactID,
-		OutputRefs:     outputRefs,
-		Outputs:        outputs,
-		TeamOutputRefs: teamRefs,
+		Title: firstNonEmptyString(group.Name, "Group retained outputs"), Summary: fmt.Sprintf("%d retained output(s) recorded for %s.", len(outputRefs), firstNonEmptyString(group.Name, group.ID)),
+		Status: outputRefs[0].Status, RunID: runID, ProofID: outputRefs[0].ProofArtifactID,
+		OutputRefs: outputRefs, Outputs: outputs, TeamOutputRefs: teamRefs, DeliveryPackage: dp,
 	}
 }
 
@@ -75,41 +89,21 @@ func teamOutputRefFromGroupArtifact(item artifacts.Artifact, groupID, role strin
 	}
 	status := firstNonEmptyString(strings.TrimSpace(item.Status), "approved")
 	proof := &protocol.OutputProofEnvelope{
-		ProofID:            firstNonEmptyString(contractID, artifactID),
-		OutputRefID:        artifactID,
-		ArtifactID:         artifactID,
-		StorageRef:         storageRef,
-		SourceRunID:        runID,
-		SourceContractID:   contractID,
-		ExecutionStatus:    status,
-		PathBoundaryStatus: proofStatusVerified,
-		Checksum:           checksum,
-		ChecksumAlgorithm:  "sha256",
-		Bytes:              sizeBytes,
-		ContentType:        item.ContentType,
-		CreatedAt:          item.CreatedAt.UTC().Format(time.RFC3339),
-		ReadbackStatus:     proofStatusVerified,
+		ProofID: firstNonEmptyString(contractID, artifactID), OutputRefID: artifactID, ArtifactID: artifactID,
+		StorageRef: storageRef, SourceRunID: runID, SourceContractID: contractID, ExecutionStatus: status,
+		PathBoundaryStatus: proofStatusVerified, Checksum: checksum, ChecksumAlgorithm: "sha256",
+		Bytes: sizeBytes, ContentType: item.ContentType, CreatedAt: item.CreatedAt.UTC().Format(time.RFC3339),
+		ReadbackStatus: proofStatusVerified,
 	}
 	return protocol.TeamOutputRef{
-		OutputID:    artifactID,
-		ArtifactID:  artifactID,
-		TeamID:      firstNonEmptyString(uuidPtrString(item.TeamID), groupID),
-		RunID:       runID,
-		Kind:        firstNonEmptyString(string(item.ArtifactType), outputKindForContentType(item.ContentType)),
-		Label:       firstNonEmptyString(item.Title, path.Base(storageRef), artifactID),
-		StorageRef:  storageRef,
-		OpenURL:     openURL,
-		RevealURL:   openURL,
-		ProofRef:    firstNonEmptyString(contractID, artifactID),
-		ContractID:  contractID,
-		ProofID:     firstNonEmptyString(contractID, artifactID),
-		PackageID:   firstNonEmptyString(lookupString([]map[string]any{meta}, "package_id"), groupID),
-		Role:        firstNonEmptyString(role, "primary"),
-		Status:      status,
-		ContentType: item.ContentType,
-		Bytes:       sizeBytes,
-		SHA256:      checksum,
-		Proof:       proof,
+		OutputID: artifactID, ArtifactID: artifactID, TeamID: firstNonEmptyString(uuidPtrString(item.TeamID), groupID),
+		RunID: runID, Kind: firstNonEmptyString(string(item.ArtifactType), outputKindForContentType(item.ContentType)),
+		Label: firstNonEmptyString(item.Title, path.Base(storageRef), artifactID), StorageRef: storageRef,
+		OpenURL: openURL, RevealURL: openURL, ProofRef: firstNonEmptyString(contractID, artifactID),
+		ContractID: contractID, ProofID: firstNonEmptyString(contractID, artifactID),
+		PackageID: firstNonEmptyString(lookupString([]map[string]any{meta}, "package_id"), groupID),
+		Role: firstNonEmptyString(role, "primary"), Status: status, ContentType: item.ContentType,
+		Bytes: sizeBytes, SHA256: checksum, Proof: proof,
 	}
 }
 

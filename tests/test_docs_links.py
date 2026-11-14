@@ -145,7 +145,7 @@ def test_readme_style_pages_expose_tocs():
         ROOT / "core" / "README.md": "## TOC",
         ROOT / "interface" / "README.md": "## TOC",
         ROOT / "cli" / "README.md": "## TOC",
-        ROOT / "core" / "internal" / "registry" / "README.md": "## TOC",
+        # retired core/internal/registry/README.md
         PRD_INDEX: "## TOC",
         ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md": "## TOC",
     }
@@ -167,7 +167,7 @@ def test_repo_readmes_expose_project_navigation():
         ROOT / "core" / "README.md",
         ROOT / "interface" / "README.md",
         ROOT / "cli" / "README.md",
-        ROOT / "core" / "internal" / "registry" / "README.md",
+        # retired core/internal/registry/README.md
         PRD_INDEX,
         ROOT / "docs" / "architecture-library" / "ARCHITECTURE_LIBRARY_INDEX.md",
     ]

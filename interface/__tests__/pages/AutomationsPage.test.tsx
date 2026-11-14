@@ -63,10 +63,6 @@ vi.mock('@/components/automations/TriggerRulesTab', () => ({
     __esModule: true,
     default: () => <div data-testid="triggers-tab">TriggerRulesTab</div>,
 }));
-vi.mock('@/components/shared/DegradedState', () => ({
-    __esModule: true,
-    default: ({ title }: any) => <div data-testid="degraded-state">{title}</div>,
-}));
 
 // Mock Zustand store
 const mockAdvancedMode = vi.fn(() => false);

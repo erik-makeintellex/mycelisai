@@ -18,9 +18,7 @@ import (
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
 	"github.com/mycelis/core/internal/overseer"
-	"github.com/mycelis/core/internal/provisioning"
 	"github.com/mycelis/core/internal/reactive"
-	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/router"
 	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/internal/searchcap"
@@ -38,8 +36,6 @@ type AdminServer struct {
 	Mem           *memory.Service
 	DB            *sql.DB // direct DB for context snapshots + mission profiles
 	Cognitive     *cognitive.Router
-	Provisioner   *provisioning.Engine
-	Registry      *registry.Service
 	Soma          *swarm.Soma
 	NC            *nats.Conn // NATS for chat request-reply routing
 	Stream        *signal.StreamHandler
@@ -74,7 +70,7 @@ type AdminServer struct {
 	Search              *searchcap.Service
 }
 
-func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, prov *provisioning.Engine, reg *registry.Service, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
+func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Service, db *sql.DB, cog *cognitive.Router, soma *swarm.Soma, nc *nats.Conn, stream *signal.StreamHandler, architect *cognitive.MetaArchitect, ov *overseer.Engine, arch *memory.Archivist, mcpSvc *mcp.Service, mcpPool *mcp.ClientPool, mcpLib *mcp.Library, cat *catalogue.Service, art *artifacts.Service, ex *exchange.Service, evStore *events.Store, runsManager *runs.Manager) *AdminServer {
 	// Reactive engine: routes subscribed NATS messages to Soma for evaluation.
 	// nc may be nil (NATS offline); engine degrades gracefully.
 	reactiveEngine := reactive.New(nc, func(profileID, topic string, msg []byte) {
@@ -89,8 +85,6 @@ func NewAdminServer(r *router.Router, guard *governance.Guard, mem *memory.Servi
 		Mem:                 mem,
 		DB:                  db,
 		Cognitive:           cog,
-		Provisioner:         prov,
-		Registry:            reg,
 		Soma:                soma,
 		NC:                  nc,
 		Stream:              stream,

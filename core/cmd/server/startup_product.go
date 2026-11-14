@@ -19,8 +19,6 @@ import (
 	"github.com/mycelis/core/internal/inception"
 	"github.com/mycelis/core/internal/mcp"
 	"github.com/mycelis/core/internal/memory"
-	"github.com/mycelis/core/internal/provisioning"
-	"github.com/mycelis/core/internal/registry"
 	"github.com/mycelis/core/internal/runs"
 	"github.com/mycelis/core/internal/searchcap"
 	"github.com/mycelis/core/internal/server"
@@ -30,14 +28,12 @@ import (
 
 type productServices struct {
 	Archivist       *memory.Archivist
-	Registry        *registry.Service
 	MCP             *mcp.Service
 	MCPPool         *mcp.ClientPool
 	MCPToolSets     *mcp.ToolSetService
 	Catalogue       *catalogue.Service
 	Artifacts       *artifacts.Service
 	Exchange        *exchange.Service
-	Provisioning    *provisioning.Engine
 	Bootstrap       *bootstrap.Service
 	Stream          *mycelisSignal.StreamHandler
 	MetaArchitect   *cognitive.MetaArchitect
@@ -76,8 +72,6 @@ func startProductRuntime(ctx context.Context, mux *http.ServeMux, core *coreRunt
 		core.MemService,
 		core.SharedDB,
 		core.CogRouter,
-		services.Provisioning,
-		services.Registry,
 		soma,
 		core.NC,
 		services.Stream,
@@ -116,23 +110,20 @@ func startProductServices(ctx context.Context, core *coreRuntime) productService
 	cogRouter := core.CogRouter
 	memService := core.MemService
 	services := productServices{
-		Provisioning: provisioning.NewEngine(cogRouter),
-		Stream:       mycelisSignal.NewStreamHandler(),
-		Comms:        comms.NewGatewayFromEnv(),
-		Search:       searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService),
+		Stream: mycelisSignal.NewStreamHandler(),
+		Comms:  comms.NewGatewayFromEnv(),
+		Search: searchcap.NewService(searchcap.ConfigFromEnv(), cogRouter, memService),
 	}
 	if memService != nil && cogRouter != nil {
 		services.Archivist = memory.NewArchivist(memService, cogRouter)
 		log.Println("Archivist Engine Active.")
 	}
 	if sharedDB != nil {
-		services.Registry = registry.NewService(sharedDB)
 		services.Catalogue = catalogue.NewService(sharedDB)
 		services.Inception = inception.NewStore(sharedDB)
 		services.RunsManager = runs.NewManager(sharedDB)
 		services.EventStore = events.NewStore(sharedDB, core.NC)
 		services.ConversationLog = conversations.NewStore(sharedDB)
-		log.Println("Registry Service Active.")
 		log.Println("Agent Catalogue Active.")
 		log.Println("V7 Inception Recipe Store Active.")
 		log.Println("V7 Event Spine Active. (runs + events stores ready)")

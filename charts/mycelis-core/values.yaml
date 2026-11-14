@@ -41,6 +41,14 @@ coreAuth:
   existingSecret: ""
   secretName: ""
 
+oidc:
+  issuer: ""
+  audience: ""
+  roleClaim: "role"
+  defaultRole: "viewer"
+  existingSecret: ""
+  hs256SecretKey: "mycelis-oidc-hs256-secret"
+
 resources:
   requests:
     cpu: 50m

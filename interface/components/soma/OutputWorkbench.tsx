@@ -101,6 +101,19 @@ function packageTitle(packageKind?: string): string {
     }
 }
 
+function proofStageState(status?: string): "completed" | "active" | "failed" {
+    const normalized = status?.toLowerCase().trim() ?? "";
+    if (normalized === "pending_review") return "active";
+    if (normalized === "failed" || normalized === "blocked" || normalized === "missing") return "failed";
+    return "completed";
+}
+
+const STAGE_STYLES: Record<"completed" | "active" | "failed", string> = {
+    completed: "border-cortex-success/30 bg-cortex-success/10 text-cortex-success",
+    active: "border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning",
+    failed: "border-red-500/30 bg-red-500/10 text-red-400",
+};
+
 function artifactForPath(artifacts: ChatArtifactRef[], path?: string, title?: string): ChatArtifactRef | undefined {
     if (!path && !title) return undefined;
     return artifacts.find((artifact) => (
@@ -142,6 +155,13 @@ export default function OutputWorkbench({
     const packageIdentity = deliveryPackage?.base_path || deliveryPackage?.package_id;
     const packageStatus = deliveryPackage?.status || "verified";
     const contentArtifacts = artifacts.filter((artifact) => artifact.content?.trim());
+    const stages: { label: string; state: "completed" | "active" | "failed" }[] = [
+        { label: "Intent", state: "completed" },
+        { label: "Approval", state: "completed" },
+        { label: "Execution", state: "completed" },
+        { label: "Package", state: "completed" },
+        { label: "Proof", state: proofStageState(packageStatus) },
+    ];
 
     return (
         <div className="mt-2 overflow-hidden rounded-lg border border-cortex-primary/25 bg-cortex-primary/5" data-testid="output-workbench">
@@ -168,6 +188,21 @@ export default function OutputWorkbench({
                         <ExternalLink className="h-3 w-3" />
                     </a>
                 ) : null}
+            </div>
+
+            <div
+                className="flex flex-wrap items-center gap-1 border-b border-cortex-primary/15 bg-cortex-bg/40 px-3 py-1.5"
+                data-testid="output-workbench-stage-strip"
+            >
+                {stages.map((stage) => (
+                    <span
+                        key={stage.label}
+                        data-stage-state={stage.state}
+                        className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase ${STAGE_STYLES[stage.state]}`}
+                    >
+                        {stage.label}
+                    </span>
+                ))}
             </div>
 
             <div className="divide-y divide-cortex-border/60">

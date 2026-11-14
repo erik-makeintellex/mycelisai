@@ -31,6 +31,14 @@ ingress:
 coreAuth:
   existingSecret: mycelis-core-auth
 
+oidc:
+  issuer: ""
+  audience: "mycelis-core"
+  roleClaim: "role"
+  defaultRole: "viewer"
+  existingSecret: ""
+  hs256SecretKey: "mycelis-oidc-hs256-secret"
+
 outputBlock:
   mode: cluster_generated
 

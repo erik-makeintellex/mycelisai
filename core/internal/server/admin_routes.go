@@ -22,7 +22,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/memory/stream", s.GetMemoryStream)
 	mux.HandleFunc("/api/v1/cognitive/infer", s.handleInfer)
 	mux.HandleFunc("/api/v1/cognitive/config", s.HandleCognitiveConfig)
-	mux.HandleFunc("/api/v1/cognitive/matrix", s.HandleCognitiveConfig) // Alias: UI calls /matrix
 	mux.HandleFunc("GET /api/v1/cognitive/status", s.HandleCognitiveStatus)
 	mux.HandleFunc("PUT /api/v1/cognitive/profiles", s.HandleUpdateProfiles)
 	mux.HandleFunc("PUT /api/v1/cognitive/providers/{id}", s.HandleUpdateProvider)
@@ -33,7 +32,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 
 	mux.HandleFunc("/api/v1/user/me", s.HandleMe)
 	mux.HandleFunc("/api/v1/teams", s.HandleTeams)
-	mux.HandleFunc("GET /api/v1/teams/detail", s.HandleTeamsDetail)
 	mux.HandleFunc("GET /api/v1/deployments", s.HandleListDeployments)
 	mux.HandleFunc("GET /api/v1/deployments/{kind}/{id}", s.HandleGetDeployment)
 	mux.HandleFunc("GET /api/v1/config/{kind}/{id}", s.HandleGetConfigView)
@@ -54,20 +52,6 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/missions/{id}/agents/{name}", s.handleUpdateMissionAgent)
 	mux.HandleFunc("DELETE /api/v1/missions/{id}/agents/{name}", s.handleDeleteMissionAgent)
 	mux.HandleFunc("DELETE /api/v1/missions/{id}", s.handleDeleteMission)
-
-	mux.HandleFunc("/api/v1/provision/draft", s.HandleProvisionDraft)
-	mux.HandleFunc("/api/v1/provision/deploy", s.HandleProvisionDeploy)
-	mux.HandleFunc("/api/v1/registry/templates", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" {
-			s.handleListTemplates(w, r)
-		} else if r.Method == "POST" {
-			s.handleRegisterTemplate(w, r)
-		} else {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	mux.HandleFunc("POST /api/v1/teams/{id}/connectors", s.handleInstallConnector)
-	mux.HandleFunc("GET /api/v1/teams/{id}/wiring", s.handleGetWiring)
 
 	mux.HandleFunc("POST /api/v1/intent/negotiate", s.handleIntentNegotiate)
 	mux.HandleFunc("POST /api/v1/intent/commit", s.handleIntentCommit)
@@ -176,9 +160,7 @@ func (s *AdminServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/mission-profiles/{id}", s.HandleDeleteMissionProfile)
 	mux.HandleFunc("POST /api/v1/mission-profiles/{id}/activate", s.HandleActivateMissionProfile)
 
-	mux.HandleFunc("GET /api/v1/runs", s.handleListRuns)
-	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
-	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
+	s.RegisterRunRoutes(mux)
 	mux.HandleFunc("GET /api/v1/triggers", s.HandleListTriggers)
 	mux.HandleFunc("POST /api/v1/triggers", s.HandleCreateTrigger)
 	mux.HandleFunc("PUT /api/v1/triggers/{id}", s.HandleUpdateTrigger)

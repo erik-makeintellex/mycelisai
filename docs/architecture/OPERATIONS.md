@@ -161,23 +161,22 @@ uv run inv team.architecture-sync
 
 Use `--live-backend` for browser proof that must hit a real Core backend.
 
-### Logging & Quality Gates (`ops/logging.py`, `ops/quality.py`)
+### Logging, Quality & Release Gates (`ops/logging.py`, `ops/quality.py`, `ops/release.py`)
 
 ```bash
 uv run inv logging.check-schema
 uv run inv logging.check-topics
 uv run inv quality.max-lines --limit 300
+uv run inv release.status
+uv run inv release.stage --tag=v0.8.3
+uv run inv release.prune-branches
 ```
 
 ## III. Development Workflow
 
-Choose the runtime lane first:
-- Compose for supported home-runtime proof
-- k3d/Helm for local cluster proof
-- source lifecycle for implementation
-- WSL proof checkout for release-style validation from Windows
+Choose the runtime lane first: Compose for supported home-runtime proof, k3d/Helm for local cluster proof, source lifecycle for implementation, and WSL proof checkout for release-style validation from Windows.
 
-Windows edit -> git push -> WSL refresh -> WSL validate is the release-proof path (`dev` is the active development/integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags `v0.8.0-rc1`, `v0.8.0-rc2`, `v0.8.0-rc3` as waves stabilize):
+Windows edit -> git push -> WSL refresh -> WSL validate is the release-proof path (`dev` is the active development/integration branch; `main` is the clean staging and release-candidate branch promoted via `uv run inv release.stage --tag=v0.8.3` with annotated git tags `v0.8.0-rc1`..`v0.8.3` and merged-branch hygiene via `uv run inv release.prune-branches`):
 
 ```bash
 uv run inv wsl.status

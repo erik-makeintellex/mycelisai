@@ -59,9 +59,15 @@ Deployment selection rule:
 - The root `uv.lock` is tracked for reproducible Python automation; update it intentionally with `uv lock` after dependency changes and verify with `uv lock --check` before release handoff.
 
 ### `version.py` (Identity)
-Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}`.
-- Source: `../VERSION` file.
+Calculates the **Immutable Tag**: `v{SEMVER}-{SHA}` and validates canonical semver (`read_semver`) and release tags (`validate_release_tag`).
+- Source: `../VERSION` file (`0.8.3`).
 - Git: `git rev-parse --short HEAD`.
+
+### `release.py` (Staging, Tagging & Branch Hygiene)
+Automates promoting verified `dev` waves onto the staging `main` branch, creating annotated release/RC tags, and pruning merged feature/archive branches while protecting `main` and `dev`:
+- **Status**: `uv run inv release.status` (reports current branch, clean/dirty working tree, tracked `VERSION`, latest tag on `main`, `main...dev` ahead/behind counts, and merged branches eligible for pruning)
+- **Stage**: `uv run inv release.stage --tag=v0.8.3 --message="..."` (validates tag format `v<MAJOR>.<MINOR>.<PATCH>[-rc<N>]`, requires a clean working tree, enforces `quality.max-lines --limit 300` and `git diff --check`, fast-forwards `main` from `dev`, creates the annotated tag, prunes merged local branches, and returns to `dev`; supports `--dry-run` and `--no-prune`)
+- **Prune Branches**: `uv run inv release.prune-branches` (deletes local branches merged into `main` while never deleting `main`, `dev`, or the checked-out branch; supports `--dry-run` and `--remote` for `git fetch --prune origin`)
 
 ### `k8s.py` (Deployment)
 Handles standards-first Kubernetes/Helm deployment automation, with `k3d` preferred for local cluster validation and Kind retained only as an older fallback.

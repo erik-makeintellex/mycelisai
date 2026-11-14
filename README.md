@@ -86,9 +86,7 @@ Before changing runtime, API, operator workflow, governance, testing, or task be
 
 ## What Mycelis Is
 
-In operator language, Mycelis lets someone create an AI Organization, work through Soma, inspect advisors/departments/automations/memory, and keep action bounded by policy.
-
-In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma coordination layer, governed execution, memory/continuity contracts, and auditable automation.
+In operator language, Mycelis lets someone create an AI Organization, work through Soma, inspect advisors/departments/automations/memory, and keep action bounded by policy. In architecture language, Mycelis is built around instantiated organizations as runtime truth, a Soma coordination layer, governed execution, memory/continuity contracts, and auditable automation.
 
 ## Active Delivery Target (V8.2 B2+)
 
@@ -201,6 +199,9 @@ uv run inv ci.service-check
 uv run inv lifecycle.memory-restart
 uv run inv team.architecture-sync
 uv run inv quality.max-lines --limit 300
+uv run inv release.status
+uv run inv release.stage --tag=v0.8.3 --dry-run
+uv run inv release.prune-branches --dry-run
 ```
 
 ## Development Contract
@@ -280,19 +281,15 @@ Refresh WSL from git; do not copy source trees across the host boundary.
 
 Use [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md) for first-time setup, deployment selection, ports, health checks, cognitive engine setup, and troubleshooting. Use [Operations](docs/architecture/OPERATIONS.md) for task ownership, lifecycle, Compose, Kubernetes, CI, and release-lane sequencing.
 
-Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1`, `v0.8.0-rc2`, `v0.8.0-rc3`) as waves stabilize, with `0` UI component legacy line-limit caps remaining.
+Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1`, `v0.8.0-rc2`, `v0.8.0-rc3`, `v0.8.3`) via `uv run inv release.status`, `uv run inv release.stage`, and `uv run inv release.prune-branches`, with `0` UI component legacy line-limit caps remaining.
 
 ## Licensing And Releases
 
-Licensing guidance lives in [Licensing](docs/licensing.md). Binary release and packaging commands live in [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md#binary-release-process) and [Operations](docs/architecture/OPERATIONS.md).
-
-Release licensing separates the local self-hosted node from full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows through a hosted admin control plane.
+Licensing guidance lives in [Licensing](docs/licensing.md). Binary release and packaging commands live in [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md#binary-release-process) and [Operations](docs/architecture/OPERATIONS.md). Release licensing separates the local self-hosted node from full enterprise multi-user IAM, federated SAML/OIDC/SSO, optional lifecycle sync, and delegated enterprise admin/recovery flows through a hosted admin control plane.
 
 ## Documentation Responsibilities
 
-Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, canonical terminology, task execution, or validation must include documentation review in the same slice.
-
-When adding, removing, or renaming major README sections, update this README TOC in the same change.
+Every implementation slice that changes product behavior, runtime behavior, operator workflow, API contract, governance posture, canonical terminology, task execution, or validation must include documentation review in the same slice. When adding, removing, or renaming major README sections, update this README TOC in the same change.
 
 ## Status
 

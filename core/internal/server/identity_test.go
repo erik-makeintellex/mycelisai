@@ -268,17 +268,3 @@ func TestIdentityAndSettings_RoleEnforcement(t *testing.T) {
 		t.Fatalf("expected owner team role, got %q", got)
 	}
 }
-
-// ── GET /api/v1/teams/detail ───────────────────────────────────────
-
-func TestHandleTeamsDetail_NilSoma(t *testing.T) {
-	s := newTestServer()
-	rr := doRequest(t, http.HandlerFunc(s.HandleTeamsDetail), "GET", "/api/v1/teams/detail", "")
-	assertStatus(t, rr, http.StatusOK)
-
-	var entries []TeamDetailEntry
-	assertJSON(t, rr, &entries)
-	if len(entries) != 0 {
-		t.Errorf("Expected empty array, got %d entries", len(entries))
-	}
-}

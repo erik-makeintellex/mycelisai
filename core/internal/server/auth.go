@@ -27,7 +27,7 @@ type RequestIdentity struct {
 	Scopes        []string `json:"scopes,omitempty"`
 }
 
-type localAuthIdentityConfig struct {
+type identityConfiguration struct {
 	PrimaryAPIKey      string
 	PrimaryUserID      string
 	PrimaryUsername    string
@@ -41,10 +41,17 @@ type localAuthIdentityConfig struct {
 	ViewerUserID       string
 	ViewerUsername     string
 	DeploymentContract DeploymentContract
+	OIDC               oidcAdapterConfig
 }
 
-func resolveLocalAuthIdentityConfig(primaryAPIKey string) localAuthIdentityConfig {
-	cfg := localAuthIdentityConfig{
+type localAuthIdentityConfig = identityConfiguration
+
+func loadIdentityConfigurationFromEnv() identityConfiguration {
+	return resolveLocalAuthIdentityConfig(strings.TrimSpace(os.Getenv("MYCELIS_API_KEY")))
+}
+
+func resolveLocalAuthIdentityConfig(primaryAPIKey string) identityConfiguration {
+	cfg := identityConfiguration{
 		PrimaryAPIKey:      primaryAPIKey,
 		PrimaryUserID:      envOrDefaultIdentity("MYCELIS_LOCAL_ADMIN_USER_ID", "00000000-0000-0000-0000-000000000000"),
 		PrimaryUsername:    envOrDefaultIdentity("MYCELIS_LOCAL_ADMIN_USERNAME", "admin"),
@@ -58,8 +65,17 @@ func resolveLocalAuthIdentityConfig(primaryAPIKey string) localAuthIdentityConfi
 		ViewerUserID:       envOrDefaultIdentity("MYCELIS_VIEWER_USER_ID", "00000000-0000-0000-0000-000000000003"),
 		ViewerUsername:     envOrDefaultIdentity("MYCELIS_VIEWER_USERNAME", "viewer"),
 		DeploymentContract: ResolveDeploymentContract(),
+		OIDC:               loadOIDCAdapterConfigFromEnv(),
 	}
 	return cfg
+}
+
+func (cfg identityConfiguration) Enabled() bool {
+	return strings.TrimSpace(cfg.PrimaryAPIKey) != "" ||
+		strings.TrimSpace(cfg.BreakGlassAPIKey) != "" ||
+		strings.TrimSpace(cfg.OperatorAPIKey) != "" ||
+		strings.TrimSpace(cfg.ViewerAPIKey) != "" ||
+		cfg.OIDC.Enabled()
 }
 
 func envOrDefaultIdentity(key, fallback string) string {
@@ -69,9 +85,9 @@ func envOrDefaultIdentity(key, fallback string) string {
 	return fallback
 }
 
-func (cfg localAuthIdentityConfig) identityForToken(token string) *RequestIdentity {
+func (cfg identityConfiguration) identityForToken(token string) *RequestIdentity {
 	switch {
-	case token != "" && subtle.ConstantTimeCompare([]byte(token), []byte(cfg.PrimaryAPIKey)) == 1:
+	case token != "" && cfg.PrimaryAPIKey != "" && subtle.ConstantTimeCompare([]byte(token), []byte(cfg.PrimaryAPIKey)) == 1:
 		return &RequestIdentity{
 			UserID:        cfg.PrimaryUserID,
 			Username:      cfg.PrimaryUsername,
@@ -113,6 +129,9 @@ func (cfg localAuthIdentityConfig) identityForToken(token string) *RequestIdenti
 			Scopes:        DefaultScopesForRole("viewer"),
 		}
 	default:
+		if cfg.OIDC.Enabled() {
+			return cfg.OIDC.verifyBearerToken(token)
+		}
 		return nil
 	}
 }

@@ -206,13 +206,7 @@ func buildSensorConfigs(bp *protocol.MissionBlueprint) map[string]swarm.SensorCo
 	return configs
 }
 
-// getDB retrieves the shared database connection via the Registry service.
+// getDB retrieves the shared database connection.
 func (s *AdminServer) getDB() *sql.DB {
-	if s.DB != nil {
-		return s.DB
-	}
-	if s.Registry != nil {
-		return s.Registry.DB
-	}
-	return nil
+	return s.DB
 }

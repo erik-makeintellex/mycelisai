@@ -58,7 +58,6 @@ The older graph-centric workflow still exists as an advanced surface rather than
 
 - `Workspace.tsx` hosts the advanced wiring environment
 - `ArchitectChat.tsx`, `CircuitBoard.tsx`, and `SquadRoom.tsx` still power mission drafting and graph inspection
-- `LaunchCrewModal.tsx` bridges default Soma requests into governed launch/execution flows when crew creation is needed
 
 ### State Flow
 
@@ -80,7 +79,6 @@ The older graph-centric workflow still exists as an advanced surface rather than
 | `components/dashboard/MissionControlChat.tsx` | Soma-first governed chat, proposal, and execution surface |
 | `components/organizations/TeamLeadInteractionPanel.tsx` | Guided first-run and organization-support actions |
 | `components/system/SystemQuickChecks.tsx` | Recovery-oriented system checks surfaced in the current product |
-| `components/workspace/LaunchCrewModal.tsx` | Governed launch/crew execution modal |
 | `components/workspace/Workspace.tsx` | Advanced wiring workspace host |
 | `components/workspace/ArchitectChat.tsx` | Advanced intent negotiation chat for wiring mode |
 | `components/workspace/CircuitBoard.tsx` | Advanced graph canvas and mission draft editor |

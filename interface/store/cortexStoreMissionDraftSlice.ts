@@ -146,13 +146,34 @@ export function createCortexMissionDraftSlice(
         fetchTeamsDetail: async () => {
             set({ isFetchingTeamsDetail: true });
             try {
-                const res = await fetch('/api/v1/teams/detail');
-                if (res.ok) {
-                    const data = await res.json();
-                    set({ teamsDetail: Array.isArray(data) ? data : [], isFetchingTeamsDetail: false });
-                } else {
-                    set({ teamsDetail: [], isFetchingTeamsDetail: false });
+                const res = await fetch('/api/v1/deployments');
+                const payload = res.ok ? await res.json() : null;
+                if (Array.isArray(payload)) {
+                    set({ teamsDetail: payload, isFetchingTeamsDetail: false });
+                    return;
                 }
+                const records = payload?.data?.deployments ?? payload?.deployments ?? [];
+                const teamsDetail = (Array.isArray(records) ? records : [])
+                    .filter((r: any) => r?.kind === 'standing_team' || r?.kind === 'mission_team')
+                    .map((r: any) => ({
+                        id: r.runtime_id || r.id,
+                        name: r.name ?? r.id,
+                        role: r.work_mode || r.purpose || 'standing',
+                        type: r.kind === 'mission_team' ? ('mission' as const) : ('standing' as const),
+                        mission_id: r.scope?.kind === 'mission' ? (r.scope.id ?? null) : null,
+                        mission_intent: r.scope?.kind === 'mission' ? (r.scope.name ?? null) : null,
+                        inputs: [],
+                        deliveries: [],
+                        agents: (Array.isArray(r.members) ? r.members : []).map((m: any) => ({
+                            id: m.id,
+                            role: m.role ?? '',
+                            status: m.status === 'busy' ? 2 : m.status === 'error' ? 3 : m.status === 'online' || m.status === 'idle' ? 1 : 0,
+                            last_heartbeat: m.last_heartbeat_at ?? '',
+                            tools: (Array.isArray(m.tools) ? m.tools : []).map((t: any) => (typeof t === 'string' ? t : t?.name ?? '')),
+                            model: m.model ?? '',
+                        })),
+                    }));
+                set({ teamsDetail, isFetchingTeamsDetail: false });
             } catch {
                 set({ teamsDetail: [], isFetchingTeamsDetail: false });
             }

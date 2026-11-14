@@ -128,5 +128,6 @@ Channel rules:
 
 - `dev` is the active development and integration branch for ongoing slices and worker waves.
 - `main` is the clean staging and release-candidate branch.
-- As features and waves stabilize on `dev` (all quality, unit, and GUI checks green with zero untracked temp/cache files), fast-forward or merge `dev` into `main` and mark stabilized milestones on `main` with an annotated git tag (`git tag -a v... -m "..."`).
-- Prune merged temporary/backup branches so local branch topology stays clean around `dev` and `main`.
+- Inspect branch/tag/version posture with `uv run inv release.status` (verifies `VERSION`, latest tag on `main`, `main...dev` ahead/behind counts, and merged branches eligible for pruning).
+- As features and waves stabilize on `dev` (all quality, unit, and GUI checks green with zero untracked temp/cache files), promote `dev` onto `main` and create an annotated git tag (`v<MAJOR>.<MINOR>.<PATCH>` or `v<MAJOR>.<MINOR>.<PATCH>-rc<N>`) via `uv run inv release.stage --tag=v0.8.3 --message="..."`.
+- Prune merged feature/archive branches with `uv run inv release.prune-branches` (`--dry-run` to preview, `--remote` to also prune remote-tracking refs) so local branch topology stays clean around `dev` and `main`.

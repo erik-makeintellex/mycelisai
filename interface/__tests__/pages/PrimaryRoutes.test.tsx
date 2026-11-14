@@ -68,10 +68,6 @@ vi.mock('@/components/catalogue/CataloguePage', () => ({
     __esModule: true,
     default: () => <div data-testid="catalogue-page">CataloguePage</div>,
 }));
-vi.mock('@/components/matrix/MatrixGrid', () => ({
-    __esModule: true,
-    default: () => <div data-testid="matrix-grid">MatrixGrid</div>,
-}));
 
 // Mock Zustand store
 vi.mock('@/store/useCortexStore', () => ({

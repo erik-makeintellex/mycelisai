@@ -10,7 +10,6 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/governance"
-	"github.com/mycelis/core/internal/registry"
 	pb "github.com/mycelis/core/pkg/pb/swarm"
 )
 
@@ -26,7 +25,7 @@ func newTestServer(opts ...func(*AdminServer)) *AdminServer {
 	return s
 }
 
-// withDB creates a sqlmock database and wires it through Registry.
+// withDB creates a sqlmock database and wires it to AdminServer.
 // Returns the option function and the mock for setting expectations.
 func withDB(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 	t.Helper()
@@ -37,7 +36,6 @@ func withDB(t *testing.T) (func(*AdminServer), sqlmock.Sqlmock) {
 	t.Cleanup(func() { db.Close() })
 	return func(s *AdminServer) {
 		s.DB = db
-		s.Registry = &registry.Service{DB: db}
 	}, mock
 }
 

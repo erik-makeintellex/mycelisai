@@ -140,6 +140,9 @@ uv run inv lifecycle.health
 uv run inv quality.max-lines --limit 300
 uv run inv logging.check-schema
 uv run inv logging.check-topics
+uv run inv release.status
+uv run inv release.stage --tag=v0.8.3 --dry-run
+uv run inv release.prune-branches --dry-run
 ```
 
 Focused live-backend examples:
@@ -255,7 +258,7 @@ uv run inv wsl.refresh
 uv run inv wsl.validate --lane=release
 ```
 
-Release-preflight lane presets are `baseline`, `runtime`, `service`, and `release`; use `uv run inv ci.release-preflight --lane=release` for the full release gate.
+Release-preflight lane presets are `baseline`, `runtime`, `service`, and `release`; use `uv run inv ci.release-preflight --lane=release` for the full release gate. Before promoting `dev` onto `main`, verify branch/tag/version readiness with `uv run inv release.status`, dry-run staging gates (`quality.max-lines --limit 300` + `git diff --check`) via `uv run inv release.stage --tag=v0.8.3 --dry-run`, and promote/tag/prune with `uv run inv release.stage --tag=v0.8.3` and `uv run inv release.prune-branches`.
 
 Deployment proof contracts:
 - Windows Docker Desktop Compose with the Windows browser on the same machine for rapid local proof.

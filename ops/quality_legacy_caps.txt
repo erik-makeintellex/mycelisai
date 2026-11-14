@@ -6,21 +6,9 @@
 # - Cap values only move downward as files are decomposed.
 # - Remove the cap entry once a file reaches 300 lines or less.
 
-charts/mycelis-core/config/templates/v8-migration-standing-team-bridge.yaml=570
-core/config/mcp-library.yaml=342
-core/config/templates/v8-migration-standing-team-bridge.yaml=570
-interface/e2e/specs/docs-and-runs.spec.ts=390
-interface/e2e/specs/mcp-connected-tools.spec.ts=527
-interface/e2e/specs/workflow-variants-live-backend.spec.ts=366
-interface/e2e/support/organization-entry.ts=435
-interface/lib/docsManifest.ts=516
 ops/compose.py=684
 ops/interface_runtime.py=808
 ops/k8s.py=561
 ops/lifecycle.py=982
 ops/wsl_runtime.py=706
-tests/test_compose_tasks.py=776
 tests/test_docs_links.py=1307
-tests/test_interface_e2e_tasks.py=539
-tests/test_lifecycle_tasks.py=601
-tests/test_runtime_deploy_contract_text.py=507

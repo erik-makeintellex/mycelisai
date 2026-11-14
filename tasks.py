@@ -15,6 +15,7 @@ from ops import logging as logging_tasks
 from ops import misc
 from ops import proto_relay
 from ops import quality
+from ops import release
 from ops import service_tiers
 from ops import test
 from ops import wsl_runtime
@@ -82,4 +83,5 @@ ns.add_collection(cognitive.ns)
 ns.add_collection(lifecycle.ns)
 ns.add_collection(service_tiers.ns)
 ns.add_collection(wsl_runtime.ns)
+ns.add_collection(release.ns)
 

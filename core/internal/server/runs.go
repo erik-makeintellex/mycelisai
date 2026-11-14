@@ -6,6 +6,17 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+// RegisterRunRoutes registers run list, event timeline, stage projection, and chain endpoints.
+func (s *AdminServer) RegisterRunRoutes(mux *http.ServeMux) {
+	if mux == nil {
+		return
+	}
+	mux.HandleFunc("GET /api/v1/runs", s.handleListRuns)
+	mux.HandleFunc("GET /api/v1/runs/{id}/events", s.handleGetRunEvents)
+	mux.HandleFunc("GET /api/v1/runs/{id}/stages", s.handleGetRunStages)
+	mux.HandleFunc("GET /api/v1/runs/{id}/chain", s.handleGetRunChain)
+}
+
 // handleGetRunEvents returns the chronological event timeline for a run.
 // GET /api/v1/runs/{id}/events
 func (s *AdminServer) handleGetRunEvents(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { MissionEvent } from "@/store/useCortexStore";
 import EventCard from "./EventCard";
+import RunStageProgressStrip from "./RunStageProgressStrip";
 
 // ── Terminal event types — stop polling ───────────────────────
 
@@ -79,7 +80,7 @@ export default function RunTimeline({ runId }: Props) {
                 setStartedAt(list[0].emitted_at);
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Network error');
+            setError(err instanceof Error ? err.message : "Network error");
         } finally {
             setLoading(false);
         }
@@ -104,7 +105,7 @@ export default function RunTimeline({ runId }: Props) {
     }, [isTerminal, runId]);
 
     function startedAgo(): string {
-        if (!startedAt) return '';
+        if (!startedAt) return "";
         const diff = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
         if (diff < 60)   return `started ${diff}s ago`;
         if (diff < 3600) return `started ${Math.floor(diff / 60)}m ago`;
@@ -143,7 +144,7 @@ export default function RunTimeline({ runId }: Props) {
                 <div className="ml-auto flex items-center gap-2">
                     {!isTerminal && !loading && (
                         <span className="text-[9px] font-mono text-cortex-primary/60 flex items-center gap-1">
-                            <RefreshCw className="w-2.5 h-2.5 animate-spin" style={{ animationDuration: '3s' }} />
+                            <RefreshCw className="w-2.5 h-2.5 animate-spin" style={{ animationDuration: "3s" }} />
                             auto-refresh
                         </span>
                     )}
@@ -156,6 +157,9 @@ export default function RunTimeline({ runId }: Props) {
                     </button>
                 </div>
             </div>
+
+            {/* V8.3 9-Stage Lifecycle Progress Strip */}
+            <RunStageProgressStrip events={events} />
 
             {/* Body */}
             <div className="max-w-2xl mx-auto px-4 py-6">

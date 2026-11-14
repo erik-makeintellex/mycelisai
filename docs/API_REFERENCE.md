@@ -22,7 +22,6 @@
 | `/api/v1/chat` | POST | Soma/Admin chat. Runtime-state and search-capability questions answer directly; freshness-oriented search prompts call configured Mycelis `web_search` before the NATS Admin-agent path. |
 | `/api/v1/cognitive/infer` | POST | Direct cognitive inference (profile-routed) |
 | `/api/v1/cognitive/config` | GET | Read cognitive router configuration (providers, profiles, media) |
-| `/api/v1/cognitive/matrix` | GET | Alias for cognitive config (matrix view) |
 | `/api/v1/cognitive/status` | GET | Live health probe of text (vLLM/Ollama) + media (Diffusers) engines |
 | `/api/v1/cognitive/profiles` | PUT | Update profile→provider routing (persists to cognitive.yaml) |
 | `/api/v1/cognitive/providers/{id}` | PUT | Configure provider (endpoint, model_id, api_key, api_key_env) |
@@ -37,7 +36,6 @@
 | `/api/v1/missions/{id}/agents/{name}` | DELETE | Remove agent from an active mission |
 | **Swarm & Teams** | | |
 | `/api/v1/teams` | GET | List active teams |
-| `/api/v1/teams/detail` | GET | Legacy team detail (raw JSON, matches missions by name, declared model only). Use `/api/v1/deployments` for new work |
 | `/api/v1/deployments` | GET | Deployments aggregate across standing teams, mission teams, groups, and planned departments; filters `kind`, `organization_id`, `state`. See [Deployments](#deployments) |
 | `/api/v1/deployments/{kind}/{id}` | GET | One deployment record with members expanded; `404` when unknown, `503` when its source is unavailable |
 | `/api/v1/config/{teams\|groups\|organizations\|templates}/{id}` | GET | Read-only, redacted config document (`?format=yaml\|json`) that `config_ref.path` resolves. See [View Config](#view-config) |
@@ -117,14 +115,8 @@
 | `/api/v1/governance/policy` | GET/PUT | Read/update governance policy rules |
 | `/api/v1/governance/pending` | GET | List pending governance approvals |
 | `/api/v1/governance/resolve/{id}` | POST | Approve/reject a pending governance action |
-| **Provisioning & Registry** | | |
-| `/api/v1/provision/draft` | POST/GET | Draft provisioning plan |
-| `/api/v1/provision/deploy` | POST | Deploy provisioned resources |
-| `/api/v1/registry/templates` | GET/POST | List/register connector templates |
-| `/api/v1/teams/{id}/connectors` | POST | Install connector on team |
-| `/api/v1/teams/{id}/wiring` | GET | Get team wiring graph |
 | **Identity** | | |
-| `/api/v1/user/me` | GET | Current user identity, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`; supports `MYCELIS_API_KEY`, `MYCELIS_BREAK_GLASS_API_KEY`, `MYCELIS_OPERATOR_API_KEY`, `MYCELIS_VIEWER_API_KEY`) plus the deploy-owned People & Access contract surfaced read-only through `settings` (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
+| `/api/v1/user/me` | GET | Current user identity, including normalized principal metadata (`principal_type`, `auth_source`, `effective_role`, `break_glass`; supports `MYCELIS_API_KEY`, `MYCELIS_BREAK_GLASS_API_KEY`, `MYCELIS_OPERATOR_API_KEY`, `MYCELIS_VIEWER_API_KEY`, and federated OIDC/JWT Bearer tokens via `MYCELIS_OIDC_ISSUER` + `MYCELIS_OIDC_HS256_SECRET`) plus the deploy-owned People & Access contract surfaced read-only through `settings` (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`) |
 | `/api/v1/user/settings` | GET/PUT | Read or update persisted user preferences (`viewer` is read-only `403` on PUT; `operator` updates general preferences; `admin`/`owner` required for access-posture keys); GET overlays the deploy-owned People & Access contract (`access_management_tier`, `product_edition`, `identity_mode`, `shared_agent_specificity_owner`), while PUT ignores/preserves those deploy-owned fields instead of persisting them |
 | `/api/v1/groups` | GET/POST | List/create root-admin collaboration groups (DB-backed, tenant scoped) |
 | `/api/v1/groups/{id}` | PUT | Update root-admin collaboration group |
@@ -162,7 +154,7 @@ Memory/governance note:
 | `/api/v1/host/actions/{id}/invoke` | POST | Invoke host action by ID. V0 supports allowlisted no-shell local commands only |
 | **Mission Runs & Events (V7)** | | |
 | `/api/v1/runs` | GET | List recent runs across all missions — status, timing, trigger source |
-| `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (MissionEventEnvelope records) |
+| `/api/v1/runs/{id}/events` | GET | Full event timeline for a run (`MissionEventEnvelope` records); `/api/v1/runs/{id}/stages` returns the projected V8.3 9-stage operator progression (`intent_received` through `recovery_next_actions`) |
 | `/api/v1/runs/{id}/chain` | GET | Causal chain — parent run → event → trigger → child run traversal |
 | **Intent (CE-1)** | | |
 | `/api/v1/intent/confirm-action` | POST | Consume confirm token, execute mutation, return run_id |
@@ -201,7 +193,7 @@ Filters: `kind` and `state` must be known values (`400` otherwise); `kind` also 
 
 Degradation: every source reports `{source, status, detail, count}` in `sources`, where `source` is `standing_teams`, `mission_teams`, `groups`, `organizations`, or `outputs` and `status` is `ok`, `degraded`, `unavailable`, or `restricted`. A failing or missing source never fails the response. With no database, standing teams and planned departments still return, and `mission_teams`, `groups`, and `outputs` report `unavailable`. Raw database errors are logged, not returned.
 
-`GET /api/v1/deployments/{kind}/{id}` returns `{"ok": true, "data": {"deployment": {...}, "sources": [...]}}`. It returns `400` for an unknown kind, `404` when the record does not exist, and `503` when the record's source is unavailable or restricted. `/api/v1/teams/detail` stays for compatibility and is legacy.
+`GET /api/v1/deployments/{kind}/{id}` returns `{"ok": true, "data": {"deployment": {...}, "sources": [...]}}`. It returns `400` for an unknown kind, `404` when the record does not exist, and `503` when the record's source is unavailable or restricted.
 
 ## View Config
 

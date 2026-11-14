@@ -9,7 +9,7 @@ import (
 	"github.com/mycelis/core/internal/cognitive"
 )
 
-func TestCognitiveMatrix(t *testing.T) {
+func TestCognitiveConfig(t *testing.T) {
 	// 1. Setup Mock AdminServer with Cognitive Engine
 	cfg := &cognitive.BrainConfig{
 		Profiles: map[string]string{"test": "mock"},
@@ -26,7 +26,7 @@ func TestCognitiveMatrix(t *testing.T) {
 	}
 
 	// 2. Create Request
-	req, _ := http.NewRequest("GET", "/api/v1/cognitive/matrix", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/cognitive/config", nil)
 	rr := httptest.NewRecorder()
 
 	// 3. Invoke Handler

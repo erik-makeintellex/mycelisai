@@ -90,6 +90,23 @@ spec:
                   name: {{ default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
                   key: mycelis-api-key
             {{- end }}
+            {{- if and .Values.oidc (or .Values.oidc.issuer .Values.oidc.existingSecret) }}
+            - name: MYCELIS_OIDC_ISSUER
+              value: {{ .Values.oidc.issuer | quote }}
+            - name: MYCELIS_OIDC_AUDIENCE
+              value: {{ default "" .Values.oidc.audience | quote }}
+            - name: MYCELIS_OIDC_ROLE_CLAIM
+              value: {{ default "role" .Values.oidc.roleClaim | quote }}
+            - name: MYCELIS_OIDC_DEFAULT_ROLE
+              value: {{ default "viewer" .Values.oidc.defaultRole | quote }}
+            {{- if .Values.oidc.existingSecret }}
+            - name: MYCELIS_OIDC_HS256_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.oidc.existingSecret }}
+                  key: {{ default "mycelis-oidc-hs256-secret" .Values.oidc.hs256SecretKey }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.ai.textEndpoint }}
             {{- range $providerID := .Values.ai.textProviderIds }}
             - name: MYCELIS_PROVIDER_{{ $providerID | replace "-" "_" | upper }}_ENDPOINT
