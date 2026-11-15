@@ -212,6 +212,65 @@ def check_topics(_c, paths=DEFAULT_TOPIC_PATHS, allow_files="core/pkg/protocol/t
     print(f"LOGGING TOPIC CHECK PASSED: scanned {len(files)} files.")
 
 
+def build_operational_log_context(
+    component: str,
+    summary: str,
+    detail: str = "",
+    suggested_action: str = "",
+    why_it_matters: str = "",
+    status: str = "error",
+    review_scope: str = "central_review",
+    source_kind: str = "internal_tool",
+    source_channel: str = "ops.invoke",
+    payload_kind: str = "operational_error",
+    run_id: str = "",
+    team_id: str = "",
+    service: str = "mycelis-ops",
+) -> dict[str, object]:
+    """Build a normalized V8.2 OperationalLogContext dict for human and agentry review."""
+    central = review_scope in {"central_review", "audit"} or status.lower() in {"error", "failed", "degraded", "critical"}
+    audiences = ["soma", "meta_agentry", "team_lead"] if central else (["team", "team_lead"] if review_scope == "team_local" else ["team"])
+    channels = ["memory.stream", "mission_events"] if central else (["team.signal.status"] if review_scope == "team_local" else ["runtime.stderr"])
+    return {
+        "schema_version": "v1",
+        "review_scope": review_scope,
+        "audiences": audiences,
+        "service": service.strip() or "mycelis-ops",
+        "component": component.strip() or "ops",
+        "summary": summary.strip(),
+        "detail": detail.strip(),
+        "why_it_matters": why_it_matters.strip(),
+        "suggested_action": suggested_action.strip(),
+        "source_kind": source_kind.strip() or "internal_tool",
+        "source_channel": source_channel.strip() or "ops.invoke",
+        "payload_kind": payload_kind.strip() or "operational_error",
+        "run_id": run_id.strip(),
+        "team_id": team_id.strip(),
+        "status": status.strip() or "error",
+        "centralized_review": central,
+        "review_channels": channels,
+    }
+
+
+def format_operator_diagnostic(ctx: dict[str, object]) -> str:
+    """Format an OperationalLogContext dict as a concise, operator- and agent-readable diagnostic."""
+    component = ctx.get("component") or "ops"
+    status = str(ctx.get("status") or "error").upper()
+    summary = ctx.get("summary") or "Operational diagnostic"
+    detail = ctx.get("detail") or ""
+    action = ctx.get("suggested_action") or ""
+    scope = ctx.get("review_scope") or "central_review"
+    channels = ",".join(str(c) for c in (ctx.get("review_channels") or []))
+    lines = [f"[{component}] status={status} review_scope={scope} summary=\"{summary}\""]
+    if detail:
+        lines.append(f"  detail: {detail}")
+    if action:
+        lines.append(f"  suggested_action: {action}")
+    if channels:
+        lines.append(f"  review_channels: {channels}")
+    return "\n".join(lines)
+
+
 ns = Collection("logging")
 ns.add_task(check_schema, name="check-schema")
 ns.add_task(check_topics, name="check-topics")

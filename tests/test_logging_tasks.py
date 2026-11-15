@@ -89,3 +89,27 @@ def test_collect_topic_literal_violations_respects_allowed_file(tmp_path: Path):
     allowed = {src.as_posix()}
     violations_allowed = logging_tasks._collect_topic_literal_violations([src], allowed_files=allowed)
     assert violations_allowed == []
+
+
+def test_build_and_format_operational_log_context_supports_agentry_and_human_review():
+    ctx = logging_tasks.build_operational_log_context(
+        component="compose.up",
+        summary="PostgreSQL readiness probe timed out.",
+        detail="container mycelis-postgres did not become healthy within 60s",
+        suggested_action="Run uv run inv compose.logs and inspect database startup.",
+        why_it_matters="Core runtime migrations cannot execute without PostgreSQL.",
+        run_id="run-123",
+        team_id="team-ops",
+    )
+
+    assert ctx["schema_version"] == "v1"
+    assert ctx["review_scope"] == "central_review"
+    assert ctx["centralized_review"] is True
+    assert "soma" in ctx["audiences"]
+    assert "memory.stream" in ctx["review_channels"]
+    assert ctx["run_id"] == "run-123"
+
+    formatted = logging_tasks.format_operator_diagnostic(ctx)
+    assert '[compose.up] status=ERROR review_scope=central_review summary="PostgreSQL readiness probe timed out."' in formatted
+    assert "suggested_action: Run uv run inv compose.logs and inspect database startup." in formatted
+    assert "review_channels: memory.stream,mission_events" in formatted

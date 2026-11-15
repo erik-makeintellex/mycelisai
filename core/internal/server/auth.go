@@ -172,6 +172,7 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 		}
 
 		if configError := identityConfig.authConfigurationError(); configError != "" {
+			LogOperationalError("auth_middleware", "Deployment auth posture blocked request.", configError, "Configure MYCELIS_BREAK_GLASS_API_KEY via uv run inv auth.break-glass-key and restart services.")
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusServiceUnavailable)
 			json.NewEncoder(w).Encode(map[string]string{"error": configError})

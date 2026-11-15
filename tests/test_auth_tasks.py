@@ -114,3 +114,24 @@ def test_posture_reports_break_glass_warnings(tmp_path: Path, monkeypatch, capsy
     assert "primary_key" in captured
     assert "break_glass_key" in captured
     assert "warning: partial break-glass config" in captured
+
+
+def test_posture_reports_oidc_federation_and_partial_oidc_warning(tmp_path: Path, monkeypatch, capsys):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "\n".join(
+            [
+                "MYCELIS_API_KEY=primary",
+                "MYCELIS_OIDC_ISSUER=https://idp.example.com",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(auth, "ENV_PATH", env_file)
+    auth.posture.body(Context(), compose=False)
+
+    captured = capsys.readouterr().out
+    assert "oidc_federation: disabled (issuer=https://idp.example.com" in captured
+    assert "warning: partial OIDC config: MYCELIS_OIDC_ISSUER is set without MYCELIS_OIDC_HS256_SECRET" in captured

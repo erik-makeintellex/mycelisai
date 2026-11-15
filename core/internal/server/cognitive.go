@@ -131,7 +131,7 @@ func inferMutationToolsFromText(text string) []string {
 	}
 
 	fileActions := []string{"create", "write", "update", "edit", "modify", "replace", "append", "save", "persist", "store", "generate", "draft", "build", "make", "produce"}
-	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase", "html", "game", "puzzle", "bundle", "kit", "brief", "faq", "deliverable"}
+	fileTargets := []string{"file", "folder", "directory", "workspace", "path", "script", "config", "json", "yaml", "yml", "toml", "markdown", "document", "doc", "repo", "repository", "codebase", "html", "game", "puzzle", "bundle", "kit"}
 	if requestContainsAny(lower, fileActions) && requestContainsAny(lower, fileTargets) {
 		tools = append(tools, "write_file")
 	}

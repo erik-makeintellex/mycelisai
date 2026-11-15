@@ -237,11 +237,13 @@ func (s *AdminServer) handleGetRunStages(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if s.Events == nil {
+		LogOperationalError("runs_timeline", "Event store unavailable for run stage projection.", "s.Events is nil", "Verify PostgreSQL and event store initialization.", WithOperationalRunID(runID))
 		respondAPIError(w, "event store not initialized", http.StatusServiceUnavailable)
 		return
 	}
 	events, err := s.Events.GetRunTimeline(r.Context(), runID)
 	if err != nil {
+		LogOperationalError("runs_timeline", "Failed to load run lifecycle stages.", err.Error(), "Check mission_events persistence and retry GET /api/v1/runs/{id}/stages.", WithOperationalRunID(runID))
 		respondAPIError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

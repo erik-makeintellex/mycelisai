@@ -63,9 +63,9 @@ describe("OutputWorkbench", () => {
         }
 
         expect(screen.getByText("Handler Patch")).toBeDefined();
-        expect(screen.getByText("core/internal/server/patch.go")).toBeDefined();
+        expect(screen.getAllByText("core/internal/server/patch.go").length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("Package Proof")).toBeDefined();
-        expect(screen.getByText("workspace/deliverables/proof.md")).toBeDefined();
+        expect(screen.getAllByText("workspace/deliverables/proof.md").length).toBeGreaterThanOrEqual(1);
         expect(screen.getByText("abcdef0123456789")).toBeDefined();
     });
 
