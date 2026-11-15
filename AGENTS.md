@@ -131,3 +131,11 @@ Channel rules:
 - Inspect branch/tag/version posture with `uv run inv release.status` (verifies `VERSION`, latest tag on `main`, `main...dev` ahead/behind counts, and merged branches eligible for pruning).
 - As features and waves stabilize on `dev` (all quality, unit, and GUI checks green with zero untracked temp/cache files), promote `dev` onto `main` and create an annotated git tag (`v<MAJOR>.<MINOR>.<PATCH>` or `v<MAJOR>.<MINOR>.<PATCH>-rc<N>`) via `uv run inv release.stage --tag=v0.8.3 --message="..."`.
 - Prune merged feature/archive branches with `uv run inv release.prune-branches` (`--dry-run` to preview, `--remote` to also prune remote-tracking refs) so local branch topology stays clean around `dev` and `main`.
+
+
+## Multi-Agentry Swarm Standardization & Write-Isolation Contract
+
+- **One-Writer-Per-File Partitioning:** Every multi-agent swarm wave (whether development subagents or runtime team leads/specialists) must assign strictly disjoint file ownership before execution begins. No two concurrent workers may create or modify the same file path in the same wave.
+- **Lead-Owned Shared Indexes:** Shared state and index files (`.state/V8_DEV_STATE.md`, `VERSION`, `ops/quality_legacy_caps.txt`, `README.md`, `interface/lib/docsManifest.ts`) are modified exclusively by the Lead Coordinator after worker verification and termination.
+- **Runtime Write-Collision Governance (`DetectTeamPackageCollisions`):** In `core/internal/server/team_delivery_package_collision.go`, any multi-agent `DeliveryPackage` where two or more agents write to the same normalized `FilePath` (or overwrite with differing content) automatically downgrades verification posture to `pending_review`, marks `OutputRef.Proof.PathBoundaryStatus = "collision_detected"` with `ReadbackStatus = "degraded"`, and emits a standardized `V8.2` `OperationalLogContext` (`review_scope: "central_review"`, `audiences: ["soma", "meta_agentry", "team_lead"]`).
+- **Façade-Preserving Module Decomposition:** When decomposing Python `ops/*.py` modules under the 300-line cap, keep monkeypatched attributes on the primary module namespace and reference them dynamically (`import ops.<module> as _m`) from extracted helper files so existing unit test `monkeypatch.setattr` contracts never break.

@@ -141,3 +141,60 @@ func TestBuildTeamOutputsExecutionSummary(t *testing.T) {
 		t.Fatal("expected nil summary for empty items")
 	}
 }
+
+
+func TestAssembleTeamSignalDeliveryPackage_DetectsMultiAgentWriteCollision(t *testing.T) {
+	teamID := uuid.MustParse("33333333-3333-3333-3333-333333333333")
+	artID1 := uuid.MustParse("cccccccc-cccc-cccc-cccc-ccccccccccc1")
+	artID2 := uuid.MustParse("cccccccc-cccc-cccc-cccc-ccccccccccc2")
+
+	items := []artifacts.Artifact{
+		{
+			ID:           artID1,
+			TeamID:       &teamID,
+			AgentID:      "coder-alpha",
+			TraceID:      "run-collision-1",
+			ArtifactType: artifacts.TypeCode,
+			Title:        "Alpha Handler Patch",
+			ContentType:  "text/x-go",
+			Content:      "package server\n// alpha\n",
+			FilePath:     "./core/internal/server/shared_handler.go",
+			Status:       "approved",
+			CreatedAt:    time.Now().UTC(),
+		},
+		{
+			ID:           artID2,
+			TeamID:       &teamID,
+			AgentID:      "coder-beta",
+			TraceID:      "run-collision-1",
+			ArtifactType: artifacts.TypeCode,
+			Title:        "Beta Handler Overwrite",
+			ContentType:  "text/x-go",
+			Content:      "package server\n// beta overwrite\n",
+			FilePath:     "core\\internal\\server\\shared_handler.go",
+			Status:       "approved",
+			CreatedAt:    time.Now().UTC(),
+		},
+	}
+
+	collisions := DetectTeamPackageCollisions(items)
+	if len(collisions["core/internal/server/shared_handler.go"]) != 2 {
+		t.Fatalf("expected collision across 2 agents on shared_handler.go, got %#v", collisions)
+	}
+
+	summary := AssembleTeamSignalDeliveryPackage(teamID.String(), "run-collision-1", "Swarm collision check", items)
+	if summary == nil || summary.DeliveryPackage == nil {
+		t.Fatal("expected non-nil ExecutionSummary and DeliveryPackage")
+	}
+	if summary.Status != VerificationPosturePendingReview || summary.DeliveryPackage.Status != VerificationPosturePendingReview {
+		t.Fatalf("expected collision to downgrade verification posture to %q, got %q / %q", VerificationPosturePendingReview, summary.Status, summary.DeliveryPackage.Status)
+	}
+	for _, ref := range summary.DeliveryPackage.Items {
+		if ref.Status != VerificationPosturePendingReview {
+			t.Fatalf("expected colliding OutputRef status %q, got %q", VerificationPosturePendingReview, ref.Status)
+		}
+		if ref.Proof == nil || ref.Proof.PathBoundaryStatus != "collision_detected" {
+			t.Fatalf("expected Proof.PathBoundaryStatus=collision_detected, got %#v", ref.Proof)
+		}
+	}
+}

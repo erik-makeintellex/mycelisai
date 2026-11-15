@@ -5,10 +5,3 @@
 # - Existing files may remain above 300 only while they stay exactly at their current cap.
 # - Cap values only move downward as files are decomposed.
 # - Remove the cap entry once a file reaches 300 lines or less.
-
-ops/compose.py=684
-ops/interface_runtime.py=808
-ops/k8s.py=561
-ops/lifecycle.py=982
-ops/wsl_runtime.py=706
-tests/test_docs_links.py=1307

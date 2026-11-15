@@ -6,7 +6,7 @@ from pathlib import Path
 from invoke import task
 
 from .config import NAMESPACE, ROOT_DIR, is_windows
-from .packaging import resolve_repo_path
+from .packaging import relative_to_root, resolve_repo_path, slugify_label, write_checksum_file, write_json
 
 
 K8S_OPEN_STANDARD_REQUIRED_FILES = (
@@ -91,8 +91,17 @@ K8S_OPEN_STANDARD_REQUIRED_SNIPPETS = {
 }
 
 
-def _chart_dir() -> Path:
-    return ROOT_DIR / "charts" / "mycelis-core"
+def _chart_dir(root_dir: Path | None = None) -> Path:
+    return (root_dir or ROOT_DIR) / "charts" / "mycelis-core"
+
+
+def _chart_version(root_dir: Path | None = None) -> str:
+    chart_yaml = _chart_dir(root_dir) / "Chart.yaml"
+    for raw_line in chart_yaml.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if line.startswith("version:"):
+            return line.split(":", 1)[1].strip().strip('"').strip("'")
+    raise SystemExit(f"Unable to determine Helm chart version from {chart_yaml}")
 
 
 def _shell_quote(value: str | Path) -> str:
@@ -102,15 +111,87 @@ def _shell_quote(value: str | Path) -> str:
     return shlex.quote(text)
 
 
-def _resolve_k8s_values_file(explicit_path: str = "") -> Path | None:
+def _resolve_k8s_values_file(explicit_path: str = "", root_dir: Path | None = None) -> Path | None:
     raw_value = explicit_path.strip() or ""
     if not raw_value:
         return None
 
-    resolved = resolve_repo_path(raw_value, root_dir=ROOT_DIR)
+    resolved = resolve_repo_path(raw_value, root_dir=root_dir or ROOT_DIR)
     if not resolved.exists():
         raise SystemExit(f"MYCELIS_K8S_VALUES_FILE does not exist: {resolved}")
     return resolved
+
+
+def _resolve_package_output_dir(raw_path: str = "", root_dir: Path | None = None) -> Path:
+    base_root = root_dir or ROOT_DIR
+    destination = resolve_repo_path(raw_path, root_dir=base_root) if raw_path.strip() else (base_root / "dist" / "helm")
+    destination.mkdir(parents=True, exist_ok=True)
+    return destination
+
+
+def _verify_and_package_chart(
+    c,
+    *,
+    values_file: Path,
+    release_label: str,
+    package_output_dir: str,
+    root_dir: Path | None = None,
+    shell_quote=_shell_quote,
+) -> Path:
+    base_root = root_dir or ROOT_DIR
+    chart_dir = _chart_dir(base_root)
+    output_dir = _resolve_package_output_dir(package_output_dir, root_dir=base_root)
+    preset_name = values_file.stem.removeprefix("values-") or "default"
+    release_slug = slugify_label(release_label)
+    rendered_path = output_dir / f"mycelis-core-{preset_name}-{release_slug}.rendered.yaml"
+    manifest_path = output_dir / f"mycelis-core-{preset_name}-{release_slug}.manifest.json"
+    chart_version = _chart_version(base_root)
+    chart_package_path = output_dir / f"mycelis-core-{chart_version}.tgz"
+
+    quoted_chart_dir = shell_quote(chart_dir)
+    quoted_values_file = shell_quote(values_file)
+    quoted_output_dir = shell_quote(output_dir)
+    quoted_rendered_path = shell_quote(rendered_path)
+    quoted_release_label = shell_quote(release_label)
+
+    print(f"Verifying enterprise Helm package for preset '{preset_name}' as {release_label}...")
+    c.run(f"helm dependency build {quoted_chart_dir}")
+    c.run(f"helm lint {quoted_chart_dir} --values {quoted_values_file}")
+    c.run(
+        f"helm template mycelis-core {quoted_chart_dir} --namespace {NAMESPACE} --values {quoted_values_file} > {quoted_rendered_path}"
+    )
+    c.run(
+        f"helm package {quoted_chart_dir} --destination {quoted_output_dir} --app-version {quoted_release_label}"
+    )
+
+    if not rendered_path.exists():
+        raise SystemExit(f"Helm template verification did not produce the rendered bundle: {rendered_path}")
+    if not chart_package_path.exists():
+        raise SystemExit(f"Helm package verification did not produce the chart archive: {chart_package_path}")
+
+    rendered_checksum_path = write_checksum_file(rendered_path)
+    chart_checksum_path = write_checksum_file(chart_package_path)
+    write_json(
+        manifest_path,
+        {
+            "artifact_kind": "enterprise_helm_package",
+            "chart_archive_checksum_path": relative_to_root(chart_checksum_path, root_dir=base_root),
+            "chart_archive_path": relative_to_root(chart_package_path, root_dir=base_root),
+            "chart_version": chart_version,
+            "notes": [
+                "This slice verifies Helm dependency hydration, lint, template rendering, and chart packaging for a concrete enterprise preset.",
+                "Registry publication, signed provenance, and a full installer bundle remain follow-up work.",
+            ],
+            "preset": preset_name,
+            "release_label": release_label,
+            "rendered_bundle_checksum_path": relative_to_root(rendered_checksum_path, root_dir=base_root),
+            "rendered_bundle_path": relative_to_root(rendered_path, root_dir=base_root),
+            "status": "scaffold",
+            "values_file": relative_to_root(values_file, root_dir=base_root),
+        },
+    )
+    print(f"Packaged enterprise Helm verification bundle: {manifest_path}")
+    return manifest_path
 
 
 def _run_k8s_open_standard_static_checks() -> None:

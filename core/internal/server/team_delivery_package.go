@@ -28,8 +28,10 @@ func AssembleTeamSignalDeliveryPackage(teamID, runID, title string, items []arti
 	}
 
 	trimmedTeamID, resolvedRunID := strings.TrimSpace(teamID), strings.TrimSpace(runID)
+	collisions := DetectTeamPackageCollisions(items)
 	packageKind, posture := ClassifyTeamDeliveryPackageKind(items), ResolveTeamPackageVerificationPosture(items)
 	packageID := fmt.Sprintf("%s:%s", packageKind, firstNonEmptyString(trimmedTeamID, resolvedRunID, "team"))
+	applyTeamPackageCollisionGovernance(trimmedTeamID, resolvedRunID, collisions)
 
 	outputRefs := make([]protocol.OutputRef, 0, len(items))
 	outputs := make([]protocol.ExecutionOutput, 0, len(items))
@@ -59,6 +61,19 @@ func AssembleTeamSignalDeliveryPackage(teamID, runID, title string, items []arti
 		}
 
 		normalizedStatus := normalizeArtifactPostureStatus(item.Status)
+		normPath := NormalizeTeamPackageFilePath(item.FilePath)
+		if collidingAgents, hasCollision := collisions[normPath]; hasCollision {
+			normalizedStatus = VerificationPosturePendingReview
+			if teamRef.Proof != nil {
+				teamRef.Proof.PathBoundaryStatus = "collision_detected"
+				teamRef.Proof.ReadbackStatus = "degraded"
+				teamRef.Proof.RecoveryHint = fmt.Sprintf(
+					"Multi-agent write collision on %s across agents [%s]; assign disjoint file ownership before promoting.",
+					normPath,
+					strings.Join(collidingAgents, ", "),
+				)
+			}
+		}
 		teamRef.Status = normalizedStatus
 		if teamRef.Proof != nil {
 			teamRef.Proof.ExecutionStatus = normalizedStatus
@@ -163,7 +178,7 @@ func ResolveTeamPackageVerificationPosture(items []artifacts.Artifact) string {
 			hasPending = true
 		}
 	}
-	if hasPending {
+	if hasPending || len(DetectTeamPackageCollisions(items)) > 0 {
 		return VerificationPosturePendingReview
 	}
 	return VerificationPostureVerified
