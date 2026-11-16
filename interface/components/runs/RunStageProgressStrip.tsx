@@ -134,8 +134,14 @@ function stageBadgeClass(status: RunStageStatus): string {
     return "bg-cortex-surface text-cortex-text-muted/60 border-cortex-border";
 }
 
-export default function RunStageProgressStrip({ events }: { events: MissionEvent[] }) {
-    const stages = buildRunLifecycleStages(events);
+export default function RunStageProgressStrip({
+    events,
+    stages: stagesProp,
+}: {
+    events: MissionEvent[];
+    stages?: RunLifecycleStage[];
+}) {
+    const stages = stagesProp && stagesProp.length > 0 ? stagesProp : buildRunLifecycleStages(events);
     return (
         <div data-testid="run-stage-progress-strip" className="border-b border-cortex-border bg-cortex-surface/40 px-4 py-2.5">
             <div className="max-w-2xl mx-auto flex flex-wrap items-center gap-1.5">

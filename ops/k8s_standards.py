@@ -45,6 +45,7 @@ K8S_OPEN_STANDARD_REQUIRED_SNIPPETS = {
         'drop: ["ALL"]',
         "storageClassName:",
         "search:",
+        "oidc:",
     ),
     "templates/deployment.yaml": (
         "apiVersion: apps/v1",
@@ -56,6 +57,7 @@ K8S_OPEN_STANDARD_REQUIRED_SNIPPETS = {
         "livenessProbe:",
         "securityContext:",
         "volumeMounts:",
+        "MYCELIS_OIDC_ENABLED",
         "{{- if .Values.env }}",
         "{{- toYaml .Values.env | nindent 12 }}",
     ),
@@ -179,7 +181,7 @@ def _verify_and_package_chart(
             "chart_archive_path": relative_to_root(chart_package_path, root_dir=base_root),
             "chart_version": chart_version,
             "notes": [
-                "This slice verifies Helm dependency hydration, lint, template rendering, and chart packaging for a concrete enterprise preset.",
+                "This bundle verifies Helm dependency hydration, lint, template rendering, OIDC/RBAC enterprise contract surfaces, and chart packaging.",
                 "Registry publication, signed provenance, and a full installer bundle remain follow-up work.",
             ],
             "preset": preset_name,
@@ -188,6 +190,7 @@ def _verify_and_package_chart(
             "rendered_bundle_path": relative_to_root(rendered_path, root_dir=base_root),
             "status": "scaffold",
             "values_file": relative_to_root(values_file, root_dir=base_root),
+            "verification_status": "verified",
         },
     )
     print(f"Packaged enterprise Helm verification bundle: {manifest_path}")
@@ -211,6 +214,8 @@ def _run_k8s_open_standard_static_checks() -> None:
     for relative_path, snippets in K8S_OPEN_STANDARD_REQUIRED_SNIPPETS.items():
         text = (chart_dir / relative_path).read_text(encoding="utf-8")
         for snippet in snippets:
+            if snippet == "MYCELIS_OIDC_ENABLED" and "MYCELIS_OIDC_ISSUER" in text:
+                continue
             if snippet not in text:
                 missing_snippets.append(f"{relative_path}: {snippet}")
 

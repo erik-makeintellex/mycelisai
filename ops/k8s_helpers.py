@@ -13,12 +13,56 @@ from .k8s_standards import _shell_quote
 from .packaging import resolve_repo_path
 
 
+def _rancher_desktop_candidate_dirs() -> list[Path]:
+    home = Path.home()
+    local_app_data = Path(os.environ.get("LOCALAPPDATA", str(home / "AppData" / "Local")))
+    return [
+        home / "scoop" / "apps" / "rancher-desktop" / "current" / "resources" / "resources" / "win32" / "bin",
+        home / "scoop" / "apps" / "rancher-desktop" / "current" / "resources" / "resources" / "win32" / "docker-cli-plugins",
+        home / "scoop" / "apps" / "rancher-desktop" / "current" / "resources" / "resources" / "linux" / "bin",
+        Path(r"C:\Program Files\Rancher Desktop\resources\resources\win32\bin"),
+        local_app_data / "Programs" / "Rancher Desktop" / "resources" / "resources" / "win32" / "bin",
+    ]
+
+
+def _ensure_rancher_desktop_path() -> list[str]:
+    current_path = os.environ.get("PATH", "")
+    existing_entries = {entry.strip().lower() for entry in current_path.split(os.pathsep) if entry.strip()}
+    added: list[str] = []
+    for candidate in _rancher_desktop_candidate_dirs():
+        if candidate.is_dir():
+            norm = str(candidate).lower()
+            if norm not in existing_entries:
+                added.append(str(candidate))
+                existing_entries.add(norm)
+    if added:
+        os.environ["PATH"] = os.pathsep.join(([current_path] if current_path else []) + added)
+    return added
+
+
+def _rancher_desktop_context_available() -> bool:
+    try:
+        proc = subprocess.run(
+            ["kubectl", "config", "current-context"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        return proc.returncode == 0 and proc.stdout.strip() == "rancher-desktop"
+    except Exception:
+        return False
+
+
 def _cluster_list_has_name(output: str, backend: str) -> bool:
     for line in output.splitlines():
         stripped = line.strip()
         if not stripped:
             continue
-        if backend == "k3d":
+        if backend == "rancher-desktop":
+            if stripped.lstrip("*").strip().split()[0] == "rancher-desktop":
+                return True
+        elif backend == "k3d":
             if stripped.lower().startswith("name "):
                 continue
             if stripped.split()[0] == CLUSTER_NAME:
@@ -115,7 +159,13 @@ def _helm_deploy_release(
     c.run("helm dependency update ./charts/mycelis-core")
 
     print("   Loading Image into Cluster...")
-    if backend == "k3d":
+    if backend == "rancher-desktop":
+        c.run("kubectl config use-context rancher-desktop", hide=True, warn=True)
+        if os.getenv("MYCELIS_RANCHER_RUNTIME", "moby").strip().lower() == "containerd":
+            c.run(f"docker save mycelis/core:{tag} | nerdctl -n k8s.io load")
+        else:
+            print(f"   Rancher Desktop Moby runtime active: image mycelis/core:{tag} shared with cluster.")
+    elif backend == "k3d":
         c.run(f"k3d image import mycelis/core:{tag} -c {CLUSTER_NAME}")
     else:
         c.run(f"kind load docker-image mycelis/core:{tag} --name {CLUSTER_NAME}")
@@ -204,6 +254,7 @@ def _run_bridge_forwards(c) -> None:
 
 
 def _check_cluster_status(c, backend_fn) -> None:
+    _ensure_rancher_desktop_path()
     print(f"Checking Infrastructure Status for {CLUSTER_NAME}...")
     try:
         c.run("docker info", hide=True)
@@ -217,10 +268,18 @@ def _check_cluster_status(c, backend_fn) -> None:
 
     try:
         backend = backend_fn()
-        cluster_command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
+        if backend == "rancher-desktop":
+            cluster_command = "kubectl config get-contexts -o name"
+            label = "rancher-desktop"
+        elif backend == "k3d":
+            cluster_command = "k3d cluster list"
+            label = f"{backend} / {CLUSTER_NAME}"
+        else:
+            cluster_command = "kind get clusters"
+            label = f"{backend} / {CLUSTER_NAME}"
         cluster_info = c.run(cluster_command, hide=True, warn=True)
         if cluster_info and cluster_info.ok and _cluster_list_has_name(cluster_info.stdout, backend):
-            print(f"Local Kubernetes Cluster ({backend} / {CLUSTER_NAME}): Active")
+            print(f"Local Kubernetes Cluster ({label}): Active")
         else:
             print("Local Kubernetes Cluster: Not Found")
             return

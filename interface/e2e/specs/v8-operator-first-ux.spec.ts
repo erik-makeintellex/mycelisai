@@ -17,7 +17,24 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
     });
 
     test("renders Durable Files & Deliverables operator view on /resources when advancedMode is off and switches to Advanced Resources", async ({ page }) => {
+        let capturedRefinePrompt = "";
+        await page.route("**/api/v1/artifacts/art-ux-101/refine", async (route) => {
+            const payload = route.request().postDataJSON() as { prompt?: string };
+            capturedRefinePrompt = payload?.prompt ?? "";
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    ok: true,
+                    data: { id: "art-ux-101", status: "refined" },
+                }),
+            });
+        });
         await page.route("**/api/v1/artifacts**", async (route) => {
+            if (route.request().url().includes("/refine")) {
+                await route.fallback();
+                return;
+            }
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
@@ -58,6 +75,13 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
         const openBtn = page.getByTestId("open-deliverable-art-ux-101");
         await openBtn.click();
         await expect(page.getByTestId("durable-files-open-notice")).toContainText("workspace/deliverables/quarterly-launch-plan.md");
+
+        await page.getByTestId("refine-deliverable-art-ux-101").click();
+        await page.getByTestId("refine-input-art-ux-101").fill("Add Q4 enterprise KPI table");
+        await page.getByTestId("refine-submit-art-ux-101").click();
+        await expect(page.getByTestId("durable-files-open-notice")).toContainText("Refinement request sent to");
+        await expect(page.getByTestId("durable-files-open-notice")).toContainText("Add Q4 enterprise KPI table");
+        expect(capturedRefinePrompt).toBe("Add Q4 enterprise KPI table");
 
         const switchBtn = page.getByTestId("resources-switch-advanced-footer");
         await expect(switchBtn).toContainText("Switch to Advanced Mode to configure AI Engines & Connected MCP Tools");
@@ -108,6 +132,31 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
         });
         await page.route("**/api/v1/artifacts**", async (route) => {
             await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, data: [] }) });
+        });
+        await page.route("**/api/v1/memory/resolve-conflict", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    ok: true,
+                    id: "mem-cand-2",
+                    resolution: "keep",
+                    verification_status: "verified",
+                    contradicted: false,
+                }),
+            });
+        });
+        await page.route("**/api/v1/memory/promote", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    ok: true,
+                    id: "mem-cand-2",
+                    memory_layer: "GOVERNED_DOCTRINE",
+                    verification_status: "verified",
+                }),
+            });
         });
         await page.route("**/api/v1/memory/search**", async (route) => {
             await route.fulfill({
@@ -169,5 +218,14 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
 
         await page.getByText("Unverified reflection candidate suggesting auto-deploy on Fridays.").click();
         await expect(page.getByText("Contradicts higher-precedence Governed Doctrine mem-doctrine-1")).toBeVisible();
+
+        await expect(page.getByTestId("memory-promote-doctrine-btn")).toBeVisible();
+        await page.getByTestId("memory-resolve-keep-btn").click();
+        await expect(page.getByTestId("memory-governance-notice")).toContainText("Conflict resolved: record verified for active recall");
+
+        await page.getByText("Governed organization doctrine: all external deployments require release approval.").click();
+        await page.getByText("Unverified reflection candidate suggesting auto-deploy on Fridays.").click();
+        await page.getByTestId("memory-promote-doctrine-btn").click();
+        await expect(page.getByTestId("memory-governance-notice")).toContainText("Promoted to Governed Doctrine (Verified)");
     });
 });

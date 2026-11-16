@@ -9,8 +9,10 @@ from .k8s_helpers import (
     _check_cluster_status,
     _cluster_list_has_name,
     _deployment_posture,
+    _ensure_rancher_desktop_path,
     _helm_deploy_release,
     _port_open,
+    _rancher_desktop_context_available,
     _resolve_k8s_values_file,
     _run_bridge_forwards,
     _start_port_forward_detached,
@@ -29,17 +31,26 @@ from .version import get_version
 
 
 def _k8s_backend() -> str:
+    _ensure_rancher_desktop_path()
     requested = os.environ.get("MYCELIS_K8S_BACKEND", "auto").strip().lower()
-    if requested not in {"", "auto", "k3d", "kind"}:
-        raise SystemExit("Invalid MYCELIS_K8S_BACKEND. Use one of: auto, k3d, kind.")
+    if requested == "rancher":
+        requested = "rancher-desktop"
+    if requested not in {"", "auto", "rancher-desktop", "k3d", "kind"}:
+        raise SystemExit("Invalid MYCELIS_K8S_BACKEND. Use one of: auto, rancher-desktop, k3d, kind.")
 
     if requested in {"", "auto"}:
+        if shutil.which("rdctl") and _rancher_desktop_context_available():
+            return "rancher-desktop"
         if shutil.which("k3d"):
             return "k3d"
         if shutil.which("kind"):
             return "kind"
-        raise SystemExit("No supported local Kubernetes backend found. Install k3d or kind.")
+        if shutil.which("rdctl"):
+            return "rancher-desktop"
+        raise SystemExit("No supported local Kubernetes backend found. Install Rancher Desktop, k3d, or kind.")
 
+    if requested == "rancher-desktop" and not (shutil.which("rdctl") or shutil.which("kubectl")):
+        raise SystemExit("MYCELIS_K8S_BACKEND=rancher-desktop requires Rancher Desktop (rdctl/kubectl) on PATH.")
     if requested == "k3d" and not shutil.which("k3d"):
         raise SystemExit("MYCELIS_K8S_BACKEND=k3d requires k3d on PATH.")
     if requested == "kind" and not shutil.which("kind"):
@@ -49,7 +60,12 @@ def _k8s_backend() -> str:
 
 def _cluster_exists(c) -> bool:
     backend = _k8s_backend()
-    command = "k3d cluster list" if backend == "k3d" else "kind get clusters"
+    if backend == "rancher-desktop":
+        command = "kubectl config get-contexts -o name"
+    elif backend == "k3d":
+        command = "k3d cluster list"
+    else:
+        command = "kind get clusters"
     result = c.run(command, hide=True, warn=True)
     if not result or not result.ok:
         return False
@@ -90,7 +106,10 @@ def init(c):
     """
     backend = _k8s_backend()
     print(f"Initializing Local Kubernetes Cluster: {CLUSTER_NAME} ({backend})...")
-    if _cluster_exists(c):
+    if backend == "rancher-desktop":
+        c.run("kubectl config use-context rancher-desktop")
+        print("Cluster exists (rancher-desktop).")
+    elif _cluster_exists(c):
         print("Cluster exists.")
     else:
         if backend == "k3d":
@@ -254,7 +273,10 @@ def reset(c):
     print("Resetting Infrastructure...")
     backend = _k8s_backend()
     print("Stopping Local Kubernetes Cluster...")
-    if backend == "k3d":
+    if backend == "rancher-desktop":
+        c.run(f"helm uninstall mycelis-core -n {NAMESPACE}", warn=True)
+        c.run(f"kubectl delete namespace {NAMESPACE} --ignore-not-found")
+    elif backend == "k3d":
         c.run(f"k3d cluster delete {CLUSTER_NAME}")
     else:
         c.run(f"kind delete cluster --name {CLUSTER_NAME}")

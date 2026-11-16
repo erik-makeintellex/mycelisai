@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, RefreshCw, Zap } from "lucide-react";
 import type { MissionEvent } from "@/store/useCortexStore";
 import EventCard from "./EventCard";
-import RunStageProgressStrip from "./RunStageProgressStrip";
+import RunStageProgressStrip, { type RunLifecycleStage } from "./RunStageProgressStrip";
 
 // ── Terminal event types — stop polling ───────────────────────
 
@@ -58,6 +58,7 @@ interface Props {
 
 export default function RunTimeline({ runId }: Props) {
     const [events, setEvents] = useState<MissionEvent[]>([]);
+    const [serverStages, setServerStages] = useState<RunLifecycleStage[] | undefined>(undefined);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [startedAt, setStartedAt] = useState<string | null>(null);
@@ -78,6 +79,27 @@ export default function RunTimeline({ runId }: Props) {
             setError(null);
             if (list.length > 0 && !startedAt) {
                 setStartedAt(list[0].emitted_at);
+            }
+            try {
+                const stageRes = await fetch(`/api/v1/runs/${runId}/stages`);
+                if (stageRes.ok) {
+                    const stageBody = await stageRes.json();
+                    const rawStages = stageBody?.data?.stages ?? stageBody?.stages;
+                    if (Array.isArray(rawStages) && rawStages.length > 0) {
+                        setServerStages(
+                            rawStages.map((s) => ({
+                                id: s.id ?? s.stage,
+                                label: s.label,
+                                status: s.status,
+                                timestamp: s.timestamp,
+                                summary: s.summary ?? s.detail,
+                                actor: s.actor,
+                            })),
+                        );
+                    }
+                }
+            } catch {
+                // Best-effort stage projection fetch
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : "Network error");
@@ -159,7 +181,7 @@ export default function RunTimeline({ runId }: Props) {
             </div>
 
             {/* V8.3 9-Stage Lifecycle Progress Strip */}
-            <RunStageProgressStrip events={events} />
+            <RunStageProgressStrip events={events} stages={serverStages} />
 
             {/* Body */}
             <div className="max-w-2xl mx-auto px-4 py-6">

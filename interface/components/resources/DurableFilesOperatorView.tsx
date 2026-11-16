@@ -210,7 +210,17 @@ export default function DurableFilesOperatorView() {
                                             <button
                                                 type="button"
                                                 data-testid={`refine-submit-${item.id}`}
-                                                onClick={() => {
+                                                onClick={async () => {
+                                                    try {
+                                                        await fetch(`/api/v1/artifacts/${encodeURIComponent(item.id)}/refine`, {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ prompt: refinePrompt }),
+                                                        });
+                                                        fetchArtifacts?.({ limit: 50 });
+                                                    } catch {
+                                                        // Fallback to optimistic refinement notice
+                                                    }
                                                     setOpenedNotice(`Refinement request sent to ${assistantName} for ${item.title}: "${refinePrompt}"`);
                                                     setRefineId(null);
                                                     setRefinePrompt("");
