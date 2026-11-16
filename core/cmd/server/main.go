@@ -33,10 +33,7 @@ func main() {
 		log.Fatal("FATAL: MYCELIS_API_KEY not set. Server refuses to start without authentication.")
 	}
 
-	natsURL := os.Getenv("NATS_URL")
-	if natsURL == "" {
-		natsURL = nats.DefaultURL // nats://localhost:4222
-	}
+	natsURL := resolveNATSURL(nats.DefaultURL)
 
 	core := startCoreRuntime(ctx, natsURL)
 	defer core.DrainNATS()
@@ -49,10 +46,7 @@ func main() {
 		port = "8080"
 	}
 
-	corsOrigin := os.Getenv("CORS_ORIGIN")
-	if corsOrigin == "" {
-		corsOrigin = "http://localhost:3000"
-	}
+	corsOrigin := envOrDefault("MYCELIS_SERVICE_CORS_ORIGIN", envOrDefault("CORS_ORIGIN", "http://localhost:3000"))
 
 	srv := newHTTPServer(port, apiKey, corsOrigin, mux)
 	startGracefulShutdown(ctx, srv, product)

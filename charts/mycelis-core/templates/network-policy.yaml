@@ -59,4 +59,16 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+
+    {{- if or (not (hasKey .Values.networkPolicy "allowExternalServicePorts")) .Values.networkPolicy.allowExternalServicePorts }}
+    # 5. Allow configured backend/external service ports (AI host, external DB/NATS, SearXNG, HTTP/SSE MCP)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        {{- range $port := (default (list 80 443 4222 5432 8000 8001 8080 11434 11435) .Values.networkPolicy.allowedEgressPorts) }}
+        - protocol: TCP
+          port: {{ $port }}
+        {{- end }}
+    {{- end }}
 {{- end }}

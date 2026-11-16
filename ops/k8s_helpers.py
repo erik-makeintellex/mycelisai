@@ -172,13 +172,14 @@ def _helm_deploy_release(
 
     print("   Applying Helm Chart...")
     load_dotenv(os.path.join(root_dir, ".env"))
-
     pg_user = os.getenv("POSTGRES_USER", "mycelis")
     pg_pass = os.getenv("POSTGRES_PASSWORD", "password")
     pg_db = os.getenv("POSTGRES_DB", "cortex")
     api_key = os.getenv("MYCELIS_API_KEY", "")
     k8s_text_endpoint = os.getenv("MYCELIS_K8S_TEXT_ENDPOINT", "").strip()
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
+    k8s_nats_url = os.getenv("MYCELIS_K8S_NATS_URL", "").strip()
+    k8s_db_host = os.getenv("MYCELIS_K8S_DB_HOST", "").strip()
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
     if values_file and "windows-ai" in values_file.name.lower() and not k8s_text_endpoint:
@@ -186,7 +187,6 @@ def _helm_deploy_release(
             "MYCELIS_K8S_TEXT_ENDPOINT must be set when deploying the enterprise Windows AI preset. "
             "Point it at the Windows GPU host, for example http://192.168.50.156:11434/v1."
         )
-
     print(f"   Injecting Secrets for DB User: {pg_user}")
     print(f"   Deployment posture: {_deployment_posture(backend, values_file)}")
     if k8s_text_endpoint:
@@ -195,7 +195,6 @@ def _helm_deploy_release(
         print(f"   Media AI endpoint: {k8s_media_endpoint}")
     if values_file:
         print(f"   Helm values file: {values_file}")
-
     cmd = (
         "helm upgrade --install mycelis-core ./charts/mycelis-core "
         f"--namespace {NAMESPACE} --create-namespace "
@@ -211,6 +210,10 @@ def _helm_deploy_release(
         cmd += f"--set-string ai.textEndpoint={shell_quote(k8s_text_endpoint)} "
     if k8s_media_endpoint:
         cmd += f"--set-string ai.mediaEndpoint={shell_quote(k8s_media_endpoint)} "
+    if k8s_nats_url:
+        cmd += f"--set-string serviceAddresses.natsUrl={shell_quote(k8s_nats_url)} "
+    if k8s_db_host:
+        cmd += f"--set-string serviceAddresses.dbHost={shell_quote(k8s_db_host)} "
     cmd += "--wait"
     c.run(cmd)
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")

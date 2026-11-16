@@ -65,9 +65,19 @@ spec:
             - name: PORT
               value: "{{ .Values.service.port }}"
             - name: NATS_URL
-              value: "nats://{{ .Release.Name }}-nats:4222"
+              value: {{ if and .Values.serviceAddresses .Values.serviceAddresses.natsUrl }}{{ .Values.serviceAddresses.natsUrl | quote }}{{ else }}"nats://{{ .Release.Name }}-nats:4222"{{ end }}
             - name: DB_HOST
-              value: "{{ .Release.Name }}-postgresql"
+              value: {{ if and .Values.serviceAddresses .Values.serviceAddresses.dbHost }}{{ .Values.serviceAddresses.dbHost | quote }}{{ else }}"{{ .Release.Name }}-postgresql"{{ end }}
+            - name: DB_PORT
+              value: {{ if and .Values.serviceAddresses .Values.serviceAddresses.dbPort }}{{ .Values.serviceAddresses.dbPort | quote }}{{ else }}"5432"{{ end }}
+            {{- if and .Values.serviceAddresses .Values.serviceAddresses.mcpGateway }}
+            - name: MYCELIS_SERVICE_MCP_GATEWAY_ADDRESS
+              value: {{ .Values.serviceAddresses.mcpGateway | quote }}
+            {{- end }}
+            {{- if and .Values.serviceAddresses .Values.serviceAddresses.corsOrigin }}
+            - name: CORS_ORIGIN
+              value: {{ .Values.serviceAddresses.corsOrigin | quote }}
+            {{- end }}
             - name: DB_USER
               valueFrom:
                 secretKeyRef:

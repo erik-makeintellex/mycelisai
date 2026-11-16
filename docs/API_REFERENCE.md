@@ -142,7 +142,8 @@
 | `/api/v1/context/snapshots` | GET | List 20 most recent snapshots (no messages payload) |
 | `/api/v1/context/snapshots/{id}` | GET | Full snapshot including messages array |
 | **Service Health** | | |
-| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Comms, Group Bus monitor |
+| `/api/v1/services/status` | GET | Aggregate health — NATS, PostgreSQL (with latency), Cognitive, Reactive, Comms, Group Bus monitor, plus resolved backend service `address` and cluster `warning` |
+| `/api/v1/services/addresses` | GET | Canonical `ServiceAddressBook` (`nats`, `postgres`, `text_ai`, `media_ai`, `search`, `mcp_gateway`, `cors_origin`) with precedence source and Kubernetes loopback warnings |
 
 Memory/governance note:
 - `AGENT_MEMORY` is the canonical team-shared execution lane

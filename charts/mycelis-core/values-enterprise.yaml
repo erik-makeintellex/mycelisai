@@ -31,6 +31,27 @@ ingress:
 coreAuth:
   existingSecret: mycelis-core-auth
 
+networkPolicy:
+  enabled: true
+  allowExternalServicePorts: true
+  allowedEgressPorts:
+    - 80
+    - 443
+    - 4222
+    - 5432
+    - 8000
+    - 8001
+    - 8080
+    - 11434
+    - 11435
+
+serviceAddresses:
+  natsUrl: ""
+  dbHost: ""
+  dbPort: "5432"
+  mcpGateway: ""
+  corsOrigin: ""
+
 oidc:
   issuer: ""
   audience: "mycelis-core"

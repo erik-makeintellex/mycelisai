@@ -12,15 +12,19 @@ type ServiceStatus struct {
 	Name      string `json:"name"`
 	Status    string `json:"status"` // "online" | "offline" | "degraded"
 	Detail    string `json:"detail,omitempty"`
+	Address   string `json:"address,omitempty"`
+	Warning   string `json:"warning,omitempty"`
 	LatencyMs int64  `json:"latency_ms,omitempty"`
 }
 
 // GET /api/v1/services/status — health snapshot of all system services.
 func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Request) {
 	var services []ServiceStatus
+	addressBook := ResolveServiceAddressBook(s.Cognitive)
 
 	// ── NATS ─────────────────────────────────────────────────────────────
-	natsStatus := ServiceStatus{Name: "nats"}
+	natsEntry, _ := addressBook.EntryFor("nats")
+	natsStatus := ServiceStatus{Name: "nats", Address: natsEntry.Address, Warning: natsEntry.LoopbackWarning}
 	if s.Reactive != nil && s.Reactive.Connected() {
 		natsStatus.Status = "online"
 		natsStatus.Detail = "JetStream connected"
@@ -31,7 +35,8 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	services = append(services, natsStatus)
 
 	// ── PostgreSQL ────────────────────────────────────────────────────────
-	dbStatus := ServiceStatus{Name: "postgres"}
+	pgEntry, _ := addressBook.EntryFor("postgres")
+	dbStatus := ServiceStatus{Name: "postgres", Address: pgEntry.Address, Warning: pgEntry.LoopbackWarning}
 	if s.DB != nil {
 		start := time.Now()
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
@@ -79,7 +84,8 @@ func (s *AdminServer) HandleServicesStatus(w http.ResponseWriter, r *http.Reques
 	services = append(services, cogStatus)
 
 	// ── Local Ollama (Ollama-first runtime contract) ─────────────────────────
-	ollamaStatus := ServiceStatus{Name: "ollama"}
+	textEntry, _ := addressBook.EntryFor("text_ai")
+	ollamaStatus := ServiceStatus{Name: "ollama", Address: textEntry.Address, Warning: textEntry.LoopbackWarning}
 	if s.Cognitive == nil || s.Cognitive.Config == nil {
 		ollamaStatus.Status = "offline"
 		ollamaStatus.Detail = "Cognitive router not initialised"

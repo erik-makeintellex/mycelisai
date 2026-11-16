@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"strings"
 
@@ -28,13 +30,49 @@ type localAuthRuntimeConfig struct {
 }
 
 func resolveDatabaseConfig() databaseRuntimeConfig {
-	return databaseRuntimeConfig{
+	cfg := databaseRuntimeConfig{
 		Host:     envOrDefault("DB_HOST", "mycelis-core-postgresql"),
 		Port:     envOrDefault("DB_PORT", "5432"),
 		User:     envOrDefault("DB_USER", "mycelis"),
 		Password: envOrDefault("DB_PASSWORD", "password"),
 		Name:     envOrDefault("DB_NAME", "cortex"),
 	}
+	if rawAddr := strings.TrimSpace(os.Getenv("MYCELIS_SERVICE_DB_ADDRESS")); rawAddr != "" {
+		host, port := parseServiceHostPort(rawAddr)
+		if host != "" {
+			cfg.Host = host
+		}
+		if port != "" && strings.TrimSpace(os.Getenv("DB_PORT")) == "" {
+			cfg.Port = port
+		}
+	}
+	return cfg
+}
+
+func parseServiceHostPort(raw string) (string, string) {
+	trimmed := strings.TrimSpace(raw)
+	if strings.Contains(trimmed, "://") {
+		if parsed, err := url.Parse(trimmed); err == nil && parsed.Host != "" {
+			return parsed.Hostname(), parsed.Port()
+		}
+	}
+	if host, port, err := net.SplitHostPort(trimmed); err == nil {
+		return strings.TrimSpace(host), strings.TrimSpace(port)
+	}
+	return strings.Trim(trimmed, "[]"), ""
+}
+
+func resolveNATSURL(defaultURL string) string {
+	if addr := strings.TrimSpace(os.Getenv("MYCELIS_SERVICE_NATS_ADDRESS")); addr != "" {
+		return addr
+	}
+	if addr := strings.TrimSpace(os.Getenv("NATS_URL")); addr != "" {
+		return addr
+	}
+	if strings.TrimSpace(defaultURL) != "" {
+		return strings.TrimSpace(defaultURL)
+	}
+	return "nats://localhost:4222"
 }
 
 func (cfg databaseRuntimeConfig) connectionString() string {

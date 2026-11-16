@@ -212,3 +212,54 @@ def test_k8s_rancher_desktop_init_deploy_and_reset(monkeypatch, capsys):
     k8s.reset.body(ctx)
     assert "helm uninstall mycelis-core -n mycelis" in ctx.commands
     assert "kubectl delete namespace mycelis --ignore-not-found" in ctx.commands
+
+
+def test_k8s_deploy_forwards_service_address_env_overrides(monkeypatch):
+    from ops import k8s
+
+    ctx = FakeContext()
+    monkeypatch.setattr(k8s, "_k8s_backend", lambda: "rancher-desktop")
+    monkeypatch.setattr(k8s.core_build, "body", lambda _ctx: "v0.8.7-rancher")
+    monkeypatch.setenv("POSTGRES_USER", "mycelis")
+    monkeypatch.setenv("POSTGRES_PASSWORD", "password")
+    monkeypatch.setenv("POSTGRES_DB", "cortex")
+    monkeypatch.setenv("MYCELIS_API_KEY", "dev-key")
+    monkeypatch.setenv("MYCELIS_K8S_NATS_URL", "nats://host.rancher-desktop.internal:4222")
+    monkeypatch.setenv("MYCELIS_K8S_DB_HOST", "host.rancher-desktop.internal")
+
+    k8s.deploy.body(ctx)
+
+    helm_command = next(command for command in ctx.commands if command.startswith("helm upgrade --install"))
+    assert (
+        f"--set-string serviceAddresses.natsUrl={k8s._shell_quote('nats://host.rancher-desktop.internal:4222')}"
+        in helm_command
+    )
+    assert (
+        f"--set-string serviceAddresses.dbHost={k8s._shell_quote('host.rancher-desktop.internal')}"
+        in helm_command
+    )
+
+
+def test_chart_defines_service_addresses_and_allowed_egress_ports():
+    chart_dir = Path(__file__).resolve().parents[1] / "charts" / "mycelis-core"
+    values_text = (chart_dir / "values.yaml").read_text(encoding="utf-8")
+    values_enterprise_text = (chart_dir / "values-enterprise.yaml").read_text(encoding="utf-8")
+    deployment_text = (chart_dir / "templates" / "deployment.yaml").read_text(encoding="utf-8")
+    network_policy_text = (chart_dir / "templates" / "network-policy.yaml").read_text(encoding="utf-8")
+
+    for text in (values_text, values_enterprise_text):
+        assert "serviceAddresses:" in text
+        assert "allowExternalServicePorts: true" in text
+        assert "allowedEgressPorts:" in text
+        assert "- 11434" in text
+        assert "- 11435" in text
+
+    assert ".Values.serviceAddresses.natsUrl" in deployment_text
+    assert ".Values.serviceAddresses.dbHost" in deployment_text
+    assert ".Values.serviceAddresses.dbPort" in deployment_text
+    assert "MYCELIS_SERVICE_MCP_GATEWAY_ADDRESS" in deployment_text
+    assert "CORS_ORIGIN" in deployment_text
+    assert "allowExternalServicePorts" in network_policy_text
+    assert "allowedEgressPorts" in network_policy_text
+    assert "11434" in network_policy_text
+    assert "11435" in network_policy_text
