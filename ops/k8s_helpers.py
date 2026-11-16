@@ -178,6 +178,7 @@ def _helm_deploy_release(
         cmd += f"--values {shell_quote(values_file)} "
     elif backend == "rancher-desktop":
         cmd += (
+            "--set service.type=LoadBalancer "
             "--set dataVolume.storageClassName=local-path "
             "--set nats.jetstream.fileStore.pvc.storageClassName=local-path "
             "--set postgresql.primary.persistence.storageClass=local-path "

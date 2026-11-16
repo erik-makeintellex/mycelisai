@@ -184,6 +184,8 @@ export interface ServiceHealthStatus {
     status: 'online' | 'offline' | 'degraded';
     detail?: string;
     latency_ms?: number;
+    address?: string;
+    warning?: string;
 }
 
 export interface SearchCapabilityBlocker {

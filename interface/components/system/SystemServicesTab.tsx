@@ -3,12 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { AlertTriangle, Check, CheckCircle, Copy, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { useCortexStore, type ServiceHealthStatus } from "@/store/useCortexStore";
+import ServiceAddressBookPanel from "./ServiceAddressBookPanel";
 
 const SERVICE_LABELS: Record<string, string> = {
     nats: "NATS JetStream",
     postgres: "PostgreSQL + pgvector",
     cognitive: "Cognitive Engine",
+    ollama: "Local AI Provider (Ollama)",
     reactive: "Reactive Engine",
+    comms: "External Notifications (Optional)",
     groups_bus: "Group Collaboration Bus",
 };
 
@@ -100,6 +103,16 @@ function ServiceCard({ svc }: { svc: ServiceHealthStatus }) {
             {svc.detail && (
                 <p className="text-xs text-cortex-text-muted">{svc.detail}</p>
             )}
+            {svc.address && (
+                <p data-testid={`service-card-address-${svc.name}`} className="text-[11px] font-mono text-cortex-primary truncate" title={svc.address}>
+                    addr: {svc.address}
+                </p>
+            )}
+            {svc.warning && (
+                <p data-testid={`service-card-warning-${svc.name}`} className="text-[10px] font-mono text-cortex-warning">
+                    {svc.warning}
+                </p>
+            )}
             {svc.latency_ms !== undefined && svc.latency_ms > 0 && (
                 <p className="text-[10px] text-cortex-text-muted font-mono">{svc.latency_ms}ms latency</p>
             )}
@@ -175,6 +188,8 @@ export default function SystemServicesTab() {
                     {services.map((svc) => <ServiceCard key={svc.name} svc={svc} />)}
                 </div>
             )}
+
+            <ServiceAddressBookPanel />
 
             <div className="rounded-lg border border-cortex-border bg-cortex-surface/50 p-4 space-y-2">
                 <h4 className="text-[10px] uppercase tracking-wider text-cortex-text-muted font-semibold">Lifecycle Commands</h4>

@@ -186,8 +186,9 @@ func resolveMediaAIServiceAddress(cog *cognitive.Router) (string, string) {
 		return addr, src
 	}
 	if cog != nil && cog.Config != nil && cog.Config.Media != nil {
-		if ep := strings.TrimSpace(cog.Config.Media.EffectiveProvider().Endpoint); ep != "" {
-			return ep, "cognitive.media"
+		mp := cog.Config.Media.EffectiveProvider()
+		if mp.IsEnabled() && strings.TrimSpace(mp.Endpoint) != "" {
+			return strings.TrimSpace(mp.Endpoint), "cognitive.media"
 		}
 	}
 	return "", "unconfigured"

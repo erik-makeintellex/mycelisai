@@ -8,7 +8,9 @@ const HUMAN_SERVICE_LABELS: Record<string, string> = {
     nats: "Event Bus & Team Coordination",
     postgres: "Workspace Memory & Storage",
     cognitive: "AI Reasoning Engine",
+    ollama: "Local AI Provider (Ollama)",
     reactive: "Automation & Trigger Engine",
+    comms: "External Notifications (Optional)",
     groups_bus: "Group Collaboration Bus",
 };
 
@@ -25,7 +27,8 @@ export default function SystemStatusSummaryCard() {
 
     const total = services.length;
     const online = services.filter((s: ServiceHealthStatus) => s.status === "online").length;
-    const allOnline = total > 0 && online === total;
+    const coreServices = services.filter((s: ServiceHealthStatus) => s.name !== "comms");
+    const allOnline = total > 0 && (online === total || (coreServices.length > 0 && coreServices.every((s: ServiceHealthStatus) => s.status === "online")));
     const anyOnline = online > 0;
 
     const headline = loading && total === 0
@@ -101,15 +104,27 @@ export default function SystemStatusSummaryCard() {
                             return (
                                 <div
                                     key={svc.name}
-                                    className={`flex items-center justify-between rounded-lg border px-3 py-2 text-xs ${tone}`}
+                                    data-testid={`system-summary-service-${svc.name}`}
+                                    className={`flex flex-col gap-1 rounded-lg border px-3 py-2 text-xs ${tone}`}
                                 >
-                                    <span className="font-medium text-cortex-text-main">
-                                        {HUMAN_SERVICE_LABELS[svc.name] ?? svc.name}
-                                    </span>
-                                    <span className="inline-flex items-center gap-1 font-mono uppercase text-[10px]">
-                                        <Icon className="w-3.5 h-3.5" />
-                                        {svc.status}
-                                    </span>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="font-medium text-cortex-text-main">
+                                            {HUMAN_SERVICE_LABELS[svc.name] ?? svc.name}
+                                        </span>
+                                        <span className="inline-flex items-center gap-1 font-mono uppercase text-[10px]">
+                                            <Icon className="w-3.5 h-3.5" />
+                                            {svc.status}
+                                        </span>
+                                    </div>
+                                    {svc.address && (
+                                        <span
+                                            data-testid={`system-summary-address-${svc.name}`}
+                                            className="font-mono text-[10px] text-cortex-text-muted truncate"
+                                            title={svc.address}
+                                        >
+                                            {svc.address}
+                                        </span>
+                                    )}
                                 </div>
                             );
                         })}
