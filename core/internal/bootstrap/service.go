@@ -29,6 +29,9 @@ func NewService(db *sql.DB, nc *nats.Conn) *Service {
 
 // processAnnouncement handles the core logic independent of NATS
 func (s *Service) processAnnouncement(data []byte) error {
+	if s == nil || s.db == nil {
+		return nil
+	}
 	var payload struct {
 		ID    string          `json:"id"`
 		Type  string          `json:"type"`
@@ -57,6 +60,9 @@ func (s *Service) processAnnouncement(data []byte) error {
 
 // processHeartbeat handles agent pulses via Protobuf
 func (s *Service) processHeartbeat(data []byte) error {
+	if s == nil || s.db == nil {
+		return nil
+	}
 	var env pb.MsgEnvelope
 	if err := proto.Unmarshal(data, &env); err != nil {
 		log.Printf("Bootstrap: Failed to unmarshal Heartbeat: %v", err)
@@ -112,6 +118,11 @@ func (s *Service) Start() {
 // HandlePendingNodes returns list of unassigned nodes
 // GET /api/v1/nodes/pending
 func (s *Service) HandlePendingNodes(w http.ResponseWriter, r *http.Request) {
+	if s == nil || s.db == nil {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("[]"))
+		return
+	}
 	rows, err := s.db.Query("SELECT id, type, status, last_seen, specs FROM nodes WHERE status = 'pending'")
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)

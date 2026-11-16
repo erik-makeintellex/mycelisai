@@ -153,6 +153,8 @@ env:
     value: "/data/artifacts"
   - name: MYCELIS_WORKSPACE
     value: "/data/workspace"
+  - name: MYCELIS_DISABLE_DEFAULT_MCP_BOOTSTRAP
+    value: "true"
 
 # NATS JetStream Configuration
 nats:

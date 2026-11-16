@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -33,7 +35,7 @@ func startCoreRuntime(ctx context.Context, natsURL string) *coreRuntime {
 	dbConfig := resolveDatabaseConfig()
 	dbURL := dbConfig.connectionString()
 
-	sharedDB := openSharedDB(ctx, dbURL)
+	sharedDB := openSharedDB(ctx, dbConfig, dbURL)
 	cogRouter := loadCognitiveRouter(sharedDB)
 	guard := loadGovernanceGuard()
 	memService := startMemoryService(ctx, dbURL)
@@ -62,7 +64,28 @@ func (rt *coreRuntime) DrainNATS() {
 	}
 }
 
-func openSharedDB(ctx context.Context, dbURL string) *sql.DB {
+func ensureTargetDatabaseExists(ctx context.Context, cfg databaseRuntimeConfig) {
+	for _, maintDB := range []string{"postgres", cfg.User} {
+		if strings.TrimSpace(maintDB) == "" || maintDB == cfg.Name {
+			continue
+		}
+		maintURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, maintDB)
+		adminDB, err := sql.Open("pgx", maintURL)
+		if err != nil {
+			continue
+		}
+		execCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		_, execErr := adminDB.ExecContext(execCtx, fmt.Sprintf(`CREATE DATABASE "%s"`, strings.ReplaceAll(cfg.Name, `"`, `""`)))
+		cancel()
+		_ = adminDB.Close()
+		if execErr == nil {
+			log.Printf("[db] created missing database %q via maintenance database %q", cfg.Name, maintDB)
+			return
+		}
+	}
+}
+
+func openSharedDB(ctx context.Context, dbConfig databaseRuntimeConfig, dbURL string) *sql.DB {
 	sharedDB, err := sql.Open("pgx", dbURL)
 	if err != nil {
 		log.Printf("WARN: Shared DB Init Failed: %v - running without persistence.", err)
@@ -79,8 +102,14 @@ func openSharedDB(ctx context.Context, dbURL string) *sql.DB {
 		pingErr = sharedDB.PingContext(pingCtx)
 		pingCancel()
 		if pingErr == nil {
+			extCtx, extCancel := context.WithTimeout(ctx, 3*time.Second)
+			_, _ = sharedDB.ExecContext(extCtx, "CREATE EXTENSION IF NOT EXISTS vector")
+			extCancel()
 			log.Println("Shared Database Connection Active.")
 			break
+		}
+		if strings.Contains(pingErr.Error(), "does not exist") || strings.Contains(pingErr.Error(), "3D000") {
+			ensureTargetDatabaseExists(ctx, dbConfig)
 		}
 		if i == 1 || i%10 == 0 {
 			log.Printf("[db] waiting for PostgreSQL (attempt %d/45): %v", i, pingErr)

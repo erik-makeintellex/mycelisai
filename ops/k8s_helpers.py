@@ -123,7 +123,7 @@ def _helm_deploy_release(
 ) -> None:
     print(f"Deploying Release: [{tag}]")
     print("Building Helm Dependencies...")
-    c.run("helm dependency update ./charts/mycelis-core")
+    c.run("helm dependency update ./charts/mycelis-core", warn=True)
 
     print("   Loading Image into Cluster...")
     if backend == "rancher-desktop":
@@ -176,6 +176,14 @@ def _helm_deploy_release(
     )
     if values_file:
         cmd += f"--values {shell_quote(values_file)} "
+    elif backend == "rancher-desktop":
+        cmd += (
+            "--set dataVolume.storageClassName=local-path "
+            "--set nats.jetstream.fileStore.pvc.storageClassName=local-path "
+            "--set postgresql.primary.persistence.storageClass=local-path "
+        )
+        if not k8s_text_endpoint:
+            k8s_text_endpoint = "http://host.rancher-desktop.internal:11434/v1"
     if k8s_text_endpoint:
         cmd += f"--set-string ai.textEndpoint={shell_quote(k8s_text_endpoint)} "
     if k8s_media_endpoint:
