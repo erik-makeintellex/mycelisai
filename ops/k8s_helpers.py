@@ -9,58 +9,25 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from .config import CLUSTER_NAME, NAMESPACE, ROOT_DIR, is_windows
+from .k8s_rancher import (
+    _ensure_rancher_desktop_path,
+    _rancher_desktop_candidate_dirs,
+    _rancher_desktop_context_available,
+    rancher_target_context,
+    rancher_target_url,
+)
 from .k8s_standards import _shell_quote
 from .packaging import resolve_repo_path
 
 
-def _rancher_desktop_candidate_dirs() -> list[Path]:
-    home = Path.home()
-    local_app_data = Path(os.environ.get("LOCALAPPDATA", str(home / "AppData" / "Local")))
-    return [
-        home / "scoop" / "apps" / "rancher-desktop" / "current" / "resources" / "resources" / "win32" / "bin",
-        home / "scoop" / "apps" / "rancher-desktop" / "current" / "resources" / "resources" / "win32" / "docker-cli-plugins",
-        home / "scoop" / "apps" / "rancher-desktop" / "current" / "resources" / "resources" / "linux" / "bin",
-        Path(r"C:\Program Files\Rancher Desktop\resources\resources\win32\bin"),
-        local_app_data / "Programs" / "Rancher Desktop" / "resources" / "resources" / "win32" / "bin",
-    ]
-
-
-def _ensure_rancher_desktop_path() -> list[str]:
-    current_path = os.environ.get("PATH", "")
-    existing_entries = {entry.strip().lower() for entry in current_path.split(os.pathsep) if entry.strip()}
-    added: list[str] = []
-    for candidate in _rancher_desktop_candidate_dirs():
-        if candidate.is_dir():
-            norm = str(candidate).lower()
-            if norm not in existing_entries:
-                added.append(str(candidate))
-                existing_entries.add(norm)
-    if added:
-        os.environ["PATH"] = os.pathsep.join(([current_path] if current_path else []) + added)
-    return added
-
-
-def _rancher_desktop_context_available() -> bool:
-    try:
-        proc = subprocess.run(
-            ["kubectl", "config", "current-context"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
-        return proc.returncode == 0 and proc.stdout.strip() == "rancher-desktop"
-    except Exception:
-        return False
-
-
 def _cluster_list_has_name(output: str, backend: str) -> bool:
+    target_ctx = rancher_target_context()
     for line in output.splitlines():
         stripped = line.strip()
         if not stripped:
             continue
         if backend == "rancher-desktop":
-            if stripped.lstrip("*").strip().split()[0] == "rancher-desktop":
+            if stripped.lstrip("*").strip().split()[0] in {"rancher-desktop", target_ctx}:
                 return True
         elif backend == "k3d":
             if stripped.lower().startswith("name "):
@@ -160,7 +127,10 @@ def _helm_deploy_release(
 
     print("   Loading Image into Cluster...")
     if backend == "rancher-desktop":
-        c.run("kubectl config use-context rancher-desktop", hide=True, warn=True)
+        target_ctx = rancher_target_context()
+        target_url = rancher_target_url()
+        c.run(f"kubectl config use-context {target_ctx}", hide=True, warn=True)
+        print(f"   Target Rancher cluster: {target_ctx} ({target_url})")
         if os.getenv("MYCELIS_RANCHER_RUNTIME", "moby").strip().lower() == "containerd":
             c.run(f"docker save mycelis/core:{tag} | nerdctl -n k8s.io load")
         else:

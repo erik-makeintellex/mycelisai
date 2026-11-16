@@ -39,7 +39,7 @@ def _k8s_backend() -> str:
         raise SystemExit("Invalid MYCELIS_K8S_BACKEND. Use one of: auto, rancher-desktop, k3d, kind.")
 
     if requested in {"", "auto"}:
-        if shutil.which("rdctl") and _rancher_desktop_context_available():
+        if (shutil.which("kubectl") or shutil.which("rdctl")) and _rancher_desktop_context_available():
             return "rancher-desktop"
         if shutil.which("k3d"):
             return "k3d"
@@ -104,11 +104,13 @@ def init(c):
     Initialize Infrastructure Layer.
     Creates the preferred local Kubernetes cluster and applies persistent infra (NATS, DBs).
     """
+    from .k8s_rancher import rancher_target_context, rancher_target_url
     backend = _k8s_backend()
     print(f"Initializing Local Kubernetes Cluster: {CLUSTER_NAME} ({backend})...")
     if backend == "rancher-desktop":
-        c.run("kubectl config use-context rancher-desktop")
-        print("Cluster exists (rancher-desktop).")
+        target_ctx = rancher_target_context()
+        c.run(f"kubectl config use-context {target_ctx}")
+        print(f"Cluster exists ({target_ctx} @ {rancher_target_url()}).")
     elif _cluster_exists(c):
         print("Cluster exists.")
     else:

@@ -263,3 +263,24 @@ def test_chart_defines_service_addresses_and_allowed_egress_ports():
     assert "allowedEgressPorts" in network_policy_text
     assert "11434" in network_policy_text
     assert "11435" in network_policy_text
+
+
+def test_platform_neutral_rancher_target_defaults_to_localhost_and_kubectl(monkeypatch):
+    from ops import k8s, k8s_rancher
+
+    monkeypatch.delenv("MYCELIS_K8S_BACKEND", raising=False)
+    monkeypatch.delenv("MYCELIS_RANCHER_URL", raising=False)
+    monkeypatch.delenv("MYCELIS_K8S_SERVER", raising=False)
+    monkeypatch.delenv("MYCELIS_K8S_CONTEXT", raising=False)
+    assert k8s_rancher.rancher_target_url() == "https://127.0.0.1:6443"
+    assert k8s_rancher.rancher_target_context() == "rancher-desktop"
+
+    monkeypatch.setattr(k8s, "_ensure_rancher_desktop_path", lambda: [])
+    monkeypatch.setattr(k8s, "_rancher_desktop_context_available", lambda: True)
+    monkeypatch.setattr(
+        k8s.shutil,
+        "which",
+        lambda name: f"/usr/bin/{name}" if name in {"kubectl", "k3d", "kind"} else None,
+    )
+
+    assert k8s._k8s_backend() == "rancher-desktop"
