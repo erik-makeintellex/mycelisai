@@ -70,6 +70,13 @@ func (a *OpenAIAdapter) Infer(ctx context.Context, prompt string, opts InferOpti
 	}
 
 	resp, err := a.client.CreateChatCompletion(ctx, reqBody)
+	if err != nil && isModelNotFoundError(err) {
+		if fallback := a.resolveAvailableFallbackModel(ctx); fallback != "" && fallback != a.model {
+			a.model = fallback
+			reqBody.Model = fallback
+			resp, err = a.client.CreateChatCompletion(ctx, reqBody)
+		}
+	}
 	if err != nil {
 		return nil, fmt.Errorf("openai inference failed: %w", err)
 	}
@@ -161,14 +168,41 @@ func (a *OpenAIAdapter) Embed(ctx context.Context, text string, model string) ([
 }
 
 func (a *OpenAIAdapter) Probe(ctx context.Context) (bool, error) {
-	// Simple connectivity check: List Models or empty chat?
-	// Listing models is safer/cheaper usually, but might return huge list.
-	// Let's try to send an empty/hello message to check Auth?
-	// Or use ListModels if available. sashabaranov has ListModels.
-
 	_, err := a.client.ListModels(ctx)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+func isModelNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	lower := strings.ToLower(err.Error())
+	return strings.Contains(lower, "not found") || (strings.Contains(lower, "404") && strings.Contains(lower, "model"))
+}
+
+func (a *OpenAIAdapter) resolveAvailableFallbackModel(ctx context.Context) string {
+	list, err := a.client.ListModels(ctx)
+	if err != nil || len(list.Models) == 0 {
+		return ""
+	}
+	preferredPrefixes := []string{"qwen2.5-coder:7b-instruct", "qwen2.5-coder", "qwen3", "llama3"}
+	for _, prefix := range preferredPrefixes {
+		for _, m := range list.Models {
+			id := strings.TrimSpace(m.ID)
+			if strings.HasPrefix(strings.ToLower(id), prefix) {
+				return id
+			}
+		}
+	}
+	for _, m := range list.Models {
+		id := strings.TrimSpace(m.ID)
+		lower := strings.ToLower(id)
+		if id != "" && !strings.Contains(lower, "embed") && !strings.Contains(lower, "llava") {
+			return id
+		}
+	}
+	return ""
 }

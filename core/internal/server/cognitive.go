@@ -190,6 +190,10 @@ func isRuntimeStateQuestion(text string) bool {
 	if lower == "" {
 		return false
 	}
+	switch strings.TrimSuffix(lower, "?") {
+	case "state", "status", "current state", "org state", "system state", "system status":
+		return true
+	}
 
 	phrases := []string{
 		"what is current state",
