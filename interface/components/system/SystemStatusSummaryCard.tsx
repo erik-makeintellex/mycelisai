@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
+import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, ShieldCheck, Sliders, XCircle } from "lucide-react";
 import { useCortexStore, type ServiceHealthStatus } from "@/store/useCortexStore";
+import ServiceAddressBookPanel from "./ServiceAddressBookPanel";
 
 const HUMAN_SERVICE_LABELS: Record<string, string> = {
     nats: "Event Bus & Team Coordination",
@@ -131,19 +133,37 @@ export default function SystemStatusSummaryCard() {
                     </div>
                 )}
 
+                <ServiceAddressBookPanel />
+
                 <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-cortex-border">
                     <span className="text-xs text-cortex-text-muted">
                         Need deep telemetry, event bus checks, or service restart commands?
                     </span>
-                    <button
-                        type="button"
-                        onClick={toggleAdvancedMode}
-                        data-testid="open-advanced-diagnostics"
-                        className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-4 py-2 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
-                    >
-                        <Sliders className="w-3.5 h-3.5" />
-                        Open Advanced Diagnostics
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Link
+                            href="/settings"
+                            data-testid="system-summary-ai-engines-link"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-xs font-mono text-cortex-text-main hover:border-cortex-primary/40 hover:text-cortex-primary transition-colors"
+                        >
+                            Configure AI Engines
+                        </Link>
+                        <Link
+                            href="/deployments"
+                            data-testid="system-summary-deployments-link"
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-xs font-mono text-cortex-text-main hover:border-cortex-primary/40 hover:text-cortex-primary transition-colors"
+                        >
+                            Active Teams
+                        </Link>
+                        <button
+                            type="button"
+                            onClick={toggleAdvancedMode}
+                            data-testid="open-advanced-diagnostics"
+                            className="inline-flex items-center gap-2 rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-4 py-2 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
+                        >
+                            <Sliders className="w-3.5 h-3.5" />
+                            Open Advanced Diagnostics
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

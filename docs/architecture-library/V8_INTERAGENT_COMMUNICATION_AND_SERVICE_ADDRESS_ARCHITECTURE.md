@@ -2,7 +2,7 @@
 > Navigation: [Project README](../../README.md) | [Architecture Library Index](ARCHITECTURE_LIBRARY_INDEX.md)
 
 > Status: Canonical
-> Last Updated: 2026-11-15
+> Last Updated: 2026-11-16
 > Purpose: Document why distributed inter-agent communication and backend service addressing fail in conventional multi-agent systems and define the Mycelis V8 architecture that prevents those failure modes across Rancher Desktop, k3d, Compose, and Enterprise Kubernetes.
 
 ## Industry Research: Why Inter-Agent & Backend Service Addressing Fails in Other Frameworks
@@ -116,3 +116,22 @@ External and backend services (`nats`, `postgres`, `text_ai`, `media_ai`, `searc
 ### Platform-Neutral Rancher Deployment Phase (`ops/k8s_rancher.py`)
 - **Default Localhost Rancher Target:** `rancher_target_url()` defaults to `https://127.0.0.1:6443` (`localhost` API server, overridable via `MYCELIS_RANCHER_URL` or `MYCELIS_K8S_SERVER`) and `rancher_target_context()` defaults to `rancher-desktop` (overridable via `MYCELIS_K8S_CONTEXT` or `MYCELIS_RANCHER_CONTEXT`).
 - **Cross-Platform Neutrality (Windows, WSL, Linux, macOS):** `_k8s_backend()` in `ops/k8s.py` requires only standard `kubectl` + `helm` talking to the target Rancher context (`rancher-desktop` at `https://127.0.0.1:6443`), without requiring OS-specific wrappers. When invoked inside WSL without a local `~/.kube/config`, `_ensure_shared_kubeconfig()` automatically binds `KUBECONFIG` to the shared host config so `uv run inv k8s.*` deploys to the same local `localhost:6443` Rancher cluster from any shell.
+
+---
+
+## Four-Tier Agentry & Service Interaction Hierarchy (UX Complexity Reduction)
+
+Mycelis structures operator interaction with inter-agent communication, backend service addresses, and deliverable proofs into four progressive disclosure tiers so operators only see the depth required for their immediate task:
+
+| Tier | Primary Surfaces | Target Operator Need | Exposed Service, Agentry & Deliverable Controls |
+| --- | --- | --- | --- |
+| **Tier 0 — Immediate Workspace Context** | `WorkspaceContextHeader` on `/dashboard` & `/organizations/[id]` | Conversational orientation with zero context switching | Always-visible workspace identity, active council/team posture, and 1-click quick-pills (`Service Status`, `Active Teams`, `Files & Tools`) without leaving the conversation. |
+| **Tier 1 — Slide-Out Status & Quick-Action Drawer** | `StatusDrawer` across all routes | Instant health triage and cross-surface jump | Instant overlay showing Council reachability, NATS/Postgres/Ollama health + resolved service addresses (`svc.address`), and 1-click navigation to `Service Book & Health`, `Active Teams & Config`, `Deliverables & Tools`, and `AI Engines & Access`. |
+| **Tier 2 — Operator Service & Deliverable Hub** | `/system` `SystemStatusSummaryCard` & `/resources` `DurableFilesOperatorView` | Default non-expert service inspection and output review | Default non-expert views exposing the `Backend Service Address Book` (`ServiceAddressBookPanel`), one-click HTML5 live preview, inline Soma refinement, and direct shortcuts to AI Engine and Team configuration without requiring global `Advanced Mode`. |
+| **Tier 3 — Advanced Builder & Cluster Governance** | `Advanced: On` `/system`, `/deployments`, `/memory`, `/automations`, `/runs` | Deep cluster debugging, config mutation, and doctrine arbitration | Deep telemetry, redacted YAML/JSON `View Config` + governed `Clone / Apply`, 5-layer Trusted-Memory promotion/conflict arbitration, and 9-stage `RunStageProgressStrip` inspection. |
+
+### Progressive Disclosure Design Rules
+1. **Never Gate Health or Service Address Visibility Behind Advanced Mode:** Resolved backend endpoints (`ServiceAddressBookPanel`), cluster vs. host mode badges, and loopback misconfiguration warnings belong in Tier 1 (`StatusDrawer`) and Tier 2 (`/system` default summary) so operators can diagnose connectivity without enabling full builder telemetry.
+2. **Keep Conversational Surfaces Uncluttered:** Tier 0 (`WorkspaceContextHeader`) surfaces concise posture pills that open Tier 1 or navigate to Tier 2 hubs rather than embedding raw configuration tables inside the Soma workspace.
+3. **Reserve Raw Spec Mutation and Deep Telemetry for Tier 3:** Redacted YAML/JSON config inspection, `Clone / Apply` team manifest workflows, 5-layer memory conflict resolution, and 9-stage `RunStageProgressStrip` diagnostics remain scoped to Tier 3 (`Advanced: On`) or dedicated governance tabs.
+

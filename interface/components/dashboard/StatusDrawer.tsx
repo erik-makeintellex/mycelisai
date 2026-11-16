@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo } from "react";
+import Link from "next/link";
 import { X, Brain, Shield, Wifi, Database, Radio, Users, AlertTriangle, RefreshCw } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
@@ -81,7 +82,19 @@ export default function StatusDrawer() {
     const govHealth: Health = governanceMode === "strict" ? "failure" : governanceMode === "active" ? "degraded" : "healthy";
 
     const activeMissions = missions.filter((m) => m.status === "active").length;
-    const failingMember = missionChatFailure?.targetLabel ?? null;
+    const ollamaSvc = serviceMap.get("ollama");
+    const brainValue = activeBrain
+        ? `${activeBrain.provider_name ?? activeBrain.provider_id} (${activeBrain.location})`
+        : !coreDown && ollamaSvc?.status === "online"
+          ? ollamaSvc.detail || "ollama (online)"
+          : "none";
+    const brainHealth: Health = activeBrain
+        ? activeBrain.location === "remote"
+            ? "degraded"
+            : "healthy"
+        : !coreDown && ollamaSvc?.status === "online"
+          ? "healthy"
+          : "offline";
 
     const councilHealth = (memberId: string): Health => {
         if (missionChatFailure && missionChatFailure.targetId === memberId) return "failure";
@@ -156,15 +169,28 @@ export default function StatusDrawer() {
                             ))
                         )}
                     </div>
-                    <StatusRow icon={Wifi} label="NATS Connection" value={svcValue("nats")} health={svcHealth("nats")} />
+                    <StatusRow
+                        icon={Wifi}
+                        label="NATS Connection"
+                        value={svcValue("nats")}
+                        subvalue={serviceMap.get("nats")?.address}
+                        health={svcHealth("nats")}
+                    />
                     <StatusRow icon={Users} label="Group Bus" value={svcValue("groups_bus", true)} health={svcHealth("groups_bus")} />
                     <StatusRow icon={Radio} label="SSE Stream" value={sseLabel} health={sseHealth} />
-                    <StatusRow icon={Database} label="Database" value={svcValue("postgres")} health={svcHealth("postgres")} />
+                    <StatusRow
+                        icon={Database}
+                        label="Database"
+                        value={svcValue("postgres")}
+                        subvalue={serviceMap.get("postgres")?.address}
+                        health={svcHealth("postgres")}
+                    />
                     <StatusRow
                         icon={Brain}
                         label="Active Brain"
-                        value={activeBrain ? `${activeBrain.provider_name ?? activeBrain.provider_id} (${activeBrain.location})` : "none"}
-                        health={activeBrain ? (activeBrain.location === "remote" ? "degraded" : "healthy") : "offline"}
+                        value={brainValue}
+                        subvalue={serviceMap.get("ollama")?.address}
+                        health={brainHealth}
                     />
                     <StatusRow
                         icon={Shield}
@@ -184,6 +210,26 @@ export default function StatusDrawer() {
                             <div>Last workspace failure: {missionChatFailure.targetLabel} ({missionChatFailure.type})</div>
                         </div>
                     )}
+                    <div className="pt-2 border-t border-cortex-border space-y-2" data-testid="status-drawer-quick-actions">
+                        <div className="text-[10px] uppercase font-mono tracking-wide text-cortex-text-muted">Quick Management</div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {[
+                                { href: "/system", label: "Service Book & Health" },
+                                { href: "/deployments", label: "Active Teams & Config" },
+                                { href: "/resources", label: "Deliverables & Tools" },
+                                { href: "/settings", label: "AI Engines & Access" },
+                            ].map((item) => (
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    onClick={() => setOpen(false)}
+                                    className="rounded-md border border-cortex-border bg-cortex-bg/60 px-2.5 py-1.5 text-[11px] font-mono text-cortex-text-main hover:border-cortex-primary/40 hover:text-cortex-primary transition-colors truncate"
+                                >
+                                    {item.label}
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </aside>
         </>
@@ -194,11 +240,13 @@ function StatusRow({
     icon: Icon,
     label,
     value,
+    subvalue,
     health,
 }: {
     icon: React.ElementType;
     label: string;
     value: string;
+    subvalue?: string;
     health: Health;
 }) {
     return (
@@ -208,6 +256,7 @@ function StatusRow({
                 <span className="text-[10px] uppercase font-mono tracking-wide">{label}</span>
             </div>
             <div className="text-xs font-mono mt-1">{value}</div>
+            {subvalue ? <div className="text-[10px] font-mono text-cortex-text-muted mt-0.5 truncate" title={subvalue}>{subvalue}</div> : null}
         </div>
     );
 }

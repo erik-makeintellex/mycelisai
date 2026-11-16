@@ -11,6 +11,9 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
         await expect(header).toBeVisible();
         await expect(header).toContainText("[Soma Executive Workspace]");
         await expect(header).toContainText("Standing Council Active");
+        await expect(page.getByTestId("workspace-header-status-btn")).toBeVisible();
+        await expect(page.getByTestId("workspace-header-deployments-link")).toBeVisible();
+        await expect(page.getByTestId("workspace-header-resources-link")).toBeVisible();
 
         const promptInput = page.getByPlaceholder(/Describe the outcome you need from Soma/i);
         await expect(promptInput).toBeVisible();
@@ -107,6 +110,22 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
                 }),
             });
         });
+        await page.route("**/api/v1/services/addresses", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    ok: true,
+                    data: {
+                        cluster_mode: true,
+                        entries: [
+                            { name: "nats", address: "nats://mycelis-core-nats:4222", protocol: "nats", source: "NATS_URL" },
+                            { name: "postgres", address: "mycelis-core-postgresql:5432", protocol: "postgres", source: "DB_HOST/DB_PORT" },
+                        ],
+                    },
+                }),
+            });
+        });
 
         await page.addInitScript(() => {
             window.localStorage.setItem("mycelis-advanced-mode", "false");
@@ -117,6 +136,9 @@ test.describe("V8 Operator-First UX Upgrade Certification", () => {
         await expect(page.getByRole("heading", { name: "System Status: Online (5/5 services active)" })).toBeVisible();
         await expect(page.getByText("Event Bus & Team Coordination")).toBeVisible();
         await expect(page.getByText("Workspace Memory & Storage")).toBeVisible();
+        await expect(page.getByTestId("service-address-book-panel")).toBeVisible();
+        await expect(page.getByTestId("system-summary-ai-engines-link")).toBeVisible();
+        await expect(page.getByTestId("system-summary-deployments-link")).toBeVisible();
 
         const openDiagnosticsBtn = page.getByTestId("open-advanced-diagnostics");
         await expect(openDiagnosticsBtn).toBeVisible();
