@@ -131,38 +131,17 @@ func (s *AdminServer) respondReferentialConfirmation(w http.ResponseWriter, r *h
 }
 
 func buildReferentialConfirmationText(review somaReferentialReview) string {
-	lines := []string{"I infer that you want me to " + review.InferredAction + "."}
-	if review.TemplateID != "" {
-		lines = append(lines, "", "Matched interaction template: "+review.TemplateID+".")
-	}
-	if len(review.ThemeIDs) > 0 {
-		lines = append(lines, "Matched phrase themes: "+strings.Join(review.ThemeIDs, ", ")+".")
-	}
-	if len(review.Concepts) > 0 {
-		lines = append(lines, "Additional concepts: "+strings.Join(review.Concepts, ", ")+".")
-	}
-	if review.ProtectionReason != "" {
-		lines = append(lines, "Protection reason: "+review.ProtectionReason+".")
-	}
-	if len(review.MatchedHistory) > 0 {
-		lines = append(lines, "", "Relevant context I matched:")
-		for _, item := range review.MatchedHistory {
-			lines = append(lines, "- "+item)
-		}
-	}
-	if len(review.RegisteredServices) > 0 {
-		lines = append(lines, "", "Current registered MCP/services: "+strings.Join(review.RegisteredServices, ", ")+".")
-	}
-	if len(review.RelevantLibrary) > 0 {
-		lines = append(lines, "Likely target MCP/library entries: "+strings.Join(review.RelevantLibrary, ", ")+".")
+	var lines []string
+	if review.InferredAction != "" {
+		lines = append(lines, "I can help you "+review.InferredAction+".")
 	}
 	if len(review.ConfigurationAdvice) > 0 {
 		lines = append(lines, strings.Join(review.ConfigurationAdvice, " "))
 	}
 	confirm := strings.TrimSpace(review.ConfirmationPrompt)
 	if confirm == "" {
-		confirm = "Please confirm whether I should proceed once, or tell me to make this the standing behavior for this workflow."
+		confirm = "Reply \"confirm\" to proceed with this plan, or tell me what you'd like to adjust."
 	}
-	lines = append(lines, "", confirm)
-	return strings.Join(lines, "\n")
+	lines = append(lines, confirm)
+	return strings.Join(lines, "\n\n")
 }

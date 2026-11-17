@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Brain, Megaphone } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
-import { SomaConversationThread } from "@/components/soma/SomaConversationThread";
 import { SomaIntentInput } from "@/components/soma/SomaIntentInput";
 import {
     DEFAULT_SOMA_SUGGESTIONS,
@@ -128,7 +127,7 @@ export default function MissionControlChat({
     };
 
     return (
-        <div className="flex h-full min-h-0 flex-col" data-testid="mission-chat">
+        <div className="flex h-full min-h-0 flex-col overflow-x-hidden" data-testid="mission-chat">
             <WorkspaceContextHeader
                 assistantName={assistantName}
                 currentTeamName={currentTeam?.name}
@@ -153,7 +152,11 @@ export default function MissionControlChat({
 
             {showAdvancedRouting && broadcastMode && <BroadcastModeIndicator />}
 
-            <SomaConversationThread scrollRef={scrollRef}>
+            <div
+                ref={scrollRef}
+                data-testid="soma-conversation-thread"
+                className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overflow-x-hidden px-3 py-3 scrollbar-thin scrollbar-thumb-cortex-border"
+            >
                 {missionChatFailure && (
                     <CouncilCallErrorCard
                         failure={missionChatFailure}
@@ -215,7 +218,7 @@ export default function MissionControlChat({
                         </div>
                     </div>
                 )}
-            </SomaConversationThread>
+            </div>
 
             <div className="px-3 py-2 border-t border-cortex-border flex-shrink-0">
                 {simpleMode ? (

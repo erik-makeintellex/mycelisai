@@ -62,7 +62,7 @@ function MessageMeta({ msg, assistantName, simpleMode = false }: { msg: ChatMess
                     {sourceNodeLabel(msg.source_node, assistantName)}
                 </span>
             )}
-            {advancedMode && msg.brain && (
+            {!simpleMode && advancedMode && msg.brain && (
                 <>
                     <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                     <span
@@ -76,7 +76,7 @@ function MessageMeta({ msg, assistantName, simpleMode = false }: { msg: ChatMess
                     </span>
                 </>
             )}
-            {advancedMode && msg.mode && (
+            {!simpleMode && advancedMode && msg.mode && (
                 <>
                     <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                     <span className={`text-[8px] font-mono font-bold uppercase tracking-wide ${MODE_LABELS[msg.mode]?.color ?? "text-cortex-text-muted"}`}>
@@ -92,7 +92,7 @@ function MessageMeta({ msg, assistantName, simpleMode = false }: { msg: ChatMess
                     </span>
                 </>
             )}
-            {(!simpleMode || advancedMode) && msg.trust_score != null && msg.trust_score > 0 && (
+            {!simpleMode && msg.trust_score != null && msg.trust_score > 0 && (
                 <>
                     <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                     <span className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`} title={trustTooltip(msg.trust_score)}>
@@ -100,13 +100,13 @@ function MessageMeta({ msg, assistantName, simpleMode = false }: { msg: ChatMess
                     </span>
                 </>
             )}
-            {advancedMode && msg.brain?.location === "remote" && (
+            {!simpleMode && advancedMode && msg.brain?.location === "remote" && (
                 <span className="flex items-center gap-0.5 text-[7px] font-mono text-cortex-warning bg-cortex-warning/10 px-1.5 py-0.5 rounded border border-cortex-warning/20">
                     <AlertTriangle className="w-2.5 h-2.5" />
                     External
                 </span>
             )}
-            {advancedMode && (
+            {!simpleMode && advancedMode && (
                 <button
                     onClick={() => setInspected(msg)}
                     className="p-0.5 rounded hover:bg-cortex-border text-cortex-text-muted hover:text-cortex-primary transition-colors ml-1"
@@ -198,9 +198,9 @@ export default function MissionControlMessageBubble({ msg, simpleMode = false }:
                     <Bot className="w-3.5 h-3.5 text-cortex-info" />
                 </div>
             )}
-            <div className="max-w-[85%] flex flex-col gap-0.5">
+            <div className="max-w-[85%] min-w-0 flex flex-col gap-0.5">
                 {!isUser && <MessageMeta msg={msg} assistantName={assistantName} simpleMode={simpleMode} />}
-                <div className={`px-3 py-2 rounded-lg text-sm font-mono leading-relaxed ${
+                <div className={`px-3.5 py-2.5 rounded-xl text-sm font-sans leading-relaxed break-words ${
                     isBroadcast
                         ? "bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30"
                         : isUser
@@ -246,7 +246,7 @@ export default function MissionControlMessageBubble({ msg, simpleMode = false }:
                         ))}
                     </div>
                 ) : null}
-                {!isUser && <ToolsUsed tools={msg.tools_used} />}
+                {!isUser && !simpleMode && <ToolsUsed tools={msg.tools_used} />}
                 {!isUser && msg.tools_used && (msg.tools_used.includes("recall") || msg.tools_used.includes("search_memory")) && (
                     <div className="flex items-center gap-1 px-1 mt-0.5">
                         <span className="w-1 h-1 rounded-full bg-cortex-primary" />

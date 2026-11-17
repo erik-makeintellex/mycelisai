@@ -123,9 +123,8 @@ func isRunnablePlannedToolCall(call protocol.PlannedToolCall) bool {
 }
 
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
-	var planned []protocol.PlannedToolCall
-	if call, ok := parsePlannedToolCall(agentResult.Text); ok && isRunnablePlannedToolCall(call) {
-		if call.Name == "write_file" {
+	for _, tool := range mutTools {
+		if tool == "write_file" {
 			if calls, ok := inferCodexTaskBundlePlanFromRequest(latestRequest); ok {
 				return calls
 			}
@@ -133,19 +132,14 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 				return calls
 			}
 		}
+	}
+	var planned []protocol.PlannedToolCall
+	if call, ok := parsePlannedToolCall(agentResult.Text); ok && isRunnablePlannedToolCall(call) {
 		planned = append(planned, normalizePlannedToolCall(call))
 	}
 	if len(planned) == 0 {
 		for _, tool := range mutTools {
 			if tool == "write_file" {
-				if calls, ok := inferCodexTaskBundlePlanFromRequest(latestRequest); ok {
-					planned = append(planned, calls...)
-					break
-				}
-				if calls, ok := inferUserDeliverableBundlePlanFromRequest(latestRequest); ok {
-					planned = append(planned, calls...)
-					break
-				}
 				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
 					planned = append(planned, normalizePlannedToolCall(call))
 					break

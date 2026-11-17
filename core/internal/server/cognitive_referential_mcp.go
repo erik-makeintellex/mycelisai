@@ -80,6 +80,9 @@ func requiredMCPEnvNames(envVars []mcp.LibraryEnvVar) []string {
 
 func buildSomaMCPConfigurationAdvice(text string, registered, library []string) []string {
 	lower := normalizeIntentText(text)
+	if !requestContainsAny(lower, []string{"mcp", "mcps", "tool", "tools", "web", "search", "github", "fetch", "browser", "shared-sources"}) {
+		return nil
+	}
 	var advice []string
 	if strings.Contains(lower, "web") || strings.Contains(lower, "search") {
 		advice = append(advice, "For web search, prefer Mycelis web_search with local_sources, searxng, or local_api; Brave is optional and needs BRAVE_API_KEY in .env only.")

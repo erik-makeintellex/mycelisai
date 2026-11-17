@@ -31,9 +31,14 @@ func isMarketingDeliverableBundleRequest(lower string) bool {
 	})
 }
 
+func isTetrisGameBundleRequest(lower string) bool {
+	return (hasDeliverableCreationIntent(lower) || requestContainsAny(lower, []string{"put a team together", "put together", "team"})) &&
+		requestContainsAny(lower, []string{"tetris", "street fighter", "arcade game", "block game"})
+}
+
 func isInteractiveGameBundleRequest(lower string) bool {
 	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
-		"puzzle game", "sliding-tile", "sliding tile", "tile puzzle", "browser game", "simple game",
+		"puzzle game", "sliding-tile", "sliding tile", "tile puzzle", "browser game", "simple game", "playable game",
 	})
 }
 
@@ -62,6 +67,9 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 		return nil, false
 	}
 
+	if isTetrisGameBundleRequest(lower) {
+		return buildDeliverableBundleCalls("deliverables/games/street-fighter-tetris", "interactive_game_bundle", "street-fighter-tetris", streetFighterTetrisBundleSpecs(trimmed)), true
+	}
 	if isInteractiveGameBundleRequest(lower) {
 		return buildDeliverableBundleCalls("deliverables/games/sliding-tile-puzzle", "interactive_game_bundle", "sliding-tile-puzzle", interactiveGameBundleSpecs(trimmed)), true
 	}

@@ -81,6 +81,9 @@ func (s *AdminServer) buildSomaReferentialReview(ctx context.Context, messages [
 	if strings.TrimSpace(latest) == "" {
 		return review
 	}
+	if _, ok := inferUserDeliverableBundlePlanFromRequest(latest); ok || isCodexTaskBundleRequest(strings.ToLower(latest)) || requestContainsAny(normalizeIntentText(latest), []string{"tetris", "street fighter", "puzzle game", "launch kit", "onboarding kit", "kpi dashboard", "wireframe"}) {
+		return somaReferentialReview{LatestRequest: latest, EffectiveRequest: latest, NeedsConfirmation: false, MutationTools: []string{"write_file"}}
+	}
 
 	action, tools := inferSomaReferentialAction(latest)
 	review.InferredAction = action
@@ -141,9 +144,9 @@ func inferSomaReferentialAction(text string) (string, []string) {
 
 	switch {
 	case teamCue && createCue && mcpCue:
-		return "confirm compact team manifestation with specialist roles, retained outputs, and target MCP/tool bindings", []string{"generate_blueprint", "delegate"}
+		return "set up a team with specialist roles and connected tools", []string{"generate_blueprint", "delegate"}
 	case teamCue && createCue:
-		return "confirm compact team manifestation with council-informed specialist roles and retained outputs", []string{"generate_blueprint", "delegate"}
+		return "set up a team with specialist roles and clear deliverables", []string{"generate_blueprint", "delegate"}
 	case mcpCue:
 		return "review current MCP/tool posture and recommend next connected tools", nil
 	default:
@@ -175,7 +178,8 @@ func priorActionRequest(messages []chatRequestMessage) (string, string, []string
 }
 
 func actionRequiresConfirmation(action string) bool {
-	return strings.Contains(action, "confirm compact team") ||
+	return strings.Contains(action, "set up a team") ||
+		strings.Contains(action, "confirm compact team") ||
 		strings.Contains(action, "confirm MCP") ||
 		strings.Contains(action, "confirm protected") ||
 		strings.Contains(action, "confirm governed") ||

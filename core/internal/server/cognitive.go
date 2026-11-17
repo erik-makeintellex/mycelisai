@@ -127,6 +127,9 @@ func inferMutationToolsFromText(text string) []string {
 		tools = append(tools, "write_file")
 	}
 	if _, ok := inferUserDeliverableBundlePlanFromRequest(text); ok {
+		if !isMissionBlueprintBundleRequest(lower) {
+			return []string{"write_file"}
+		}
 		tools = append(tools, "write_file")
 	}
 

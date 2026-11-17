@@ -119,7 +119,7 @@ export function SomaCausalSummary({
           )}
         </div>
       </div>
-      <div className={`mt-4 grid gap-3 ${facts.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+      <div className={`mt-3 grid gap-2.5 ${facts.length === 5 ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
         {facts.map(([label, value]) => (
           <Fact key={label} label={label} value={value} />
         ))}
@@ -153,11 +153,11 @@ function SummaryTitle({ failed = false }: { failed?: boolean }) {
 
 function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2">
+    <div className="rounded-xl border border-cortex-border bg-cortex-bg px-2.5 py-2">
       <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
         {label}
       </p>
-      <p className="mt-2 text-sm leading-5 text-cortex-text-main">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-cortex-text-main line-clamp-2 break-words">{value}</p>
     </div>
   );
 }
