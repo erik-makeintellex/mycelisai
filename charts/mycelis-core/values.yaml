@@ -25,6 +25,17 @@ service:
   type: ClusterIP
   port: 8080
 
+interface:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: mycelis/interface
+    tag: dev
+    pullPolicy: IfNotPresent
+  service:
+    type: LoadBalancer
+    port: 3000
+
 ingress:
   enabled: false
   className: ""

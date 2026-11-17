@@ -152,6 +152,8 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         )
 
     tag = core_build.body(c)
+    if os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() in {"1", "true", "yes"}:
+        c.run(f"docker build -t mycelis/interface:{tag} -f interface/Dockerfile .")
     backend = _k8s_backend()
     _helm_deploy_release(
         c,

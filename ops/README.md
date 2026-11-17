@@ -25,9 +25,9 @@
 This directory contains the logic for the **Service Release Standard 1.0**.
 
 Recommended host posture:
-- Windows repo: canonical editing, review, and git-push surface for active development
+- Windows repo: canonical editing, review, and git-push surface for active development, running the **Two-Stage Windows Execution + Windows Rancher Desktop (`rancher-desktop`) Pipeline** — **Stage 1 (Windows Local Execution & Testing)** runs Go, Python, Vitest, and Playwright checks directly from the Windows workspace without launching WSL, and **Stage 2 (Windows Rancher Desktop Containerization & Deployment)** uses Windows Rancher Desktop (`rancher-desktop` context at `https://127.0.0.1:6443`, `LoadBalancer` on `localhost:8080`, `local-path` storage, and `http://host.rancher-desktop.internal:11434/v1` AI bridge) to manage containerization and Helm deployment after local execution tests pass
 - WSL `mother-brain` checkout backed by `D:\wsl-distro`: canonical rapid proof lane for install, build, API/UI test, Compose runtime, and pre-cluster validation
-- Windows native: keep the runtime story anchored to rapid Compose proof or self-hosted Kubernetes validation; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL
+- Windows native: keep the runtime story anchored to rapid Compose proof or self-hosted Kubernetes validation; when Windows no longer has a native `docker` binary, `compose.*` can route through Docker inside WSL, while Stage 2 Kubernetes containerization and Helm deployment target Windows Rancher Desktop (`rancher-desktop`)
 - Linux GPU hosts: optional `cognitive.*` helpers are appropriate only when you intentionally want local vLLM/Diffusers
 - if you switch a repo between Windows and WSL/Linux/macOS, recreate host-specific generated surfaces such as `.venv`, `interface/node_modules`, and `interface/.next`
 
@@ -77,9 +77,9 @@ Handles standards-first Kubernetes/Helm deployment automation, with `k3d` prefer
 - **Status**: `uv run inv k8s.status` (Health).
 - **Bridge**: `uv run inv k8s.bridge` now verifies the local PostgreSQL/NATS/Core port-forwards actually bind before reporting success.
 - **Recover**: `uv run inv k8s.recover` now fails closed when the cluster is unreachable and waits for rollout readiness before claiming recovery.
-- **Backend selection**: local Kubernetes auto-detects Rancher Desktop (`rancher-desktop` context + `rdctl` CLI, or explicit `MYCELIS_K8S_BACKEND=rancher-desktop` / `rancher`); local Kubernetes now prefers `k3d` when available; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow.
-- **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host without editing chart source.
-- **Preset values contract**: `k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`; repo-relative paths such as `charts/mycelis-core/values-k3d.yaml` are resolved from the repo root and the task fails fast if the requested values file does not exist.
+- **Backend selection**: local Kubernetes auto-detects Rancher Desktop (`rancher-desktop` context at `https://127.0.0.1:6443` + `rdctl` CLI, `LoadBalancer` on `localhost:8080`, `local-path` storage, and `http://host.rancher-desktop.internal:11434/v1` AI bridge, or explicit `MYCELIS_K8S_BACKEND=rancher-desktop` / `rancher`); local Kubernetes now prefers `k3d` when available; set `MYCELIS_K8S_BACKEND=kind` when you intentionally need the older Kind workflow.
+- **External AI endpoint contract**: `k8s.deploy` accepts `MYCELIS_K8S_TEXT_ENDPOINT` and `MYCELIS_K8S_MEDIA_ENDPOINT`, forwarding them into Helm so deployed providers can target a reachable external AI host (such as `http://host.rancher-desktop.internal:11434/v1` on Rancher Desktop) without editing chart source.
+- **Preset values contract**: `k8s.deploy` also accepts `MYCELIS_K8S_VALUES_FILE`; repo-relative paths such as `charts/mycelis-core/values-k3d.yaml` (or `charts/mycelis-core/values-rancher-desktop.yaml`) are resolved from the repo root and the task fails fast if the requested values file does not exist.
 - **Verification packaging**: `k8s.deploy --verify-package` is the release-packaging path for promoted values files; it renders, lints, packages, and writes manifest/checksum artifacts under `dist/helm/` without contacting a cluster.
 - **Open-standard surfaces**: the standards gate keeps the chart on standard Kubernetes resources: Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy, probes, non-root pod/container security context, image pull/digest posture, and cluster-managed output storage.
 - **Enterprise Windows-AI guardrail**: the `values-enterprise-windows-ai` preset fails closed unless `MYCELIS_K8S_TEXT_ENDPOINT` is set to the real Windows GPU host endpoint.

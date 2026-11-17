@@ -22,7 +22,7 @@ Implementation slices that change runtime, tasking, validation, API meaning, or 
 Operational lanes use:
 - `uv` and Invoke for repo task execution
 - Docker/Compose for the supported home-runtime stack
-- k3d or Kind plus kubectl/Helm for local Kubernetes
+- k3d or Kind plus kubectl/Helm for local Kubernetes (and Windows Rancher Desktop `rancher-desktop` for Stage 2 Windows containerization and Helm deployment)
 - Go, Node.js, and Python for source-mode development
 - PostgreSQL, NATS, and a reachable AI endpoint for live runtime proof
 
@@ -133,7 +133,7 @@ uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterpr
 uv run inv k8s.reset
 ```
 
-Prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path.
+Prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path; on Windows Stage 2, `k8s.*` auto-detects Windows Rancher Desktop (`rancher-desktop` context at `https://127.0.0.1:6443`, `LoadBalancer` on `localhost:8080`, `local-path` storage, and `http://host.rancher-desktop.internal:11434/v1` AI bridge).
 
 ### Cognitive Tasks (`ops/cognitive.py`)
 
@@ -186,7 +186,7 @@ uv run inv wsl.validate --lane=release
 
 ### Deployment Guidance Across Host Architectures
 
-- Windows x86_64: edit on Windows; prove through Compose, WSL Compose, or Kubernetes as the slice requires.
+- Windows x86_64: edit on Windows; prove through Compose, WSL Compose, or Kubernetes as the slice requires, following the **Two-Stage Windows Execution + Windows Rancher Desktop (`rancher-desktop`) Pipeline** — **Stage 1 (Windows Local Execution & Testing)** runs Go, Python, Vitest, and Playwright checks directly from the Windows workspace without launching WSL, and **Stage 2 (Windows Rancher Desktop Containerization & Deployment)** uses Windows Rancher Desktop (`rancher-desktop` context at `https://127.0.0.1:6443`, `LoadBalancer` on `localhost:8080`, `local-path` storage, and `http://host.rancher-desktop.internal:11434/v1` AI bridge) to manage containerization and Helm deployment after local execution tests pass.
 - Linux x86_64: use Compose for home-runtime and k3d/Helm for cluster proof.
 - Linux arm64: prefer Compose or binary/control-node lanes with explicit remote AI.
 - Mixed-architecture deployment rule: keep AI, database, NATS, Core, and Interface addresses explicit.
@@ -241,9 +241,9 @@ Invoke manages the Next.js server lifecycle for browser proof (`interface/playwr
 
 ### Kubernetes (Self-Hosted / Helm)
 
-This chart is the target clustered deployment contract for self-hosted and enterprise Kubernetes. Use Helm with explicit values, secrets, persistent storage, ingress, and reachable AI endpoints. Use `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` for chart posture. local Kubernetes now prefers `k3d` when it is installed; fallback with `MYCELIS_K8S_BACKEND=kind`.
+This chart is the target clustered deployment contract for self-hosted and enterprise Kubernetes. Use Helm with explicit values, secrets, persistent storage, ingress, and reachable AI endpoints. Use `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` for chart posture. local Kubernetes now prefers `k3d` when it is installed; fallback with `MYCELIS_K8S_BACKEND=kind` (on Windows Stage 2, `k8s.*` auto-detects `rancher-desktop` at `https://127.0.0.1:6443` with `LoadBalancer` on `localhost:8080`, `local-path` storage, and `http://host.rancher-desktop.internal:11434/v1` AI bridge).
 
-Open-standard resources include Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. `MYCELIS_K8S_VALUES_FILE` may select `values-k3d.yaml`, `values-enterprise.yaml`, or `values-enterprise-windows-ai.yaml`.
+Open-standard resources include Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy. `MYCELIS_K8S_VALUES_FILE` may select `values-k3d.yaml`, `values-enterprise.yaml`, or `values-enterprise-windows-ai.yaml` (or `values-rancher-desktop.yaml`).
 
 ### Docker
 

@@ -150,6 +150,7 @@ def _helm_deploy_release(
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
     k8s_nats_url = os.getenv("MYCELIS_K8S_NATS_URL", "").strip()
     k8s_db_host = os.getenv("MYCELIS_K8S_DB_HOST", "").strip()
+    k8s_with_interface = os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() in {"1", "true", "yes"}
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
     if values_file and "windows-ai" in values_file.name.lower() and not k8s_text_endpoint:
@@ -193,6 +194,8 @@ def _helm_deploy_release(
         cmd += f"--set-string serviceAddresses.natsUrl={shell_quote(k8s_nats_url)} "
     if k8s_db_host:
         cmd += f"--set-string serviceAddresses.dbHost={shell_quote(k8s_db_host)} "
+    if k8s_with_interface:
+        cmd += f"--set interface.enabled=true --set interface.image.tag={tag} "
     cmd += "--wait"
     c.run(cmd)
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")

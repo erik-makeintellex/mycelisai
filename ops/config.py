@@ -105,15 +105,14 @@ def wsl_has_command(command: str) -> bool:
 
 @lru_cache(maxsize=1)
 def docker_host_mode() -> str:
+    from ops.k8s_rancher import _ensure_rancher_desktop_path
+
+    _ensure_rancher_desktop_path()
     requested = os.environ.get("MYCELIS_DOCKER_HOST", "auto").strip().lower()
     if requested not in {"", "auto", "native", "wsl"}:
         raise SystemExit("Invalid MYCELIS_DOCKER_HOST. Use one of: auto, native, wsl.")
 
     if requested in {"", "auto"}:
-        if shutil.which("docker"):
-            return "native"
-        if is_windows() and shutil.which("wsl.exe") and wsl_has_command("docker"):
-            return "wsl"
         return "native"
 
     if requested == "wsl":

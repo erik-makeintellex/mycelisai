@@ -1,0 +1,60 @@
+{{- if and .Values.interface .Values.interface.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-interface
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}-interface
+spec:
+  replicas: {{ .Values.interface.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-interface
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}-interface
+    spec:
+      containers:
+        - name: interface
+          image: "{{ .Values.interface.image.repository }}:{{ .Values.interface.image.tag }}"
+          imagePullPolicy: {{ .Values.interface.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.interface.service.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "{{ .Values.interface.service.port }}"
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            - name: MYCELIS_API_HOST
+              value: "{{ .Chart.Name }}"
+            - name: MYCELIS_API_PORT
+              value: "{{ .Values.service.port }}"
+            {{- if or .Values.coreAuth.apiKey .Values.coreAuth.existingSecret }}
+            - name: MYCELIS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
+                  key: mycelis-api-key
+            {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-interface
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}-interface
+spec:
+  type: {{ .Values.interface.service.type }}
+  ports:
+    - port: {{ .Values.interface.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Chart.Name }}-interface
+{{- end }}
