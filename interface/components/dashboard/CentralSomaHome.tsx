@@ -70,14 +70,12 @@ export default function CentralSomaHome({
     };
 
     return (
-        <section className="space-y-5">
-            <div className="rounded-3xl border border-cortex-border bg-cortex-surface p-3">
-                <div className="flex flex-wrap gap-2">
-                        {lastOrganization ? (
-                            <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
-                        ) : null}
-                        <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
-                </div>
+        <section className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+                {lastOrganization ? (
+                    <QuickLink href={`/organizations/${lastOrganization.id}`} icon={<Building2 className="h-4 w-4" />} label={`Return to ${lastOrganization.name}`} />
+                ) : null}
+                <QuickAction onClick={openOrganizationSetup} icon={<FolderPlus className="h-4 w-4" />} label="Create or open AI Organizations" />
             </div>
             {focusedTeam ? (
                 <div className="rounded-2xl border border-cortex-primary/20 bg-cortex-primary/10 px-4 py-3 text-sm text-cortex-text-main">

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import Link from "next/link";
+import { useCortexStore } from "@/store/useCortexStore";
 import {
   approvalPostureSentence,
   outputsSummaryLabel,
@@ -43,16 +45,37 @@ export function DeploymentDetailPane({
             {record.what_runs}
           </p>
         </div>
-        {advancedMode ? (
-          <button
-            type="button"
-            onClick={() => setConfigViewerOpen(true)}
-            data-testid="deployments-view-config"
-            className="inline-flex items-center justify-center rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main hover:border-cortex-primary/25"
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/dashboard?team_id=${encodeURIComponent(record.id)}`}
+            data-testid="deployments-engage-soma"
+            className="inline-flex items-center justify-center rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-primary hover:bg-cortex-primary/20"
           >
-            View config
-          </button>
-        ) : null}
+            Work with Team in Soma
+          </Link>
+          {advancedMode ? (
+            <button
+              type="button"
+              onClick={() => setConfigViewerOpen(true)}
+              data-testid="deployments-view-config"
+              className="inline-flex items-center justify-center rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main hover:border-cortex-primary/25"
+            >
+              View config
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                useCortexStore.getState().toggleAdvancedMode();
+                setConfigViewerOpen(true);
+              }}
+              data-testid="deployments-enable-advanced-config"
+              className="inline-flex items-center justify-center rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted hover:border-cortex-primary/25 hover:text-cortex-text-main"
+            >
+              Inspect Config (Advanced)
+            </button>
+          )}
+        </div>
       </div>
 
       {advancedMode && configViewerOpen ? (

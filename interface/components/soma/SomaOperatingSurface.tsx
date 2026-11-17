@@ -13,6 +13,7 @@ export function SomaOperatingSurface({
   organizationName,
   activeMode,
   governancePosture,
+  headerActions,
   evidenceItems,
   suggestions = DEFAULT_SOMA_SUGGESTIONS,
 }: {
@@ -20,6 +21,7 @@ export function SomaOperatingSurface({
   organizationName?: string | null;
   activeMode?: string | null;
   governancePosture?: string;
+  headerActions?: React.ReactNode;
   evidenceItems?: SomaEvidenceItem[];
   suggestions?: readonly SomaSuggestion[];
 }) {
@@ -35,6 +37,7 @@ export function SomaOperatingSurface({
         organizationName={organizationName}
         activeMode={activeMode}
         governancePosture={governancePosture}
+        quickActions={headerActions}
       />
       <div className="space-y-4 p-5">
         <div

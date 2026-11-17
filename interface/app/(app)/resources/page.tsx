@@ -3,7 +3,7 @@
 import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Brain, Wrench, BookOpen, FolderOpen, GitBranch, BookMarked } from "lucide-react";
+import { Brain, Wrench, BookOpen, FolderOpen, GitBranch, BookMarked, Package } from "lucide-react";
 import BrainsPage from "@/components/settings/BrainsPage";
 import DurableFilesOperatorView from "@/components/resources/DurableFilesOperatorView";
 import { useCortexStore } from "@/store/useCortexStore";
@@ -33,8 +33,8 @@ const DeploymentContextPanel = dynamic(() => import("@/components/resources/Depl
     loading: () => <TabLoading label="knowledge" />,
 });
 
-type TabId = "engines" | "tools" | "workspace" | "roles" | "exchange" | "deployment-context";
-const VALID_TABS: TabId[] = ["engines", "tools", "workspace", "roles", "exchange", "deployment-context"];
+type TabId = "deliverables" | "engines" | "tools" | "workspace" | "roles" | "exchange" | "deployment-context";
+const VALID_TABS: TabId[] = ["deliverables", "engines", "tools", "workspace", "roles", "exchange", "deployment-context"];
 
 export default function ResourcesPage() {
     return (
@@ -71,6 +71,7 @@ function ResourcesContent() {
                 </div>
 
                 <div className="flex gap-1 border-b border-cortex-border">
+                    <TabButton active={activeTab === "deliverables"} onClick={() => setActiveTab("deliverables")} icon={<Package size={14} />} label="Deliverables" />
                     <TabButton active={activeTab === "tools"} onClick={() => setActiveTab("tools")} icon={<Wrench size={14} />} label="Connected Tools" />
                     <TabButton active={activeTab === "exchange"} onClick={() => setActiveTab("exchange")} icon={<GitBranch size={14} />} label="Exchange" />
                     <TabButton active={activeTab === "deployment-context"} onClick={() => setActiveTab("deployment-context")} icon={<BookMarked size={14} />} label="Knowledge" />
@@ -81,6 +82,7 @@ function ResourcesContent() {
             </header>
 
             <div className="flex-1 overflow-hidden">
+                {activeTab === "deliverables" && <DurableFilesOperatorView />}
                 {activeTab === "engines" && (
                     <div className="h-full overflow-y-auto">
                         <div className="max-w-5xl mx-auto w-full px-6 py-6">

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, ClipboardCheck, Compass, FileText, Gamepad2, LayoutTemplate, Megaphone, Search, Settings2, Sparkles, Terminal } from "lucide-react";
+import { BarChart3, BrainCircuit, ClipboardCheck, Compass, FileText, Gamepad2, GitBranch, LayoutTemplate, Megaphone, Search, Settings2, ShieldAlert, Sparkles, Terminal, Wrench } from "lucide-react";
 
 export type SomaSuggestion = {
   id?: string;
@@ -84,13 +84,42 @@ export const POPULAR_DELIVERABLE_STARTERS: SomaSuggestion[] = [
   },
 ];
 
+export const ORCHESTRATION_PLAYBOOK_STARTERS: SomaSuggestion[] = [
+  {
+    label: "Council Architecture & Security Review",
+    detail: "Consult Architect + Sentry on system design and risk posture.",
+    prompt: "Consult the Architect and Sentry council specialists to review our current architecture tradeoffs, security boundaries, and recommended next steps.",
+    icon: ShieldAlert,
+  },
+  {
+    label: "Multi-Team Mission Blueprint",
+    detail: "Design a plan -> develop -> verify -> deliver team workflow.",
+    prompt: "Design a multi-agent mission blueprint with explicit plan, develop, verify, and deliver team lanes and governance checkpoints.",
+    icon: GitBranch,
+  },
+  {
+    label: "Trusted-Memory & Doctrine Audit",
+    detail: "Inspect governed doctrine, project memory, and continuity.",
+    prompt: "Audit our current trusted memory layers, highlight any candidate lessons ready for promotion to Governed Doctrine, and check for contradictions.",
+    icon: BrainCircuit,
+  },
+  {
+    label: "Service & Tool Capability Plan",
+    detail: "Verify backend service addresses and MCP tool readiness.",
+    prompt: "Check our current backend service status and installed MCP tools, and recommend the next capability or workflow to enable.",
+    icon: Wrench,
+  },
+];
+
 export function SomaSuggestionBar({
   suggestions = DEFAULT_SOMA_SUGGESTIONS,
   starters = POPULAR_DELIVERABLE_STARTERS,
+  playbooks = ORCHESTRATION_PLAYBOOK_STARTERS,
   onSelect,
 }: {
   suggestions?: readonly SomaSuggestion[];
   starters?: readonly SomaSuggestion[];
+  playbooks?: readonly SomaSuggestion[];
   onSelect: (prompt: string) => void;
 }) {
   return (
@@ -144,6 +173,36 @@ export function SomaSuggestionBar({
                   </span>
                   <span className="mt-1 block text-xs leading-4 text-cortex-text-muted">
                     {item.detail || item.summary}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {playbooks.length > 0 && (
+        <div className="border-t border-cortex-border/70 pt-2.5">
+          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+            Advanced orchestration & council playbooks
+          </p>
+          <div className="mt-2 grid gap-2 md:grid-cols-4">
+            {playbooks.map((item, index) => {
+              const Icon = item.icon ?? Sparkles;
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  data-testid={`orchestration-playbook-starter-${index}`}
+                  onClick={() => onSelect(item.prompt)}
+                  className="rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-left transition hover:border-cortex-primary/35 hover:bg-cortex-primary/5"
+                >
+                  <span className="flex items-center gap-2 text-xs font-semibold text-cortex-text-main">
+                    <Icon className="h-3.5 w-3.5 text-cortex-primary" />
+                    {item.label}
+                  </span>
+                  <span className="mt-1 block text-xs leading-4 text-cortex-text-muted">
+                    {item.detail}
                   </span>
                 </button>
               );

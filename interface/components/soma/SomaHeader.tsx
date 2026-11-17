@@ -27,11 +27,13 @@ export function SomaHeader({
   status,
   activeMode,
   governancePosture = "Governed execution enabled",
+  quickActions,
 }: {
   organizationName?: string | null;
   status?: string;
   activeMode?: string | null;
   governancePosture?: string;
+  quickActions?: React.ReactNode;
 }) {
   const reachability = useCortexStore(selectCoreReachability);
   const coreDown = reachability === "unreachable";
@@ -56,6 +58,9 @@ export function SomaHeader({
         <p className="mt-2 max-w-3xl text-sm leading-7 text-cortex-text-muted">
           {scope}
         </p>
+        {quickActions ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">{quickActions}</div>
+        ) : null}
       </div>
       <div
         data-testid="soma-header-status"
