@@ -15,7 +15,13 @@ type deliverableBundleFileSpec struct {
 
 func hasDeliverableCreationIntent(lower string) bool {
 	return requestContainsAny(lower, []string{
-		"create", "generate", "draft", "prepare", "make", "build", "write", "save",
+		"create", "generate", "draft", "prepare", "make", "build", "write", "save", "design",
+	})
+}
+
+func isMissionBlueprintBundleRequest(lower string) bool {
+	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
+		"multi-agent mission blueprint", "team lanes", "plan, develop, verify, and deliver",
 	})
 }
 
@@ -70,6 +76,9 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 	}
 	if isProductWireframeBundleRequest(lower) {
 		return buildDeliverableBundleCalls("deliverables/product-wireframe", "product_wireframe_bundle", "product-wireframe", productWireframeBundleSpecs(trimmed)), true
+	}
+	if isMissionBlueprintBundleRequest(lower) {
+		return buildDeliverableBundleCalls("deliverables/blueprints/multi-team-mission-blueprint", "mission_blueprint_bundle", "multi-team-mission-blueprint", missionBlueprintBundleSpecs(trimmed)), true
 	}
 	return nil, false
 }
@@ -178,6 +187,39 @@ func productWireframeBundleSpecs(goal string) []deliverableBundleFileSpec {
 		{name: "product_spec.md", title: "Product Requirements & Spec", contentType: "text/markdown", content: "# Product Requirements & Spec\n\n## Goal\n" + goal + "\n\n## Core Capabilities\n- Interactive screen switching between Workspace Overview and Approval Workflow.\n- Governed review gates with SHA-256 deliverable verification.\n"},
 		{name: "user_flows_and_acceptance.md", title: "User Flows & Acceptance Criteria", contentType: "text/markdown", content: "# User Flows & Acceptance Criteria\n\n## Flows\n1. Operator opens the interactive wireframe and inspects the Workspace Overview screen.\n2. Operator switches to the Approval Workflow tab (`[data-testid=\"wireframe-tab-workflow\"]`) to verify gate controls.\n"},
 	}
+}
+
+func missionBlueprintBundleSpecs(goal string) []deliverableBundleFileSpec {
+	return []deliverableBundleFileSpec{
+		{
+			name: "mission_blueprint.yaml", title: "Multi-Team Mission Blueprint (YAML)", contentType: "text/yaml",
+			content: "mission_id: multi-team-mission-blueprint\ngoal: " + strconvQuoteSafe(goal) + "\nlanes:\n" +
+				"  - lane: plan\n    role: Architecture & Scope Planner\n    command_subject: swarm.team.plan.internal.command\n    status_subject: swarm.team.plan.signal.status\n    result_subject: swarm.team.plan.signal.result\n" +
+				"  - lane: develop\n    role: Implementation Specialist\n    command_subject: swarm.team.develop.internal.command\n    status_subject: swarm.team.develop.signal.status\n    result_subject: swarm.team.develop.signal.result\n" +
+				"  - lane: verify\n    role: QA & Proof Verification Lead\n    command_subject: swarm.team.verify.internal.command\n    status_subject: swarm.team.verify.signal.status\n    result_subject: swarm.team.verify.signal.result\n" +
+				"  - lane: deliver\n    role: Release & Package Coordinator\n    command_subject: swarm.team.deliver.internal.command\n    status_subject: swarm.team.deliver.signal.status\n    result_subject: swarm.team.deliver.signal.result\n",
+		},
+		{
+			name: "governance_and_approval_gates.md", title: "Governance & Approval Gates", contentType: "text/markdown",
+			content: "# Governance & Approval Gates\n\n## Mission Context\n" + goal + "\n\n## 9-Stage V8.3 Lifecycle Checkpoints\n" +
+				"1. **Intent Normalize** -> 2. **Team Decomposition** -> 3. **Write-Isolation Partition** -> 4. **Proposal Gate** -> 5. **Operator Confirmation** -> 6. **Bounded Execution** -> 7. **Collision & Boundary Audit** -> 8. **OutputProofEnvelope Verification** -> 9. **Governed Delivery Release**.\n\n" +
+				"## OutputProofEnvelope Verification Rules\n- Every retained artifact must record SHA-256 digest, byte count, `path_boundary_status: verified`, and `readback_status: verified`.\n- Any write collision downgrades verification posture to `pending_review`.\n",
+		},
+		{
+			name: "team_handoff_and_verification.md", title: "Team Handoff & Write-Isolation Matrix", contentType: "text/markdown",
+			content: "# Team Handoff & Write-Isolation Matrix\n\n## One-Writer-Per-File Disjoint Ownership\n" +
+				"| Lane | Owned Paths | Handoff Gate |\n| --- | --- | --- |\n" +
+				"| `plan` | `mission_blueprint.yaml` | Scope & NATS lane contract approved |\n" +
+				"| `develop` | Implementation slice files | Disjoint file partition verified |\n" +
+				"| `verify` | `governance_and_approval_gates.md` | Zero collision & SHA-256 readback pass |\n" +
+				"| `deliver` | `team_handoff_and_verification.md`, `proof.md` | `OutputProofEnvelope` bundle finalized |\n\n" +
+				"## Acceptance Criteria\n- [x] `plan`, `develop`, `verify`, and `deliver` lanes mapped to canonical `swarm.team.<lane>.internal.command` subjects.\n- [x] Disjoint file ownership enforced with zero write collisions.\n",
+		},
+	}
+}
+
+func strconvQuoteSafe(s string) string {
+	return "\"" + strings.ReplaceAll(strings.ReplaceAll(s, "\\", "\\\\"), "\"", "\\\"") + "\""
 }
 
 func inferFallbackDeliverableWritePlan(latestRequest, agentReply string) (protocol.PlannedToolCall, bool) {

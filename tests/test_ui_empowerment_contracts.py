@@ -30,3 +30,14 @@ def test_resources_page_includes_deliverables_tab_for_seamless_switching() -> No
     assert "deliverables" in content
     assert 'label="Deliverables"' in content
     assert "if (!advancedMode && !tabParam)" in content
+
+
+def test_soma_suggestion_bar_defines_three_progressive_engagement_tiers() -> None:
+    content = (REPO_ROOT / "interface" / "components" / "soma" / "SomaSuggestionBar.tsx").read_text(encoding="utf-8")
+    assert "export const DEFAULT_SOMA_SUGGESTIONS" in content
+    assert "export const POPULAR_DELIVERABLE_STARTERS" in content
+    assert "export const ORCHESTRATION_PLAYBOOK_STARTERS" in content
+    assert "Start with Soma" in content
+    assert "Popular deliverable starters" in content
+    assert "Advanced orchestration & council playbooks" in content
+

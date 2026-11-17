@@ -64,6 +64,10 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
 		return
 	}
+	if playbookKind, ok := isOrchestrationPlaybookQuestion(latestUserText); ok {
+		s.respondOrchestrationPlaybookAnswer(w, r, playbookKind, req.OrganizationID, req.TeamID, req.TeamName)
+		return
+	}
 	if isSearchCapabilityQuestion(latestUserText) {
 		s.respondSearchCapabilitySummary(w, r)
 		return
