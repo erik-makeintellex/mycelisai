@@ -166,4 +166,10 @@ func TestIsWeakDirectAnswerFallback_DoesNotFlagOrdinaryApology(t *testing.T) {
 	if !isWeakDirectAnswerFallback("I'm sorry, but I can't assist with that right now. Please try again later.") {
 		t.Fatal("known weak provider fallback should be detected")
 	}
+	if !isWeakDirectAnswerFallback("I'm sorry, but I can't assist with that request.") {
+		t.Fatal("refusal request fallback should be detected")
+	}
+	if !isRuntimeStateQuestion("what's the current state of mycelis?") {
+		t.Fatal("expected contraction 'what's the current state of mycelis?' to match runtime state question")
+	}
 }

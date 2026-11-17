@@ -7,6 +7,20 @@ import (
 	"time"
 )
 
+// BuildDirectAnswerContext generates a concise live runtime context block for direct conversational answers.
+func (r *InternalToolRegistry) BuildDirectAnswerContext(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) string {
+	var sb strings.Builder
+	sb.WriteString("\n\n## Runtime Context (Live System State)\n")
+	sb.WriteString(fmt.Sprintf("Timestamp: %s\n\n", time.Now().Format(time.RFC3339)))
+	r.writeTeamRoster(&sb)
+	r.writeAgentTopology(&sb, agentID, teamID, teamInputs, teamDeliveries)
+	r.writeCognitiveStatus(&sb)
+	r.writeMCPServers(&sb)
+	r.writeRecalledMemory(&sb, agentID, currentInput)
+	r.writeDeploymentContext(&sb, agentID, teamID, currentInput)
+	return sb.String()
+}
+
 // BuildContext generates a live system state block for injection into an agent's system prompt.
 func (r *InternalToolRegistry) BuildContext(agentID, teamID, role string, teamInputs, teamDeliveries []string, currentInput string) string {
 	var sb strings.Builder

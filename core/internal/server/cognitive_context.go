@@ -134,6 +134,9 @@ func recentSessionChatMessages(turns []conversations.ConversationTurn, limit int
 		if content == "" {
 			continue
 		}
+		if role == "assistant" && isWeakDirectAnswerFallback(content) {
+			continue
+		}
 		out = append(out, chatRequestMessage{Role: role, Content: content})
 	}
 	return out

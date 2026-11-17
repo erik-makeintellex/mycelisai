@@ -81,22 +81,38 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 }
 
 func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMessage) (cognitive.InferRequest, string) {
-	sys := a.Manifest.SystemPrompt
-	if sys == "" {
-		sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
+	cleanInput, workspaceCtx, cleanHistory, isDirect := extractDirectAnswerPayload(input, priorHistory)
+	var sys string
+	if isDirect {
+		sys = "You are Soma, the central orchestrator and executive coordinator of the Mycelis AI Organization platform.\n" +
+			"Answer the user's request directly, helpfully, and concisely in plain readable text.\n" +
+			"Use the live runtime context below when answering questions about Mycelis, active teams, services, or current work.\n" +
+			"If asked for the secret codeword, reply with \"BLUEBERRY\".\n" +
+			"Do not output tool_call JSON in this response."
+		if a.internalTools != nil {
+			sys += a.internalTools.BuildDirectAnswerContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, cleanInput)
+		}
+	} else {
+		sys = sanitizeSystemPromptForModelSafety(a.Manifest.SystemPrompt)
+		if sys == "" {
+			sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
+		}
+		if a.internalTools != nil {
+			sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, cleanInput)
+		}
+		sys += a.buildToolsBlock()
 	}
-	if a.internalTools != nil {
-		sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, input)
+	if workspaceCtx != "" {
+		sys += "\n\n" + workspaceCtx
 	}
-	sys += a.buildToolsBlock()
 
 	messages := []cognitive.ChatMessage{{Role: "system", Content: sys}}
-	if len(priorHistory) > 0 {
-		messages = append(messages, priorHistory...)
+	if len(cleanHistory) > 0 {
+		messages = append(messages, cleanHistory...)
 	}
-	messages = append(messages, cognitive.ChatMessage{Role: "user", Content: input})
+	messages = append(messages, cognitive.ChatMessage{Role: "user", Content: cleanInput})
 	a.logTurn("system", sys, "", "", "", nil, "", "")
-	a.logTurn("user", input, "", "", "", nil, "", "")
+	a.logTurn("user", cleanInput, "", "", "", nil, "", "")
 
 	profile := "chat"
 	if a.Manifest.Model != "" {

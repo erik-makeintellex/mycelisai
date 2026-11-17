@@ -190,8 +190,11 @@ func isRuntimeStateQuestion(text string) bool {
 	if lower == "" {
 		return false
 	}
-	switch strings.TrimSuffix(lower, "?") {
-	case "state", "status", "current state", "org state", "system state", "system status":
+	normalized := strings.ReplaceAll(strings.ReplaceAll(lower, "’", "'"), "what's", "what is")
+	normalized = strings.ReplaceAll(normalized, "whats", "what is")
+	normalized = strings.TrimRight(normalized, "?.! ")
+	switch normalized {
+	case "state", "status", "current state", "org state", "system state", "system status", "mycelis state", "mycelis status":
 		return true
 	}
 
@@ -199,6 +202,12 @@ func isRuntimeStateQuestion(text string) bool {
 		"what is current state",
 		"what is your current state",
 		"what is the current state",
+		"what is the state of mycelis",
+		"what is the status of mycelis",
+		"current state of mycelis",
+		"current status of mycelis",
+		"state of mycelis",
+		"status of mycelis",
 		"current org state",
 		"organization state",
 		"break down of org state",
@@ -213,7 +222,7 @@ func isRuntimeStateQuestion(text string) bool {
 		"connectivity status",
 	}
 	for _, phrase := range phrases {
-		if strings.Contains(lower, phrase) {
+		if strings.Contains(normalized, phrase) {
 			return true
 		}
 	}
