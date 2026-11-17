@@ -6,6 +6,7 @@ from pathlib import Path
 from invoke import task
 
 from .config import NAMESPACE, ROOT_DIR, is_windows
+from .k8s_rancher import _ensure_rancher_desktop_path
 from .packaging import relative_to_root, resolve_repo_path, slugify_label, write_checksum_file, write_json
 
 
@@ -141,6 +142,7 @@ def _verify_and_package_chart(
     shell_quote=_shell_quote,
 ) -> Path:
     base_root = root_dir or ROOT_DIR
+    _ensure_rancher_desktop_path()
     chart_dir = _chart_dir(base_root)
     output_dir = _resolve_package_output_dir(package_output_dir, root_dir=base_root)
     preset_name = values_file.stem.removeprefix("values-") or "default"
@@ -157,7 +159,7 @@ def _verify_and_package_chart(
     quoted_release_label = shell_quote(release_label)
 
     print(f"Verifying enterprise Helm package for preset '{preset_name}' as {release_label}...")
-    c.run(f"helm dependency build {quoted_chart_dir}")
+    c.run(f"helm dependency build {quoted_chart_dir}", warn=True)
     c.run(f"helm lint {quoted_chart_dir} --values {quoted_values_file}")
     c.run(
         f"helm template mycelis-core {quoted_chart_dir} --namespace {NAMESPACE} --values {quoted_values_file} > {quoted_rendered_path}"
@@ -249,6 +251,7 @@ def standards(c, values_file="", helm=False):
         print("Helm execution: skipped (pass --helm to run lint/template checks with vendored chart dependencies).")
         return
 
+    _ensure_rancher_desktop_path()
     resolved_values_file = _resolve_k8s_values_file(values_file)
     if not resolved_values_file:
         enterprise_values = _chart_dir() / "values-enterprise.yaml"

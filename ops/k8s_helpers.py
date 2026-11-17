@@ -120,6 +120,7 @@ def _helm_deploy_release(
     values_file: Path | None,
     root_dir: Path = ROOT_DIR,
     shell_quote=_shell_quote,
+    with_interface: bool = False,
 ) -> None:
     print(f"Deploying Release: [{tag}]")
     print("Building Helm Dependencies...")
@@ -150,7 +151,9 @@ def _helm_deploy_release(
     k8s_media_endpoint = os.getenv("MYCELIS_K8S_MEDIA_ENDPOINT", "").strip()
     k8s_nats_url = os.getenv("MYCELIS_K8S_NATS_URL", "").strip()
     k8s_db_host = os.getenv("MYCELIS_K8S_DB_HOST", "").strip()
-    k8s_with_interface = os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() in {"1", "true", "yes"}
+    k8s_with_interface = with_interface or (
+        os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() in {"1", "true", "yes"}
+    )
     if not api_key:
         raise SystemExit("MYCELIS_API_KEY must be set in .env or shell before deploying the cluster.")
     if values_file and "windows-ai" in values_file.name.lower() and not k8s_text_endpoint:
@@ -195,6 +198,10 @@ def _helm_deploy_release(
     if k8s_db_host:
         cmd += f"--set-string serviceAddresses.dbHost={shell_quote(k8s_db_host)} "
     if k8s_with_interface:
+        c.run(
+            f"docker build --build-arg MYCELIS_API_HOST=mycelis-core --build-arg MYCELIS_API_PORT=8080 "
+            f"-t mycelis/interface:{tag} -f interface/Dockerfile ."
+        )
         cmd += f"--set interface.enabled=true --set interface.image.tag={tag} "
     cmd += "--wait"
     c.run(cmd)

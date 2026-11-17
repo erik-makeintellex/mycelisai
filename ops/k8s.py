@@ -131,7 +131,7 @@ def init(c):
         "package_output_dir": "Directory for Helm verification artifacts. Defaults to dist/helm.",
     }
 )
-def deploy(c, values_file="", verify_package=False, release_label="", package_output_dir=""):
+def deploy(c, values_file="", verify_package=False, release_label="", package_output_dir="", with_interface=False):
     """
     Deploys the core using Helm (Hardened Security).
     Uses Immutable Identity Tagging.
@@ -152,8 +152,6 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         )
 
     tag = core_build.body(c)
-    if os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() in {"1", "true", "yes"}:
-        c.run(f"docker build -t mycelis/interface:{tag} -f interface/Dockerfile .")
     backend = _k8s_backend()
     _helm_deploy_release(
         c,
@@ -162,6 +160,7 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
         values_file=resolved_values_file,
         root_dir=ROOT_DIR,
         shell_quote=_shell_quote,
+        with_interface=with_interface,
     )
 
 
@@ -199,7 +198,7 @@ def wait(c, timeout=180):
 
 
 @task(help={"timeout": "Seconds to wait per rollout readiness check (default: 180)."})
-def up(c, timeout=180):
+def up(c, timeout=180, with_interface=False):
     """
     Canonical cluster bring-up sequence.
     Order: init -> deploy -> wait.
@@ -208,7 +207,7 @@ def up(c, timeout=180):
     print("[1/3] Ensure local Kubernetes cluster + namespace...")
     init(c)
     print("\n[2/3] Deploy Helm release...")
-    deploy(c)
+    deploy(c, with_interface=with_interface)
     print("\n[3/3] Wait for service readiness...")
     wait(c, timeout=timeout)
     print("\nCluster bring-up complete.")
