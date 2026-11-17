@@ -1,8 +1,7 @@
-name: Release Core Binaries
+name: Release Core Binaries (Disabled)
 
+# GitHub Actions are disabled; binary packaging runs locally via `uv run inv core.package`.
 on:
-  push:
-    tags: ["v*"]
   workflow_dispatch:
     inputs:
       version_tag:
@@ -12,6 +11,7 @@ on:
 
 jobs:
   build-release-binaries:
+    if: false
     name: Build ${{ matrix.goos }}-${{ matrix.goarch }}
     runs-on: ubuntu-latest
     permissions:

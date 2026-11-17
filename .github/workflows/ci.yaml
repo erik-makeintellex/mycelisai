@@ -1,10 +1,7 @@
-name: CI
+name: CI (Disabled)
 
+# GitHub Actions are disabled; validation and containerization run locally on Windows + Windows Rancher Desktop.
 on:
-  pull_request:
-    branches: ["main", "develop"]
-  push:
-    branches: ["main", "develop"]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +22,7 @@ env:
 
 jobs:
   repo-hygiene:
+    if: false
     name: Repo Hygiene, Docs, And Ops Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -57,6 +55,7 @@ jobs:
         run: uv run pytest -q
 
   core:
+    if: false
     name: Go Core
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -92,6 +91,7 @@ jobs:
         run: uv run inv core.compile
 
   interface:
+    if: false
     name: Interface Unit And Build
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -130,6 +130,7 @@ jobs:
         run: uv run inv interface.typecheck
 
   browser-smoke:
+    if: false
     name: Browser Smoke Without Live Agentry
     needs: interface
     runs-on: ubuntu-latest
@@ -183,6 +184,7 @@ jobs:
           retention-days: 7
 
   mvp-browser:
+    if: false
     name: MVP Browser Workflows Without Live Agentry
     needs: interface
     runs-on: ubuntu-latest
@@ -236,6 +238,7 @@ jobs:
           retention-days: 7
 
   helm-standards:
+    if: false
     name: Helm And Kubernetes Standards
     runs-on: ubuntu-latest
     timeout-minutes: 15

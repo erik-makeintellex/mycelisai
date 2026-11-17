@@ -162,7 +162,8 @@ def test_release_binaries_workflow_uses_core_package_task():
     workflow = _read(".github/workflows/release-binaries.yaml")
 
     assert "workflow_dispatch" in workflow
-    assert 'tags: ["v*"]' in workflow
+    assert "if: false" in workflow
+    assert "push:" not in workflow
     assert 'id: release' in workflow
     assert "uv run inv core.package" in workflow
     assert "--version-tag=${{ steps.release.outputs.label }}" in workflow
@@ -179,4 +180,17 @@ def test_release_workflow_verifies_enterprise_packaging_before_optional_image_pu
     assert "values-enterprise.yaml" in workflow
     assert "values-enterprise-windows-ai.yaml" in workflow
     assert "actions/upload-artifact@v4" in workflow
-    assert "if: inputs.publish_images == true" in workflow
+    assert "if: false" in workflow
+
+
+def test_all_github_workflows_have_automatic_triggers_disabled():
+    for workflow_path in [
+        ".github/workflows/ci.yaml",
+        ".github/workflows/dev-build.yaml",
+        ".github/workflows/release-binaries.yaml",
+        ".github/workflows/release.yaml",
+    ]:
+        text = _read(workflow_path)
+        assert "pull_request:" not in text, f"{workflow_path} still triggers on pull_request"
+        assert "\n  push:" not in text, f"{workflow_path} still triggers on push"
+        assert "if: false" in text, f"{workflow_path} must guard jobs with if: false"

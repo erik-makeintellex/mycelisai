@@ -1,5 +1,6 @@
-name: Release Packaging
+name: Release Packaging (Disabled)
 
+# GitHub Actions are disabled; Helm and container packaging run locally via Windows Rancher Desktop.
 on:
   workflow_dispatch:
     inputs:
@@ -19,6 +20,7 @@ env:
 
 jobs:
   verify-enterprise-packaging:
+    if: false
     runs-on: ubuntu-latest
     outputs:
       release_label: ${{ steps.release.outputs.label }}
@@ -76,7 +78,7 @@ jobs:
           path: dist/helm/**
 
   build-and-push:
-    if: inputs.publish_images == true
+    if: false
     needs: verify-enterprise-packaging
     runs-on: ubuntu-latest
     permissions:
