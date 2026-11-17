@@ -82,7 +82,7 @@ export default function DurableFilesOperatorView() {
                             className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-mono text-cortex-text-muted hover:border-cortex-primary/40 hover:text-cortex-primary transition-colors"
                         >
                             <Sliders className="w-3.5 h-3.5" />
-                            Switch to Advanced Mode to configure AI Engines &amp; Connected MCP Tools
+                            Connected Tools &amp; AI Engines
                         </button>
                     </div>
                 </header>

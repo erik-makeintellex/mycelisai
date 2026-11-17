@@ -36,7 +36,7 @@ export function ZoneA() {
 
     const primaryNav = [
         { href: '/dashboard', icon: Home, label: 'Soma Work', description: 'Ask first', testId: 'nav-dashboard' },
-        { href: '/teams', icon: Users, label: 'Teams', description: 'Active workflows', testId: 'nav-teams' },
+        { href: '/teams', icon: Users, label: 'Teams', description: 'Active workflows', testId: 'nav-teams', matchPrefix: !effectiveAdvancedMode ? '/deployments' : undefined },
         { href: '/resources', icon: FolderCog, label: 'Durable Files', description: 'Deliverables & files', testId: 'nav-resources' },
         ...(lastOrganization ? [{
             href: currentOrganizationHref!,
@@ -82,6 +82,7 @@ export function ZoneA() {
                         title={item.title}
                         description={item.description}
                         testId={item.testId}
+                        matchPrefix={item.matchPrefix}
                         onClick={item.href === currentOrganizationHref ? () => router.push(item.href) : undefined}
                     />
                 ))}
@@ -135,9 +136,12 @@ export function ZoneA() {
     );
 }
 
-function NavItem({ icon: Icon, label, href, title, description, onClick, testId }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string }) {
+function NavItem({ icon: Icon, label, href, title, description, onClick, testId, matchPrefix }: { icon: any; label: string; href: string; title?: string; description?: string; onClick?: () => void; testId?: string; matchPrefix?: string }) {
     const pathname = usePathname();
-    const isActive = pathname === href || pathname?.startsWith(href + '/') === true;
+    const isActive =
+        pathname === href ||
+        pathname?.startsWith(href + '/') === true ||
+        (!!matchPrefix && (pathname === matchPrefix || pathname?.startsWith(matchPrefix + '/') === true));
     const classes = `
         flex items-center justify-center md:justify-start w-full p-2.5 rounded-lg transition-all duration-200
         ${isActive

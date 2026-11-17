@@ -78,3 +78,53 @@ def test_helm_chart_and_k8s_helpers_support_optional_interface_deployment():
     assert "MYCELIS_K8S_WITH_INTERFACE" in k8s_helpers
     assert "--set interface.enabled=true" in k8s_helpers
 
+
+def test_db_require_postgres_auto_bridges_localhost_when_port_closed(monkeypatch):
+    import ops.db
+    import ops.k8s_helpers
+
+    monkeypatch.setattr(ops.db, "_dsn", lambda dbname=None: ("127.0.0.1", "5432", "mycelis", "password", "postgres"))
+    psql_calls = []
+
+    def fake_psql(sql=None, file=None, dbname=None):
+        psql_calls.append((sql, dbname))
+        return 1 if len(psql_calls) == 1 else 0
+
+    forwarded = []
+    monkeypatch.setattr(ops.db, "_psql", fake_psql)
+    monkeypatch.setattr(ops.k8s_helpers, "_port_open", lambda port, host="127.0.0.1", timeout=1.0: False)
+    monkeypatch.setattr(
+        ops.k8s_helpers,
+        "_start_port_forward_detached",
+        lambda service, forward: forwarded.append((service, forward)),
+    )
+    monkeypatch.setattr(
+        ops.k8s_helpers,
+        "_wait_for_local_port",
+        lambda port, label, timeout_seconds=15, interval_seconds=1.0: True,
+    )
+
+    ops.db._require_postgres("postgres")
+    assert len(psql_calls) == 2
+    assert forwarded == [("svc/mycelis-core-postgresql", "5432:5432")]
+
+
+def test_k8s_up_defaults_to_with_interface_on_rancher_desktop(monkeypatch):
+    import ops.k8s
+
+    recorded = {}
+    monkeypatch.setattr(ops.k8s, "_k8s_backend", lambda: "rancher-desktop")
+    monkeypatch.setattr(ops.k8s, "init", lambda c: None)
+    monkeypatch.setattr(
+        ops.k8s,
+        "deploy",
+        lambda c, with_interface=False: recorded.setdefault("with_interface", with_interface),
+    )
+    monkeypatch.setattr(ops.k8s, "wait", lambda c, timeout=180: None)
+    monkeypatch.delenv("MYCELIS_K8S_WITH_INTERFACE", raising=False)
+
+    ops.k8s.up.body(object())
+    assert recorded["with_interface"] is True
+
+
+

@@ -179,13 +179,9 @@ def wait(c, timeout=180):
         raise SystemExit(1)
 
     pg_ready = _wait_rollout(c, "statefulset/mycelis-core-postgresql", timeout_seconds=timeout)
-    nats_ready = _wait_rollout(
-        c, "statefulset/mycelis-core-nats", timeout_seconds=timeout, required=False
-    )
+    nats_ready = _wait_rollout(c, "statefulset/mycelis-core-nats", timeout_seconds=timeout, required=False)
     if not nats_ready:
-        nats_ready = _wait_rollout(
-            c, "deployment/mycelis-core-nats", timeout_seconds=timeout, required=False
-        )
+        nats_ready = _wait_rollout(c, "deployment/mycelis-core-nats", timeout_seconds=timeout, required=False)
     core_ready = _wait_rollout(c, "deployment/mycelis-core", timeout_seconds=timeout)
 
     if not (pg_ready and nats_ready and core_ready):
@@ -207,6 +203,8 @@ def up(c, timeout=180, with_interface=False):
     print("[1/3] Ensure local Kubernetes cluster + namespace...")
     init(c)
     print("\n[2/3] Deploy Helm release...")
+    if not with_interface and _k8s_backend() == "rancher-desktop":
+        with_interface = os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() not in {"0", "false", "no"}
     deploy(c, with_interface=with_interface)
     print("\n[3/3] Wait for service readiness...")
     wait(c, timeout=timeout)

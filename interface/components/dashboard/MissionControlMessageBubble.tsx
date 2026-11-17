@@ -49,7 +49,7 @@ function DelegationTrace({ consultations, assistantName }: { consultations: Chat
     );
 }
 
-function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: string }) {
+function MessageMeta({ msg, assistantName, simpleMode = false }: { msg: ChatMessage; assistantName: string; simpleMode?: boolean }) {
     const setInspected = useCortexStore((s) => s.setInspectedMessage);
     const advancedMode = useCortexStore((s) => s.advancedMode);
     const askBadge = askClassBadge(msg.ask_class);
@@ -92,7 +92,7 @@ function MessageMeta({ msg, assistantName }: { msg: ChatMessage; assistantName: 
                     </span>
                 </>
             )}
-            {msg.trust_score != null && msg.trust_score > 0 && (
+            {(!simpleMode || advancedMode) && msg.trust_score != null && msg.trust_score > 0 && (
                 <>
                     <span className="text-[7px] text-cortex-text-muted">&bull;</span>
                     <span className={`text-[8px] font-mono font-bold ${trustColor(msg.trust_score)}`} title={trustTooltip(msg.trust_score)}>
@@ -147,7 +147,7 @@ function ToolsUsed({ tools }: { tools?: string[] }) {
     );
 }
 
-export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage }) {
+export default function MissionControlMessageBubble({ msg, simpleMode = false }: { msg: ChatMessage; simpleMode?: boolean }) {
     const isUser = msg.role === "user";
     const isBroadcast = isUser && msg.content.startsWith("[BROADCAST]");
     const assistantName = useCortexStore((s) => s.assistantName);
@@ -199,7 +199,7 @@ export default function MissionControlMessageBubble({ msg }: { msg: ChatMessage 
                 </div>
             )}
             <div className="max-w-[85%] flex flex-col gap-0.5">
-                {!isUser && <MessageMeta msg={msg} assistantName={assistantName} />}
+                {!isUser && <MessageMeta msg={msg} assistantName={assistantName} simpleMode={simpleMode} />}
                 <div className={`px-3 py-2 rounded-lg text-sm font-mono leading-relaxed ${
                     isBroadcast
                         ? "bg-cortex-warning/10 text-cortex-text-main border border-cortex-warning/30"

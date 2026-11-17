@@ -186,7 +186,7 @@ export default function MissionControlChat({
                         />
                     )
                 ) : (
-                    missionChat.map((msg, i) => <MissionControlMessageBubble key={i} msg={msg} />)
+                    missionChat.map((msg, i) => <MissionControlMessageBubble key={i} msg={msg} simpleMode={simpleMode} />)
                 )}
 
                 {isLoading && (

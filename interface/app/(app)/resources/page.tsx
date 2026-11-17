@@ -52,7 +52,7 @@ function ResourcesContent() {
         tabParam && VALID_TABS.includes(tabParam) ? tabParam : "tools"
     );
 
-    if (!advancedMode) {
+    if (!advancedMode && !tabParam) {
         return <DurableFilesOperatorView />;
     }
 

@@ -129,7 +129,7 @@ export function MissionControlChatHeader({
     simpleMode: boolean;
 }) {
     return (
-        <div className="h-10 px-4 border-b border-cortex-border flex items-center gap-2 flex-shrink-0 bg-cortex-surface/50">
+        <div className="min-h-10 py-1.5 px-4 border-b border-cortex-border flex items-center gap-2 flex-shrink-0 bg-cortex-surface/50">
             {showAdvancedRouting && broadcastMode ? (
                 <>
                     <Megaphone className="w-3.5 h-3.5 text-cortex-warning" />
@@ -137,13 +137,13 @@ export function MissionControlChatHeader({
                 </>
             ) : (
                 <>
-                    <Brain className="w-3.5 h-3.5 text-cortex-primary" />
-                    <div className="min-w-0">
-                        <span className="block text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
+                    <Brain className="w-3.5 h-3.5 text-cortex-primary flex-shrink-0" />
+                    <div className="min-w-0 flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-cortex-primary font-mono">
                             {simpleMode ? "Soma conversation" : assistantName}
                         </span>
                         {simpleMode ? (
-                            <span className="block text-[11px] text-cortex-text-muted">
+                            <span className="text-[11px] text-cortex-text-muted">
                                 Work with {assistantName} on plans, governed changes, reusable context, and delivery decisions.
                             </span>
                         ) : null}

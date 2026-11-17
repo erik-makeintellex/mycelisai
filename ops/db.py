@@ -115,6 +115,16 @@ def _require_postgres(dbname="postgres"):
     """Fail fast when the local PostgreSQL bridge is unavailable."""
     host, port, _user, _password, _db = _dsn(dbname)
     rc = _psql(sql="SELECT 1;", dbname=dbname)
+    if rc != 0 and host in {"127.0.0.1", "localhost"}:
+        try:
+            from .k8s_helpers import _port_open, _start_port_forward_detached, _wait_for_local_port
+
+            if not _port_open(int(port)):
+                _start_port_forward_detached("svc/mycelis-core-postgresql", f"{port}:5432")
+                if _wait_for_local_port(int(port), "PostgreSQL", timeout_seconds=15):
+                    rc = _psql(sql="SELECT 1;", dbname=dbname)
+        except Exception:
+            pass
     if rc != 0:
         raise SystemExit(
             f"Cannot connect to PostgreSQL at {host}:{port}. "
