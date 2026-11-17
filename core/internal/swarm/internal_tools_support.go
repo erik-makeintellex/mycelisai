@@ -3,6 +3,7 @@ package swarm
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -89,22 +90,72 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 		askRouting = defaultTeamAskRouting()
 	}
 
-	return &TeamManifest{
-		ID:          teamID,
-		Name:        name,
-		Type:        teamType,
-		Description: "Runtime-created team",
-		AskRouting:  askRouting,
-		Members: []protocol.AgentManifest{{
-			ID:            agentID,
-			Role:          role,
-			SystemPrompt:  systemPrompt,
-			Tools:         tools,
-			MaxIterations: 6,
-		}},
-		Inputs:     inputs,
-		Deliveries: deliveries,
+	description := pickFirstString(merged, "description", "instructions")
+	if description == "" {
+		description = "Runtime-created team"
 	}
+	return &TeamManifest{
+		ID: teamID, Name: name, Type: teamType, Description: description,
+		AskRouting: askRouting,
+		Members:    parseRuntimeTeamMembers(merged, teamID, role, agentID, systemPrompt, tools),
+		Inputs:     inputs, Deliveries: deliveries,
+	}
+}
+
+func parseRuntimeTeamMembers(merged map[string]any, teamID, defaultRole, defaultAgentID, defaultPrompt string, defaultTools []string) []protocol.AgentManifest {
+	if membersMap, ok := merged["members"].(map[string]any); ok && len(membersMap) > 0 {
+		roles := make([]string, 0, len(membersMap))
+		for roleKey := range membersMap {
+			roles = append(roles, roleKey)
+		}
+		sort.Strings(roles)
+		members := make([]protocol.AgentManifest, 0, len(roles))
+		for _, roleKey := range roles {
+			agentID := normalizeRuntimeID(stringValue(membersMap[roleKey]))
+			if agentID == "" {
+				agentID = teamID + "-" + normalizeRuntimeID(roleKey)
+			}
+			members = append(members, protocol.AgentManifest{
+				ID: agentID, Role: roleKey, Tools: defaultTools, MaxIterations: 6,
+				SystemPrompt: fmt.Sprintf("You are %s (%s) in team %s. Execute assigned tasks and report outcomes.", roleKey, agentID, teamID),
+			})
+		}
+		return members
+	}
+	if membersSlice, ok := merged["members"].([]any); ok && len(membersSlice) > 0 {
+		members := make([]protocol.AgentManifest, 0, len(membersSlice))
+		for _, item := range membersSlice {
+			m, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			role := pickFirstString(m, "role", "name")
+			if role == "" {
+				role = defaultRole
+			}
+			id := normalizeRuntimeID(pickFirstString(m, "id", "agent_id"))
+			if id == "" {
+				id = teamID + "-" + normalizeRuntimeID(role)
+			}
+			prompt := pickFirstString(m, "system_prompt")
+			if prompt == "" {
+				prompt = defaultPrompt
+			}
+			mTools := stringSlice(m["tools"])
+			if len(mTools) == 0 {
+				mTools = defaultTools
+			}
+			members = append(members, protocol.AgentManifest{
+				ID: id, Role: role, SystemPrompt: prompt, Tools: mTools, MaxIterations: 6,
+			})
+		}
+		if len(members) > 0 {
+			return members
+		}
+	}
+	return []protocol.AgentManifest{{
+		ID: defaultAgentID, Role: defaultRole, SystemPrompt: defaultPrompt, Tools: defaultTools, MaxIterations: 6,
+	}}
 }
 
 func parseTeamAskRouting(raw any) map[string]string {

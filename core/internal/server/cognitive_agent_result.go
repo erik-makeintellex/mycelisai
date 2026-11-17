@@ -82,7 +82,7 @@ func buildChatBlocker(agentResult chatAgentResult, fallbackSummary string) cogni
 
 func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 	if isMutation {
-		if _, ok := parsePlannedToolCall(agentResult.Text); ok || containsToolCallJSON(agentResult.Text) || isWeakDirectAnswerFallback(agentResult.Text) {
+		if _, ok := parsePlannedToolCall(agentResult.Text); ok || containsToolCallJSON(agentResult.Text) || containsRawJSONBlock(agentResult.Text) || isWeakDirectAnswerFallback(agentResult.Text) {
 			return "I've prepared a ready-to-run plan for your request. Review the files below and click Approve & Execute to build them."
 		}
 	}

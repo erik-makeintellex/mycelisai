@@ -173,6 +173,9 @@ func priorActionRequest(messages []chatRequestMessage) (string, string, []string
 		if actionRequiresConfirmation(action) || matchSomaInteractionTemplate(candidate).Protected {
 			return candidate, action, tools
 		}
+		if tools := inferMutationToolsFromText(candidate); len(tools) > 0 {
+			return candidate, "create the requested team and deliverables", tools
+		}
 	}
 	return "", "", nil
 }
@@ -191,13 +194,13 @@ func isConfirmationTurn(text string) bool {
 	if lower == "" {
 		return false
 	}
-	confirmations := []string{"yes", "confirm", "confirmed", "proceed", "do it", "execute", "go ahead", "continue with that", "one time"}
+	confirmations := []string{"yes", "confirm", "confirmed", "proceed", "do it", "execute", "go ahead", "continue with that", "one time", "create it", "launch it", "build it", "make it", "ok", "okay", "sure", "approve", "approved"}
 	for _, cue := range confirmations {
 		if lower == cue || strings.HasPrefix(lower, cue+" ") {
 			return true
 		}
 	}
-	return false
+	return strings.Contains(lower, "this once") || strings.Contains(lower, "proceed once") || strings.Contains(lower, "one time") || strings.Contains(lower, "just once")
 }
 
 func hasRepeatCue(text string) bool {

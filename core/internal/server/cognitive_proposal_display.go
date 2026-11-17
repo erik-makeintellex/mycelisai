@@ -91,6 +91,22 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 
 	if len(planned) > 0 {
 		switch strings.TrimSpace(planned[0].Name) {
+		case "create_team":
+			teamName := firstStringArgument(planned[0].Arguments, "name")
+			if teamName == "" {
+				teamName = firstStringArgument(planned[0].Arguments, "team_id")
+			}
+			if teamName == "" {
+				teamName = "specialist team"
+			}
+			if len(planned) > 1 {
+				display.OperatorSummary = fmt.Sprintf("Launch %q and build the requested deliverable package (%d files).", teamName, len(planned)-1)
+				display.ExpectedResult = fmt.Sprintf("Team %q will be spawned in the active runtime (/deployments) and all deliverable files will be generated with verified proof.", teamName)
+			} else {
+				display.OperatorSummary = fmt.Sprintf("Launch %q in the active runtime.", teamName)
+				display.ExpectedResult = fmt.Sprintf("Team %q will be spawned and active in Teams (/deployments) after approval.", teamName)
+			}
+			return display
 		case "write_file":
 			path := firstStringArgument(planned[0].Arguments, "path")
 			if path != "" {

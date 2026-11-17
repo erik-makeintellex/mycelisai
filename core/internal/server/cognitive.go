@@ -11,6 +11,7 @@ import (
 // mutationTools are tools that trigger proposal mode when used in chat.
 // If an agent uses any of these, the response switches from answer → proposal.
 var mutationTools = map[string]bool{
+	"create_team":                true,
 	"generate_blueprint":         true,
 	"delegate":                   true,
 	"write_file":                 true,
@@ -62,7 +63,7 @@ func chatToolRisk(tools []string) string {
 		if t == "publish_signal" || t == "broadcast" {
 			return "high"
 		}
-		if t == "generate_blueprint" || t == "delegate" || t == "write_file" {
+		if t == "create_team" || t == "generate_blueprint" || t == "delegate" || t == "write_file" {
 			return "medium"
 		}
 		if t == "promote_deployment_context" {
@@ -128,6 +129,9 @@ func inferMutationToolsFromText(text string) []string {
 	}
 	if _, ok := inferUserDeliverableBundlePlanFromRequest(text); ok {
 		if !isMissionBlueprintBundleRequest(lower) {
+			if hasTeamCreationIntent(lower) {
+				return []string{"create_team", "write_file"}
+			}
 			return []string{"write_file"}
 		}
 		tools = append(tools, "write_file")

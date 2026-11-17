@@ -123,32 +123,41 @@ func isRunnablePlannedToolCall(call protocol.PlannedToolCall) bool {
 }
 
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
+	var planned []protocol.PlannedToolCall
+	hasTeamTool := false
+	hasWriteFile := false
 	for _, tool := range mutTools {
-		if tool == "write_file" {
-			if calls, ok := inferCodexTaskBundlePlanFromRequest(latestRequest); ok {
-				return calls
-			}
-			if calls, ok := inferUserDeliverableBundlePlanFromRequest(latestRequest); ok {
-				return calls
-			}
+		switch tool {
+		case "create_team", "generate_blueprint", "delegate":
+			hasTeamTool = true
+		case "write_file":
+			hasWriteFile = true
 		}
 	}
-	var planned []protocol.PlannedToolCall
+	if hasTeamTool {
+		if teamCall, ok := inferCreateTeamPlanFromRequest(latestRequest, agentResult.Text); ok {
+			planned = append(planned, teamCall)
+		}
+	}
+	if hasWriteFile {
+		if calls, ok := inferCodexTaskBundlePlanFromRequest(latestRequest); ok {
+			return append(planned, calls...)
+		}
+		if calls, ok := inferUserDeliverableBundlePlanFromRequest(latestRequest); ok {
+			return append(planned, calls...)
+		}
+	}
+	if len(planned) > 0 {
+		return planned
+	}
 	if call, ok := parsePlannedToolCall(agentResult.Text); ok && isRunnablePlannedToolCall(call) {
 		planned = append(planned, normalizePlannedToolCall(call))
 	}
-	if len(planned) == 0 {
-		for _, tool := range mutTools {
-			if tool == "write_file" {
-				if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
-					planned = append(planned, normalizePlannedToolCall(call))
-					break
-				}
-				if call, ok := inferFallbackDeliverableWritePlan(latestRequest, agentResult.Text); ok {
-					planned = append(planned, normalizePlannedToolCall(call))
-					break
-				}
-			}
+	if len(planned) == 0 && hasWriteFile {
+		if call, ok := inferWriteFilePlanFromRequest(latestRequest); ok {
+			planned = append(planned, normalizePlannedToolCall(call))
+		} else if call, ok := inferFallbackDeliverableWritePlan(latestRequest, agentResult.Text); ok {
+			planned = append(planned, normalizePlannedToolCall(call))
 		}
 	}
 	return planned
@@ -158,6 +167,11 @@ func affectedResourcesForPlannedCalls(planned []protocol.PlannedToolCall) []stri
 	var resources []string
 	for _, call := range planned {
 		switch strings.TrimSpace(call.Name) {
+		case "create_team":
+			if teamID := firstNonEmptyString(call.Arguments["team_id"], call.Arguments["name"]); teamID != "" {
+				resources = append(resources, "team:"+teamID)
+				continue
+			}
 		case "write_file":
 			if rawPath, ok := call.Arguments["path"].(string); ok && strings.TrimSpace(rawPath) != "" {
 				resources = append(resources, strings.TrimSpace(rawPath))

@@ -145,6 +145,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, s
 		Brain: s.Cognitive,
 		DB:    s.getDB(),
 	})
+	registry.SetSoma(s.Soma)
 	executor := swarm.NewCompositeToolExecutor(registry, nil)
 	toolCtx := swarm.WithToolInvocationContext(ctx, swarm.ToolInvocationContext{
 		RunID:         runID,
@@ -180,7 +181,7 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, s
 }
 
 func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {
-	resource := firstNonEmptyString(planned.Arguments["path"], planned.Arguments["subject"], planned.Arguments["channel"])
+	resource := firstNonEmptyString(planned.Arguments["path"], planned.Arguments["team_id"], planned.Arguments["subject"], planned.Arguments["channel"])
 	capabilityID := capabilityForPlannedTool(resolvedToolName)
 	details := buildExecutionAuditDetailsForTool(planned, resolvedToolName)
 	_, _ = s.createAuditEvent(

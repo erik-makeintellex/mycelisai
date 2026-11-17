@@ -50,6 +50,9 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx,
 	files := make([]packageOutputFile, 0, len(planned))
 	artifacts := make([]protocol.ChatArtifactRef, 0, len(planned)+1)
 	for _, call := range planned {
+		if strings.TrimSpace(call.Name) != "write_file" {
+			continue
+		}
 		file, artifact, err := packageFileFromPlannedCall(call)
 		if err != nil {
 			return nil, err
@@ -139,22 +142,17 @@ func packageContentTypeForPath(relativePath string) string {
 	}
 	return "text/markdown"
 }
-
 func packageArtifactTypeForPath(relativePath string) string {
 	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(relativePath)), ".html") {
 		return "code"
 	}
 	return "document"
 }
-
 func packageOutputFileFromBytes(relativePath, title string, data []byte) packageOutputFile {
 	sum := sha256.Sum256(data)
 	return packageOutputFile{
-		Path:        filepath.ToSlash(relativePath),
-		Title:       title,
-		ContentType: packageContentTypeForPath(relativePath),
-		Bytes:       len(data),
-		SHA256:      fmt.Sprintf("%x", sum),
+		Path: filepath.ToSlash(relativePath), Title: title,
+		ContentType: packageContentTypeForPath(relativePath), Bytes: len(data), SHA256: fmt.Sprintf("%x", sum),
 	}
 }
 
@@ -181,7 +179,7 @@ func deliverablePackageMetadataFromCalls(planned []protocol.PlannedToolCall) (st
 	basePath, slug, packageKind := "", "", ""
 	for _, call := range planned {
 		if strings.TrimSpace(call.Name) != "write_file" {
-			return "", "", "", false
+			continue
 		}
 		kind := firstStringArgument(call.Arguments, "package_kind")
 		if !isSupportedDeliverablePackageKind(kind) {
@@ -201,6 +199,9 @@ func deliverablePackageMetadataFromCalls(planned []protocol.PlannedToolCall) (st
 		if dir != basePath || kind != packageKind {
 			return "", "", "", false
 		}
+	}
+	if basePath == "" {
+		return "", "", "", false
 	}
 	if packageKind == "" {
 		packageKind = "codex_task_bundle"
