@@ -13,6 +13,7 @@ from .k8s_rancher import (
     _ensure_rancher_desktop_path,
     _rancher_desktop_candidate_dirs,
     _rancher_desktop_context_available,
+    prune_old_mycelis_images,
     rancher_target_context,
     rancher_target_url,
 )
@@ -206,6 +207,8 @@ def _helm_deploy_release(
     cmd += "--wait"
     c.run(cmd)
     c.run(f"kubectl rollout restart deployment/mycelis-core -n {NAMESPACE}")
+    if type(c).__name__ == "Context":
+        prune_old_mycelis_images(tag)
     print(f"Deployment Complete ({tag}).")
 
 

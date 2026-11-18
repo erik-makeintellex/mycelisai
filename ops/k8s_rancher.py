@@ -143,3 +143,51 @@ def _rancher_desktop_context_available() -> bool:
     except Exception:
         return False
     return False
+
+
+def prune_old_mycelis_images(active_tag: str) -> list[str]:
+    """Remove superseded mycelis/core and mycelis/interface image tags and dangling layers."""
+    if not active_tag or active_tag == "dev":
+        return []
+    _ensure_rancher_desktop_path()
+    keep = {
+        f"mycelis/core:{active_tag}",
+        f"mycelis/interface:{active_tag}",
+    }
+    removed: list[str] = []
+    try:
+        listed = subprocess.run(
+            ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        if listed.returncode == 0:
+            stale = [
+                ref.strip()
+                for ref in listed.stdout.splitlines()
+                if ref.strip().startswith(("mycelis/core:", "mycelis/interface:", "mycelis-home-"))
+                and ref.strip() not in keep
+                and not ref.strip().endswith(":<none>")
+            ]
+            if stale:
+                subprocess.run(
+                    ["docker", "rmi", "-f", *stale],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    check=False,
+                )
+                removed.extend(stale)
+        subprocess.run(
+            ["docker", "image", "prune", "-f"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except Exception:
+        return removed
+    return removed
+
