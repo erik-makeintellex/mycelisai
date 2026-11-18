@@ -36,6 +36,8 @@ interface Props {
 export default function RunChainNode({ run, children = [] }: Props) {
     const [expanded, setExpanded] = useState(true);
     const hasChildren = children.length > 0;
+    const teamId = typeof run.metadata?.team_id === "string" ? run.metadata.team_id.trim() : "";
+    const teamName = typeof run.metadata?.team_name === "string" ? run.metadata.team_name.trim() : "";
 
     const metadataEntries = useMemo(() => {
         const entries = run.metadata ? Object.entries(run.metadata) : [];
@@ -60,6 +62,20 @@ export default function RunChainNode({ run, children = [] }: Props) {
                         <span className="text-[9px] font-mono text-cortex-text-muted/70">
                             mission: {run.mission_id}
                         </span>
+                        {(teamName || teamId) && (
+                            <span className="text-[10px] font-mono font-bold text-cortex-primary px-1.5 py-0.5 rounded border border-cortex-primary/30 bg-cortex-primary/10">
+                                {teamName || teamId}
+                            </span>
+                        )}
+                        {teamId && (
+                            <a
+                                href={`/deployments?team=${encodeURIComponent(teamId)}`}
+                                data-testid={`chain-node-open-team-${teamId}`}
+                                className="text-[9px] font-mono font-bold px-2 py-0.5 rounded border border-cortex-primary/35 bg-cortex-primary/15 text-cortex-primary hover:bg-cortex-primary/25 transition-colors"
+                            >
+                                View Team &amp; Outputs &rarr;
+                            </a>
+                        )}
                     </div>
 
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-[9px] font-mono text-cortex-text-muted/70">

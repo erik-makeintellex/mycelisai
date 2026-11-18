@@ -62,3 +62,10 @@ def test_team_generated_content_access_surfaces_are_wired() -> None:
     assert "deliverables-producer-filter" in durable_files
 
 
+def test_run_chain_node_links_to_team_workspace_and_outputs() -> None:
+    content = (REPO_ROOT / "interface" / "components" / "runs" / "RunChainNode.tsx").read_text(encoding="utf-8")
+    assert "chain-node-open-team-" in content
+    assert "/deployments?team=" in content
+
+
+

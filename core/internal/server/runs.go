@@ -82,6 +82,30 @@ func (s *AdminServer) handleGetRunChain(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	if s.Events != nil {
+		for i := range chain {
+			events, evErr := s.Events.GetRunTimeline(r.Context(), chain[i].ID)
+			if evErr == nil && len(events) > 0 {
+				if chain[i].Metadata == nil {
+					chain[i].Metadata = map[string]interface{}{}
+				}
+				for _, ev := range events {
+					if len(chain) > 1 && string(ev.EventType) == "signal.published" {
+						continue
+					}
+					if ev.SourceTeam != "" && ev.SourceTeam != "governance" {
+						chain[i].Metadata["team_id"] = ev.SourceTeam
+					}
+					for _, key := range []string{"team_id", "team_name", "listens_on", "speaks_on"} {
+						if val := firstNonEmptyString(ev.Payload[key]); val != "" {
+							chain[i].Metadata[key] = val
+						}
+					}
+				}
+			}
+		}
+	}
+
 	respondJSON(w, map[string]interface{}{
 		"run_id":     runID,
 		"mission_id": run.MissionID,

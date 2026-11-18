@@ -157,6 +157,8 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, s
 		PlanningOnly:  false,
 	})
 
+	prevRunID := runID
+	teamDepth := 0
 	for _, planned := range scope.PlannedToolCalls {
 		toolName := strings.TrimSpace(planned.Name)
 		if toolName == "" {
@@ -169,6 +171,10 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, s
 		if _, err := executor.CallTool(toolCtx, serverID, resolvedToolName, planned.Arguments); err != nil {
 			return nil, err
 		}
+		if resolvedToolName == "create_team" {
+			teamDepth++
+			prevRunID = recordPlannedTeamChildRunTx(tx, proofID, prevRunID, teamDepth, planned)
+		}
 		s.auditExecutedPlannedTool(planned, resolvedToolName, auditUser)
 	}
 
@@ -178,6 +184,52 @@ func (s *AdminServer) executePlannedToolCalls(ctx context.Context, tx *sql.Tx, s
 	}
 
 	return packageSummary, nil
+}
+
+func stringSliceFromAny(raw any) []string {
+	switch v := raw.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s := firstNonEmptyString(item); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
+}
+
+func recordPlannedTeamChildRunTx(tx *sql.Tx, proofID, parentRunID string, depth int, planned protocol.PlannedToolCall) string {
+	if tx == nil || strings.TrimSpace(planned.Name) != "create_team" {
+		return parentRunID
+	}
+	teamID := firstNonEmptyString(planned.Arguments["team_id"], planned.Arguments["id"])
+	teamName := firstNonEmptyString(planned.Arguments["name"], teamID)
+	listensOn := strings.Join(stringSliceFromAny(planned.Arguments["inputs"]), ", ")
+	speaksOn := strings.Join(stringSliceFromAny(planned.Arguments["deliveries"]), ", ")
+	childRunID := uuid.New().String()
+	now := time.Now()
+
+	_, err := tx.Exec(
+		"INSERT INTO mission_runs (id, mission_id, tenant_id, status, run_depth, parent_run_id, started_at, completed_at) VALUES ($1, $2, $3, $4, $5, NULLIF($6,'')::uuid, $7, $8)",
+		childRunID, proofID, "default", runs.StatusCompleted, depth, parentRunID, now, now,
+	)
+	if err != nil {
+		return parentRunID
+	}
+
+	payload, _ := json.Marshal(map[string]any{
+		"team_id": teamID, "team_name": teamName,
+		"listens_on": listensOn, "speaks_on": speaksOn,
+		"action": "team_manifested_and_executed",
+	})
+	const insertEvSQL = `INSERT INTO mission_events (id, run_id, tenant_id, event_type, severity, source_agent, source_team, payload, emitted_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+	_, _ = tx.Exec(insertEvSQL, uuid.New().String(), childRunID, "default", string(protocol.EventToolCompleted), string(protocol.SeverityInfo), "soma", teamID, payload, now)
+	_, _ = tx.Exec(insertEvSQL, uuid.New().String(), parentRunID, "default", "signal.published", string(protocol.SeverityInfo), "soma", teamID, payload, now)
+	return childRunID
 }
 
 func (s *AdminServer) auditExecutedPlannedTool(planned protocol.PlannedToolCall, resolvedToolName, auditUser string) {
