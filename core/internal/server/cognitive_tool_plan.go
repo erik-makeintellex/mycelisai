@@ -135,8 +135,8 @@ func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mu
 		}
 	}
 	if hasTeamTool {
-		if teamCall, ok := inferCreateTeamPlanFromRequest(latestRequest, agentResult.Text); ok {
-			planned = append(planned, teamCall)
+		if teamCalls := inferCreateTeamPlanCallsFromRequest(latestRequest, agentResult.Text); len(teamCalls) > 0 {
+			planned = append(planned, teamCalls...)
 		}
 	}
 	if hasWriteFile {

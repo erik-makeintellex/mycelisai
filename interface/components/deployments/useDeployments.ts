@@ -47,6 +47,16 @@ export function useDeployments(organizationId?: string | null) {
         if (current && nextDeployments.some((d) => compositeDeploymentId(d) === current)) {
           return current;
         }
+        const requestedTeam =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("team")?.trim()
+            : "";
+        if (requestedTeam) {
+          const matched = nextDeployments.find(
+            (d) => d.id === requestedTeam || compositeDeploymentId(d) === requestedTeam,
+          );
+          if (matched) return compositeDeploymentId(matched);
+        }
         return nextDeployments[0] ? compositeDeploymentId(nextDeployments[0]) : null;
       });
       setLoadError(null);

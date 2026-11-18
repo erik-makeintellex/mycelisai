@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, ClipboardList, Download, ExternalLink, Eye, FileText, Play, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ClipboardList, Download, ExternalLink, FileText, ShieldCheck } from "lucide-react";
 import type { ChatArtifactRef, DeliveryPackageSummary, OutputProofEnvelope, OutputRef } from "@/store/useCortexStore";
 import {
     artifactForPath,
-    isPlayablePackageFile,
     isProofFile,
     packageTitle,
     proofDetailRows,
@@ -72,8 +70,6 @@ export default function OutputWorkbench({
     outputRefs?: OutputRef[];
     runId?: string;
 }) {
-    const [activePreviewPath, setActivePreviewPath] = useState<string | null>(null);
-
     if (!deliveryPackage && artifacts.length === 0 && outputRefs.length === 0) return null;
 
     const refs = outputRefs.length > 0 ? outputRefs : deliveryPackage?.items ?? [];
@@ -82,15 +78,9 @@ export default function OutputWorkbench({
     const packageRunId = runId || deliveryPackage?.run_id;
     const packageIdentity = deliveryPackage?.base_path || deliveryPackage?.package_id;
     const packageStatus = deliveryPackage?.status || "verified";
+    const teamId = deliveryPackage?.team_id;
+    const teamName = deliveryPackage?.team_name;
     const contentArtifacts = artifacts.filter((artifact) => artifact.content?.trim());
-    const playableEntry = files.find((file) => {
-        const artifact = artifactForPath(artifacts, file.path, file.title);
-        return Boolean(artifact?.content) && isPlayablePackageFile(file, artifact);
-    });
-    const activeFile = activePreviewPath
-        ? files.find((file) => (file.path || file.title) === activePreviewPath || file.path === activePreviewPath)
-        : undefined;
-    const activeArtifact = activeFile ? artifactForPath(artifacts, activeFile.path, activeFile.title) : undefined;
     const stages: { label: string; state: "completed" | "active" | "failed" }[] = [
         { label: "Intent", state: "completed" },
         { label: "Approval", state: "completed" },
@@ -105,29 +95,25 @@ export default function OutputWorkbench({
                 <ClipboardList className="h-3.5 w-3.5 text-cortex-primary" />
                 <div className="min-w-0 flex-1">
                     <div className="truncate text-[10px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
-                        {packageTitle(deliveryPackage?.package_kind)}
+                        {teamName ? `${teamName} — ${packageTitle(deliveryPackage?.package_kind)}` : packageTitle(deliveryPackage?.package_kind)}
                     </div>
                     {packageIdentity ? (
                         <div className="truncate text-[9px] font-mono text-cortex-text-muted">{packageIdentity}</div>
                     ) : null}
                 </div>
-                {playableEntry ? (
-                    <button
-                        type="button"
-                        data-testid="output-workbench-play-inline"
-                        onClick={() => setActivePreviewPath(activePreviewPath === playableEntry.path ? null : (playableEntry.path || playableEntry.title || null))}
-                        className="inline-flex items-center gap-1 rounded border border-cortex-primary/40 bg-cortex-primary/15 px-2 py-0.5 text-[9px] font-mono font-bold text-cortex-primary hover:bg-cortex-primary/25"
-                    >
-                        <Play className="h-2.5 w-2.5" />
-                        {activePreviewPath === playableEntry.path ? "Hide Preview" : "Play / Live Preview"}
-                    </button>
-                ) : null}
                 <Link
-                    href="/resources"
+                    href={teamId ? `/deployments?team=${encodeURIComponent(teamId)}` : "/deployments"}
+                    data-testid="output-workbench-open-team"
+                    className="inline-flex items-center gap-1 rounded border border-cortex-primary/35 bg-cortex-primary/15 px-2 py-0.5 text-[9px] font-mono font-bold text-cortex-primary hover:bg-cortex-primary/25"
+                >
+                    View Team &amp; Outputs &rarr;
+                </Link>
+                <Link
+                    href={teamId ? `/resources?team=${encodeURIComponent(teamId)}` : "/resources"}
                     data-testid="output-workbench-open-resources"
                     className="inline-flex items-center gap-1 rounded border border-cortex-border bg-cortex-surface px-2 py-0.5 text-[9px] font-mono text-cortex-text-main hover:border-cortex-primary/40 hover:text-cortex-primary"
                 >
-                    Open in Deliverables
+                    Download / View Files
                 </Link>
                 <span className="inline-flex items-center gap-1 rounded border border-cortex-success/30 bg-cortex-success/10 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-cortex-success">
                     <CheckCircle2 className="h-2.5 w-2.5" />
@@ -135,9 +121,10 @@ export default function OutputWorkbench({
                 </span>
                 {packageRunId ? (
                     <a
-                        href={`/runs/${packageRunId}`}
+                        href={`/runs/${packageRunId}/chain`}
+                        data-testid="output-workbench-open-chain"
                         className="rounded p-0.5 text-cortex-text-muted hover:bg-cortex-border hover:text-cortex-primary"
-                        title="Open run"
+                        title="View execution chain"
                     >
                         <ExternalLink className="h-3 w-3" />
                     </a>
@@ -159,24 +146,6 @@ export default function OutputWorkbench({
                 ))}
             </div>
 
-            {activeFile && activeArtifact?.content ? (
-                <div className="border-b border-cortex-primary/20 bg-cortex-bg p-3" data-testid="output-workbench-inline-preview">
-                    {isPlayablePackageFile(activeFile, activeArtifact) ? (
-                        <iframe
-                            title={activeFile.title || "Live Deliverable Preview"}
-                            data-testid="output-workbench-inline-iframe"
-                            sandbox="allow-scripts"
-                            srcDoc={activeArtifact.content}
-                            className="w-full h-[460px] rounded-lg border border-cortex-primary/30 bg-slate-950"
-                        />
-                    ) : (
-                        <pre className="max-h-72 overflow-auto rounded-lg border border-cortex-border bg-cortex-surface p-3 text-xs font-mono text-cortex-text-main whitespace-pre-wrap">
-                            {activeArtifact.content}
-                        </pre>
-                    )}
-                </div>
-            ) : null}
-
             <div className="divide-y divide-cortex-border/60">
                 {files.map((file) => {
                     const artifact = artifactForPath(artifacts, file.path, file.title);
@@ -184,7 +153,6 @@ export default function OutputWorkbench({
                     const proofFile = isProofFile(file.path, file.title);
                     const role = ref?.role || (proofFile ? "proof" : "");
                     const openUrl = ref?.open_url ?? artifact?.url;
-                    const playable = isPlayablePackageFile(file, artifact);
                     return (
                         <div key={`${file.path}-${file.title}`} className="px-3 py-2">
                             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
@@ -205,16 +173,6 @@ export default function OutputWorkbench({
                                     {role ? (
                                         <span className="text-[8px] font-mono text-cortex-text-muted">{role}</span>
                                     ) : null}
-                                    {artifact?.content ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => setActivePreviewPath(activePreviewPath === file.path ? null : (file.path || file.title || null))}
-                                            className="inline-flex items-center gap-1 rounded border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 py-0.5 text-[8px] font-mono font-bold text-cortex-primary hover:bg-cortex-primary/20"
-                                        >
-                                            {playable ? <Play className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
-                                            {playable ? "Play" : "View"}
-                                        </button>
-                                    ) : null}
                                     <ProofChip proof={ref?.proof} />
                                     {openUrl ? (
                                         <a
@@ -225,6 +183,12 @@ export default function OutputWorkbench({
                                             <Download className="h-3 w-3" />
                                         </a>
                                     ) : null}
+                                    <Link
+                                        href={teamId ? `/deployments?team=${encodeURIComponent(teamId)}` : "/resources"}
+                                        className="rounded border border-cortex-border bg-cortex-bg px-1.5 py-0.5 text-[8px] font-mono text-cortex-text-main hover:border-cortex-primary/40"
+                                    >
+                                        View
+                                    </Link>
                                 </div>
                             </div>
                             {ref?.proof ? (

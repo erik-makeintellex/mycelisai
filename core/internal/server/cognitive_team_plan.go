@@ -7,10 +7,25 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+func isChainedTeamPipelineRequest(text string) bool {
+	lower := strings.ToLower(strings.TrimSpace(text))
+	if lower == "" {
+		return false
+	}
+	return requestContainsAny(lower, []string{
+		"chain", "chained", "2 or more", "two or more", "two teams", "between teams",
+		"mcp output", "mcp outputs", "registered mcp", "listen and speak",
+		"listen on", "speak on", "feed output", "pipe output", "handoff between",
+	})
+}
+
 func hasTeamCreationIntent(text string) bool {
 	lower := strings.ToLower(strings.TrimSpace(text))
 	if lower == "" {
 		return false
+	}
+	if isChainedTeamPipelineRequest(lower) {
+		return true
 	}
 	if requestContainsAny(lower, []string{
 		"put a team together",
@@ -79,6 +94,55 @@ func titleCaseTeamID(teamID string) string {
 	return strings.Join(parts, " ")
 }
 
+func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []protocol.PlannedToolCall {
+	if isChainedTeamPipelineRequest(latestRequest) {
+		return []protocol.PlannedToolCall{
+			{
+				Name: "create_team",
+				Arguments: map[string]any{
+					"team_id":     "mcp-upstream-discovery-team",
+					"name":        "MCP & Upstream Discovery Team",
+					"description": "Collects registered MCP tool outputs and publishes normalized findings on its result channel.",
+					"inputs":      []string{"swarm.team.mcp-upstream-discovery-team.internal.command", "swarm.mcp.outputs.registered", "swarm.global.broadcast"},
+					"deliveries":  []string{"swarm.team.mcp-upstream-discovery-team.signal.result", "swarm.team.mcp-upstream-discovery-team.signal.status"},
+					"members": map[string]any{
+						"mcp-collector":     "council-architect",
+						"signal-normalizer": "council-sentry",
+					},
+					"tools": []string{"read_file", "publish_signal", "write_file"},
+				},
+			},
+			{
+				Name: "create_team",
+				Arguments: map[string]any{
+					"team_id":     "chained-downstream-delivery-team",
+					"name":        "Chained Downstream Delivery Team",
+					"description": "Listens on swarm.team.mcp-upstream-discovery-team.signal.result and synthesizes downstream deliverables.",
+					"inputs":      []string{"swarm.team.mcp-upstream-discovery-team.signal.result", "swarm.team.chained-downstream-delivery-team.internal.command"},
+					"deliveries":  []string{"swarm.team.chained-downstream-delivery-team.signal.result", "swarm.team.chained-downstream-delivery-team.signal.status"},
+					"members": map[string]any{
+						"lead-integrator": "prime-development-agent",
+						"output-verifier": "agui-design-architect-agent",
+					},
+					"tools": []string{"write_file", "publish_signal"},
+				},
+			},
+		}
+	}
+	call, ok := inferCreateTeamPlanFromRequest(latestRequest, agentReply)
+	if !ok {
+		return nil
+	}
+	teamID := firstNonEmptyString(call.Arguments["team_id"], "mission-delivery-team")
+	if call.Arguments["inputs"] == nil {
+		call.Arguments["inputs"] = []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"}
+	}
+	if call.Arguments["deliveries"] == nil {
+		call.Arguments["deliveries"] = []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"}
+	}
+	return []protocol.PlannedToolCall{call}
+}
+
 func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.PlannedToolCall, bool) {
 	cleanRequest := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(latestRequest), "Confirmed action from prior user request:\n"))
 	if rawMap, ok := containsRawTeamJSON(agentReply); ok {
@@ -93,6 +157,8 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 				"team_id":     teamID,
 				"name":        name,
 				"description": firstNonEmptyString(rawMap["instructions"], rawMap["description"], cleanRequest),
+				"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"},
+				"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
 				"members":     rawMap["members"],
 				"tools":       rawMap["tools"],
 			},
@@ -111,6 +177,8 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 				"team_id":     "tetris-street-fighter",
 				"name":        "Street Fighter II Tetris Team",
 				"description": "Arcade game design, architecture, development, and character theme team",
+				"inputs":      []string{"swarm.team.tetris-street-fighter.internal.command", "swarm.global.broadcast"},
+				"deliveries":  []string{"swarm.team.tetris-street-fighter.signal.result", "swarm.team.tetris-street-fighter.signal.status"},
 				"members": map[string]any{
 					"designer":  "agui-design-architect-agent",
 					"architect": "council-architect",
@@ -128,6 +196,8 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 			"team_id":     "mission-delivery-team",
 			"name":        "Mission Delivery Team",
 			"description": cleanRequest,
+			"inputs":      []string{"swarm.team.mission-delivery-team.internal.command", "swarm.global.broadcast"},
+			"deliveries":  []string{"swarm.team.mission-delivery-team.signal.result", "swarm.team.mission-delivery-team.signal.status"},
 			"members": map[string]any{
 				"architect": "council-architect",
 				"developer": "prime-development-agent",

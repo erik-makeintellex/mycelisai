@@ -57,6 +57,8 @@ func (c *deploymentCollector) collectStandingTeams() {
 			Since:          deploymentTime(deploymentsCoreStartedAt),
 			Members:        members,
 			Tools:          unionMemberTools(members),
+			InputChannels:  tm.Inputs,
+			OutputChannels: tm.Deliveries,
 			ConfigRef:      deploymentConfigRef("team", tm.ID),
 		}
 		if hb := latestMemberHeartbeat(members); hb != nil {
@@ -181,6 +183,8 @@ func (c *deploymentCollector) missionTeamRecord(row deploymentMissionRow, agents
 	}
 	if runtime != nil {
 		rec.RuntimeID = runtime.ID
+		rec.InputChannels = runtime.Inputs
+		rec.OutputChannels = runtime.Deliveries
 	}
 	if row.createdAt.Valid {
 		rec.Since = deploymentTime(row.createdAt.Time)

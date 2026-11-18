@@ -41,8 +41,12 @@ func deliveryPackageFromPackageSummary(summary *packageOutputSummary) protocol.D
 		refs = outputRefsFromPackageSummary(summary)
 	}
 	primaryRef, proofRef := outputRefPointers(refs)
+	title := "Codex task bundle"
+	if summary.TeamName != "" || summary.TeamID != "" {
+		title = firstNonEmptyString(summary.TeamName, summary.PackageKind, "Codex task bundle")
+	}
 	return protocol.DeliveryPackageSummary{
-		PackageID: summary.PackageID, RunID: summary.RunID, Title: "Codex task bundle",
+		PackageID: summary.PackageID, RunID: summary.RunID, TeamID: summary.TeamID, TeamName: summary.TeamName, Title: title,
 		Summary:     fmt.Sprintf("Codex task bundle created under %s with proof at %s.", summary.BasePath, summary.ProofPath),
 		PackageKind: summary.PackageKind, Status: "verified", PrimaryOutputRef: primaryRef, Items: refs,
 		NextActions: []string{"Open the implementation task.", "Run the validation checklist.", "Review package proof before promotion."},

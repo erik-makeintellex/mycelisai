@@ -99,6 +99,12 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 			if teamName == "" {
 				teamName = "specialist team"
 			}
+			if len(planned) > 1 && strings.TrimSpace(planned[1].Name) == "create_team" {
+				team2 := firstNonEmptyString(firstStringArgument(planned[1].Arguments, "name"), firstStringArgument(planned[1].Arguments, "team_id"), "downstream team")
+				display.OperatorSummary = fmt.Sprintf("Launch chained teams (%q -> %q) and execute inter-team channel handoff.", teamName, team2)
+				display.ExpectedResult = fmt.Sprintf("%q will publish outputs on its result channel, and %q will listen on that channel to generate the final deliverables.", teamName, team2)
+				return display
+			}
 			if len(planned) > 1 {
 				display.OperatorSummary = fmt.Sprintf("Launch %q and build the requested deliverable package (%d files).", teamName, len(planned)-1)
 				display.ExpectedResult = fmt.Sprintf("Team %q will be spawned in the active runtime (/deployments) and all deliverable files will be generated with verified proof.", teamName)

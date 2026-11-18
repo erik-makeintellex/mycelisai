@@ -4,8 +4,10 @@ import { BarChart3, BrainCircuit, ClipboardCheck, Compass, FileText, Gamepad2, G
 export type SomaSuggestion = {
   id?: string;
   label: string;
-  detail: string;
+  detail?: string;
   summary?: string;
+  badge?: string;
+  hint?: string;
   prompt: string;
   icon?: LucideIcon;
 };
@@ -108,6 +110,14 @@ export const ORCHESTRATION_PLAYBOOK_STARTERS: SomaSuggestion[] = [
     detail: "Verify backend service addresses and MCP tool readiness.",
     prompt: "Check our current backend service status and installed MCP tools, and recommend the next capability or workflow to enable.",
     icon: Wrench,
+  },
+  {
+    label: "Chain Multi-Team & MCP Channels",
+    detail: "Links 2+ teams via NATS listen/speak channels and registered MCP outputs",
+    prompt: "Chain two team asks together: have an upstream MCP discovery team publish registered MCP outputs on its result channel, and have a downstream execution team listen on that channel to produce the final deliverable package.",
+    badge: "Channel Chain",
+    hint: "Links 2+ teams via NATS listen/speak channels and registered MCP outputs",
+    icon: GitBranch,
   },
 ];
 

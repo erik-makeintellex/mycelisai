@@ -100,6 +100,8 @@ type TeamOutputRef struct {
 type DeliveryPackageSummary struct {
 	PackageID        string      `json:"package_id,omitempty"`
 	RunID            string      `json:"run_id,omitempty"`
+	TeamID           string      `json:"team_id,omitempty"`
+	TeamName         string      `json:"team_name,omitempty"`
 	Title            string      `json:"title"`
 	Summary          string      `json:"summary,omitempty"`
 	PackageKind      string      `json:"package_kind"`

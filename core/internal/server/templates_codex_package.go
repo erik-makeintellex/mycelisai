@@ -44,12 +44,13 @@ type packageOutputSummary struct {
 }
 
 func plannedTeamIdentity(planned []protocol.PlannedToolCall) (string, string) {
+	teamID, teamName := "", ""
 	for _, call := range planned {
 		if strings.TrimSpace(call.Name) == "create_team" {
-			return firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
+			teamID, teamName = firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
 		}
 	}
-	return "", ""
+	return teamID, teamName
 }
 
 func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx, planned []protocol.PlannedToolCall, runID, proofID string) (*packageOutputSummary, error) {
@@ -157,7 +158,7 @@ func isDeliverablePackageKind(kind string) bool { return isSupportedDeliverableP
 
 func isSupportedDeliverablePackageKind(kind string) bool {
 	switch strings.TrimSpace(kind) {
-	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle":
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle":
 		return true
 	default:
 		return false
@@ -243,6 +244,7 @@ func deliverablePackageProofTitle(packageKind string) string {
 	case "kpi_dashboard_bundle": return "KPI Dashboard Bundle Proof"
 	case "product_wireframe_bundle": return "Product Wireframe Bundle Proof"
 	case "mission_blueprint_bundle": return "Mission Blueprint Bundle Proof"
+	case "chained_pipeline_bundle": return "Chained Team Pipeline Proof"
 	default: return "Codex Task Bundle Proof"
 	}
 }

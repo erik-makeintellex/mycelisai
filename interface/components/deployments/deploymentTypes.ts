@@ -48,6 +48,18 @@ export type DeploymentOutputsSummary = {
   last_output_at?: string | null;
 };
 
+export type DeploymentOutputItem = {
+  id: string;
+  title: string;
+  file_path?: string;
+  content_type?: string;
+  bytes?: number;
+  status?: string;
+  download_url?: string;
+  view_url?: string;
+  created_at?: string | null;
+};
+
 export type DeploymentConfigRef = {
   kind: string;
   id: string;
@@ -73,6 +85,9 @@ export type DeploymentRecord = {
   approval_policy_ref?: string;
   approval_posture?: string;
   outputs_summary?: DeploymentOutputsSummary | null;
+  input_channels?: string[];
+  output_channels?: string[];
+  recent_outputs?: DeploymentOutputItem[];
   config_ref: DeploymentConfigRef;
 };
 

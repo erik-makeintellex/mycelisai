@@ -74,15 +74,11 @@ func buildRuntimeTeamManifest(args map[string]any) *TeamManifest {
 
 	inputs := stringSlice(merged["inputs"])
 	if len(inputs) == 0 {
-		inputs = []string{protocol.TopicGlobalBroadcast}
+		inputs = []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), protocol.TopicGlobalBroadcast}
 	}
 	deliveries := stringSlice(merged["deliveries"])
 	if len(deliveries) == 0 {
-		if teamType == TeamTypeExpression {
-			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)}
-		} else {
-			deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)}
-		}
+		deliveries = []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)}
 	}
 	tools := stringSlice(merged["tools"])
 	askRouting := parseTeamAskRouting(merged["ask_routing"])

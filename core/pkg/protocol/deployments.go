@@ -103,6 +103,19 @@ type DeploymentOutputsSummary struct {
 	LastOutputAt *time.Time     `json:"last_output_at,omitempty"`
 }
 
+// DeploymentOutputItem describes a recent retained output linked to a deployment.
+type DeploymentOutputItem struct {
+	ID          string     `json:"id"`
+	Title       string     `json:"title"`
+	FilePath    string     `json:"file_path,omitempty"`
+	ContentType string     `json:"content_type,omitempty"`
+	Bytes       int64      `json:"bytes,omitempty"`
+	Status      string     `json:"status,omitempty"`
+	DownloadURL string     `json:"download_url,omitempty"`
+	ViewURL     string     `json:"view_url,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
+}
+
 // DeploymentConfigRef points at the config view resolved by RC-004F.
 type DeploymentConfigRef struct {
 	Kind string `json:"kind"` // team | group | organization
@@ -126,10 +139,13 @@ type DeploymentRecord struct {
 	LastActivity      *time.Time                `json:"last_activity,omitempty"`
 	Members           []DeploymentMember        `json:"members"`
 	Tools             []DeploymentTool          `json:"tools"`
+	InputChannels     []string                  `json:"input_channels,omitempty"`
+	OutputChannels    []string                  `json:"output_channels,omitempty"`
 	WorkMode          string                    `json:"work_mode,omitempty"`
 	ApprovalPolicyRef string                    `json:"approval_policy_ref,omitempty"`
 	ApprovalPosture   string                    `json:"approval_posture,omitempty"`
 	OutputsSummary    *DeploymentOutputsSummary `json:"outputs_summary,omitempty"`
+	RecentOutputs     []DeploymentOutputItem    `json:"recent_outputs,omitempty"`
 	ConfigRef         DeploymentConfigRef       `json:"config_ref"`
 }
 

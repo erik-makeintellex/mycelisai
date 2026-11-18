@@ -74,6 +74,8 @@ export interface DeliveryPackageSummary {
     proof_path?: string;
     run_id?: string;
     proof_id?: string;
+    team_id?: string;
+    team_name?: string;
     files?: DeliveryPackageFile[];
     primary_output_ref?: OutputRef;
     items?: OutputRef[];
@@ -92,21 +94,10 @@ export interface ExecutionSummary {
     delivery_package?: DeliveryPackageSummary;
 }
 
-export type AskClass =
-    | 'direct_answer'
-    | 'governed_mutation'
-    | 'governed_artifact'
-    | 'specialist_consultation'
-    | 'execution_blocker';
-
+export type AskClass = 'direct_answer' | 'governed_mutation' | 'governed_artifact' | 'specialist_consultation' | 'execution_blocker';
 export type TemplateID = 'chat-to-answer' | 'chat-to-proposal';
 export type ExecutionMode = 'answer' | 'proposal' | 'execution_result' | 'blocker';
-export type ProposalLifecycleStatus =
-    | 'active'
-    | 'cancelled'
-    | 'confirmed_pending_execution'
-    | 'executed'
-    | 'failed';
+export type ProposalLifecycleStatus = 'active' | 'cancelled' | 'confirmed_pending_execution' | 'executed' | 'failed';
 
 export interface AnswerProvenance {
     resolved_intent: string;
@@ -232,18 +223,7 @@ export interface CTSChatEnvelope {
             risk_level: string;
             confirm_token: string;
             intent_proof_id: string;
-            team_expressions?: {
-                expression_id?: string;
-                team_id?: string;
-                objective: string;
-                role_plan?: string[];
-                module_bindings?: {
-                    binding_id?: string;
-                    module_id: string;
-                    adapter_kind?: string;
-                    operation?: string;
-                }[];
-            }[];
+            team_expressions?: TeamExpressionData[];
             task_cadence?: TaskCadence;
             schedule_summary?: string;
             runtime_posture?: string;

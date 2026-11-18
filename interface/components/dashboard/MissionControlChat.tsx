@@ -67,6 +67,12 @@ export default function MissionControlChat({
 
     useEffect(() => {
         setCouncilTarget("admin");
+        if (typeof window !== "undefined") {
+            const chainChannel = new URLSearchParams(window.location.search).get("chain_channel")?.trim();
+            if (chainChannel) {
+                setInput(`Chain the output published on channel ${chainChannel} into a downstream team that listens on ${chainChannel} and generates the next deliverable package.`);
+            }
+        }
     }, [setCouncilTarget]);
 
     useEffect(() => {

@@ -100,6 +100,7 @@ export function DeploymentDetailPane({
         <div className="space-y-4">
           <MembersPanel members={record.members} advancedMode={advancedMode} />
           <PostureAndOutputsPanel record={record} />
+          <ChannelsAndChainingPanel record={record} />
         </div>
         <TimingPanel record={record} />
       </div>
@@ -143,6 +144,7 @@ function MembersPanel({ members, advancedMode }: { members: DeploymentMember[]; 
 }
 
 function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
+  const recentOutputs = record.recent_outputs ?? [];
   return (
     <section className="rounded-xl border border-cortex-border bg-cortex-bg p-4">
       <h3 className="text-sm font-semibold text-cortex-text-main">Work mode and outputs</h3>
@@ -152,7 +154,96 @@ function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
       <p className="mt-2 text-sm text-cortex-text-muted" data-testid="deployments-outputs-summary">
         Retained outputs: {outputsSummaryLabel(record.outputs_summary)}
       </p>
-      <Link href={`/resources?team=${encodeURIComponent(record.id)}`} className="mt-2 inline-flex items-center text-xs font-medium text-cortex-primary hover:underline">Browse generated files in Deliverables &rarr;</Link>
+      <div className="mt-3 space-y-2" data-testid="deployments-team-outputs">
+        <div className="text-xs font-semibold uppercase tracking-wider text-cortex-text-muted">
+          Generated Team Outputs
+        </div>
+        {recentOutputs.length > 0 ? (
+          <div className="space-y-1.5">
+            {recentOutputs.map((item) => (
+              <div
+                key={item.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold text-cortex-text-main">{item.title}</div>
+                  <div className="truncate font-mono text-[11px] text-cortex-text-muted">
+                    {item.file_path || item.content_type || "output"}
+                    {item.bytes != null ? ` · ${item.bytes} B` : ""}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={item.download_url || `/api/v1/artifacts/${item.id}/download`}
+                    download
+                    data-testid={`team-output-download-${item.id}`}
+                    className="rounded border border-cortex-primary/35 bg-cortex-primary/10 px-2 py-1 font-mono text-[11px] font-medium text-cortex-primary hover:bg-cortex-primary/20"
+                  >
+                    Download
+                  </a>
+                  <Link
+                    href={item.view_url || `/resources?team=${encodeURIComponent(record.id)}`}
+                    data-testid={`team-output-view-${item.id}`}
+                    className="rounded border border-cortex-border bg-cortex-bg px-2 py-1 font-mono text-[11px] text-cortex-text-main hover:border-cortex-primary/35"
+                  >
+                    View / Open
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-cortex-text-muted">No recent outputs indexed yet.</p>
+        )}
+      </div>
+      <Link href={`/resources?team=${encodeURIComponent(record.id)}`} className="mt-3 inline-flex items-center text-xs font-medium text-cortex-primary hover:underline">
+        Browse all generated files in Deliverables &rarr;
+      </Link>
+    </section>
+  );
+}
+
+function ChannelsAndChainingPanel({ record }: { record: DeploymentRecord }) {
+  const inputChannels = record.input_channels?.length
+    ? record.input_channels
+    : [`swarm.team.${record.id}.internal.command`, "swarm.global.broadcast"];
+  const outputChannels = record.output_channels?.length
+    ? record.output_channels
+    : [`swarm.team.${record.id}.signal.result`, `swarm.team.${record.id}.signal.status`];
+  const primarySpeakChannel = outputChannels[0] || `swarm.team.${record.id}.signal.result`;
+
+  return (
+    <section className="rounded-xl border border-cortex-border bg-cortex-bg p-4" data-testid="deployments-team-channels">
+      <h3 className="text-sm font-semibold text-cortex-text-main">Channels &amp; Inter-Team Chaining (Listen / Speak)</h3>
+      <div className="mt-2 space-y-2 text-xs">
+        <div>
+          <span className="font-semibold text-cortex-text-muted">Listens on (Inputs):</span>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {inputChannels.map((ch) => (
+              <span key={ch} className="rounded border border-cortex-border bg-cortex-surface px-2 py-0.5 font-mono text-[11px] text-cortex-text-main">
+                {ch}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div>
+          <span className="font-semibold text-cortex-text-muted">Speaks on (Outputs / Deliveries):</span>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {outputChannels.map((ch) => (
+              <span key={ch} className="rounded border border-cortex-primary/30 bg-cortex-primary/10 px-2 py-0.5 font-mono text-[11px] text-cortex-primary">
+                {ch}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <Link
+        href={`/dashboard?team_id=${encodeURIComponent(record.id)}&chain_channel=${encodeURIComponent(primarySpeakChannel)}`}
+        data-testid="deployments-chain-output"
+        className="mt-3 inline-flex items-center rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-1.5 text-xs font-medium text-cortex-primary hover:bg-cortex-primary/20"
+      >
+        Chain This Team&apos;s Output to Another Team in Soma &rarr;
+      </Link>
     </section>
   );
 }

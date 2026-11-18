@@ -17,9 +17,19 @@ const deploymentOutputsSQL = `
 	FROM artifacts
 	GROUP BY 1, 2, 3`
 
+const deploymentRecentArtifactsSQL = `
+	SELECT id::text, COALESCE(team_id::text, ''), COALESCE(agent_id, ''),
+	       COALESCE(title, ''), COALESCE(file_path, ''), COALESCE(content_type, ''),
+	       COALESCE(file_size_bytes, 0), COALESCE(status, ''), created_at
+	FROM artifacts
+	ORDER BY created_at DESC
+	LIMIT 100`
+
 type deploymentOutputBuckets struct {
-	byTeam  map[string]*protocol.DeploymentOutputsSummary
-	byAgent map[string]*protocol.DeploymentOutputsSummary
+	byTeam        map[string]*protocol.DeploymentOutputsSummary
+	byAgent       map[string]*protocol.DeploymentOutputsSummary
+	recentByTeam  map[string][]protocol.DeploymentOutputItem
+	recentByAgent map[string][]protocol.DeploymentOutputItem
 }
 
 func newDeploymentOutputsSummary() *protocol.DeploymentOutputsSummary {
@@ -72,12 +82,23 @@ func (c *deploymentCollector) attachOutputs() {
 		case protocol.DeploymentKindStandingTeam:
 			mergeOutputs(summary, buckets.byTeam[rec.ID])
 			mergeOutputs(summary, buckets.byAgent[rec.ID])
+			recent := append([]protocol.DeploymentOutputItem(nil), buckets.recentByTeam[rec.ID]...)
+			recent = append(recent, buckets.recentByAgent[rec.ID]...)
 			for _, m := range rec.Members {
 				mergeOutputs(summary, buckets.byAgent[m.ID])
+				recent = append(recent, buckets.recentByAgent[m.ID]...)
 			}
+			if len(recent) > 6 {
+				recent = recent[:6]
+			}
+			for j := range recent {
+				recent[j].ViewURL = "/resources?team=" + rec.ID
+			}
+			rec.RecentOutputs = recent
 			standing[rec.ID] = summary
 		case protocol.DeploymentKindMissionTeam:
 			mergeOutputs(summary, buckets.byTeam[rec.ID])
+			rec.RecentOutputs = buckets.recentByTeam[rec.ID]
 		default:
 			continue
 		}
@@ -114,8 +135,10 @@ func (c *deploymentCollector) loadOutputBuckets(db *sql.DB) (*deploymentOutputBu
 	}
 	defer rows.Close()
 	b := &deploymentOutputBuckets{
-		byTeam:  map[string]*protocol.DeploymentOutputsSummary{},
-		byAgent: map[string]*protocol.DeploymentOutputsSummary{},
+		byTeam:        map[string]*protocol.DeploymentOutputsSummary{},
+		byAgent:       map[string]*protocol.DeploymentOutputsSummary{},
+		recentByTeam:  map[string][]protocol.DeploymentOutputItem{},
+		recentByAgent: map[string][]protocol.DeploymentOutputItem{},
 	}
 	for rows.Next() {
 		var teamID, agentID, status string
@@ -146,5 +169,36 @@ func (c *deploymentCollector) loadOutputBuckets(db *sql.DB) (*deploymentOutputBu
 			summary.LastOutputAt = laterDeploymentTime(summary.LastOutputAt, deploymentTime(last.Time))
 		}
 	}
-	return b, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if rows2, err := db.QueryContext(c.ctx, deploymentRecentArtifactsSQL); err == nil {
+		defer rows2.Close()
+		for rows2.Next() {
+			var id, teamID, agentID, title, filePath, contentType, status string
+			var sizeBytes int64
+			var createdAt sql.NullTime
+			if err := rows2.Scan(&id, &teamID, &agentID, &title, &filePath, &contentType, &sizeBytes, &status, &createdAt); err != nil {
+				break
+			}
+			item := protocol.DeploymentOutputItem{
+				ID: id, Title: deploymentFirstNonEmpty(title, filePath, id), FilePath: filePath,
+				ContentType: contentType, Bytes: sizeBytes, Status: status,
+				DownloadURL: "/api/v1/artifacts/" + id + "/download", ViewURL: "/resources?artifact=" + id,
+			}
+			if createdAt.Valid {
+				item.CreatedAt = deploymentTime(createdAt.Time)
+			}
+			if teamID != "" {
+				if len(b.recentByTeam[teamID]) < 6 {
+					b.recentByTeam[teamID] = append(b.recentByTeam[teamID], item)
+				}
+			} else if agentID != "" {
+				if len(b.recentByAgent[agentID]) < 6 {
+					b.recentByAgent[agentID] = append(b.recentByAgent[agentID], item)
+				}
+			}
+		}
+	}
+	return b, nil
 }

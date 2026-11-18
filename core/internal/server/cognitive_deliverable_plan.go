@@ -60,6 +60,10 @@ func isProductWireframeBundleRequest(lower string) bool {
 	})
 }
 
+func isChainedPipelineBundleRequest(lower string) bool {
+	return isChainedTeamPipelineRequest(lower)
+}
+
 func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedToolCall, bool) {
 	trimmed := strings.TrimSpace(text)
 	lower := strings.ToLower(trimmed)
@@ -67,6 +71,9 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 		return nil, false
 	}
 
+	if isChainedPipelineBundleRequest(lower) {
+		return buildDeliverableBundleCalls("deliverables/pipelines/chained-team-pipeline", "chained_pipeline_bundle", "chained-team-pipeline", chainedPipelineBundleSpecs(trimmed)), true
+	}
 	if isTetrisGameBundleRequest(lower) {
 		return buildDeliverableBundleCalls("deliverables/games/street-fighter-tetris", "interactive_game_bundle", "street-fighter-tetris", streetFighterTetrisBundleSpecs(trimmed)), true
 	}
@@ -222,6 +229,23 @@ func missionBlueprintBundleSpecs(goal string) []deliverableBundleFileSpec {
 				"| `verify` | `governance_and_approval_gates.md` | Zero collision & SHA-256 readback pass |\n" +
 				"| `deliver` | `team_handoff_and_verification.md`, `proof.md` | `OutputProofEnvelope` bundle finalized |\n\n" +
 				"## Acceptance Criteria\n- [x] `plan`, `develop`, `verify`, and `deliver` lanes mapped to canonical `swarm.team.<lane>.internal.command` subjects.\n- [x] Disjoint file ownership enforced with zero write collisions.\n",
+		},
+	}
+}
+
+func chainedPipelineBundleSpecs(goal string) []deliverableBundleFileSpec {
+	return []deliverableBundleFileSpec{
+		{
+			name: "channel_chain_topology.yaml", title: "Inter-Team & MCP Channel Chain Topology (YAML)", contentType: "text/yaml",
+			content: "pipeline_id: chained-team-pipeline\ngoal: " + strconvQuoteSafe(goal) + "\nupstream_team: mcp-upstream-discovery-team\n  mcp_channel: swarm.mcp.outputs.registered\n  speaks_on: swarm.team.mcp-upstream-discovery-team.signal.result\ndownstream_team: chained-downstream-delivery-team\n  listens_on: swarm.team.mcp-upstream-discovery-team.signal.result\n  speaks_on: swarm.team.chained-downstream-delivery-team.signal.result\n",
+		},
+		{
+			name: "upstream_mcp_channel_output.json", title: "Registered MCP Channel Output Snapshot (JSON)", contentType: "application/json",
+			content: "{\n  \"source_team\": \"mcp-upstream-discovery-team\",\n  \"mcp_channel\": \"swarm.mcp.outputs.registered\",\n  \"published_subject\": \"swarm.team.mcp-upstream-discovery-team.signal.result\",\n  \"status\": \"verified\",\n  \"findings\": [\"Registered MCP tool outputs normalized for downstream consumption\"]\n}\n",
+		},
+		{
+			name: "downstream_chained_deliverable.md", title: "Downstream Chained Team Deliverable", contentType: "text/markdown",
+			content: "# Downstream Chained Team Deliverable\n\n## Goal\n" + goal + "\n\n## Channel Handoff Lineage\n- **Upstream Producer:** `MCP & Upstream Discovery Team` (`mcp-upstream-discovery-team`) speaking on `swarm.team.mcp-upstream-discovery-team.signal.result`.\n- **Downstream Consumer:** `Chained Downstream Delivery Team` (`chained-downstream-delivery-team`) listening on `swarm.team.mcp-upstream-discovery-team.signal.result` and publishing to `swarm.team.chained-downstream-delivery-team.signal.result`.\n",
 		},
 	}
 }
