@@ -70,6 +70,8 @@ func (c *deploymentCollector) attachOutputs() {
 		summary := newDeploymentOutputsSummary()
 		switch rec.Kind {
 		case protocol.DeploymentKindStandingTeam:
+			mergeOutputs(summary, buckets.byTeam[rec.ID])
+			mergeOutputs(summary, buckets.byAgent[rec.ID])
 			for _, m := range rec.Members {
 				mergeOutputs(summary, buckets.byAgent[m.ID])
 			}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/mycelis/core/internal/artifacts"
@@ -64,10 +65,16 @@ func (s *AdminServer) storePackageArtifactTx(ctx context.Context, tx *sql.Tx, su
 	if index < len(summary.Artifacts) {
 		content = summary.Artifacts[index].Content
 	}
+	agentID := "codex-package"
+	if strings.TrimSpace(summary.TeamID) != "" {
+		agentID = strings.TrimSpace(summary.TeamID)
+	}
 	metadata, err := json.Marshal(map[string]any{
 		"package_id":         summary.PackageID,
 		"package_kind":       summary.PackageKind,
 		"package_slug":       summary.PackageSlug,
+		"team_id":            summary.TeamID,
+		"team_name":          summary.TeamName,
 		"run_id":             summary.RunID,
 		"source_contract_id": summary.ProofID,
 		"storage_ref":        file.Path,
@@ -80,7 +87,7 @@ func (s *AdminServer) storePackageArtifactTx(ctx context.Context, tx *sql.Tx, su
 		return nil, fmt.Errorf("marshal package artifact metadata: %w", err)
 	}
 	stored, err := s.Artifacts.StoreTx(ctx, tx, artifacts.Artifact{
-		AgentID:       "codex-package",
+		AgentID:       agentID,
 		TraceID:       summary.RunID,
 		ArtifactType:  artifacts.TypeDocument,
 		Title:         firstNonEmptyString(file.Title, path.Base(file.Path)),

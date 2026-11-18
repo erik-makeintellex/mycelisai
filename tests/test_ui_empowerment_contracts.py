@@ -41,3 +41,20 @@ def test_soma_suggestion_bar_defines_three_progressive_engagement_tiers() -> Non
     assert "Popular deliverable starters" in content
     assert "Advanced orchestration & council playbooks" in content
 
+
+def test_team_generated_content_access_surfaces_are_wired() -> None:
+    workbench = (REPO_ROOT / "interface" / "components" / "soma" / "OutputWorkbench.tsx").read_text(encoding="utf-8")
+    assert "output-workbench-open-resources" in workbench
+    assert "output-workbench-play-inline" in workbench
+
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "deployments-open-deliverables" in detail_pane
+
+    durable_files = (
+        REPO_ROOT / "interface" / "components" / "resources" / "DurableFilesOperatorView.tsx"
+    ).read_text(encoding="utf-8")
+    assert "deliverables-producer-filter" in durable_files
+
+

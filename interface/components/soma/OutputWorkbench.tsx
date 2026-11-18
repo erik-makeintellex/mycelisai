@@ -1,40 +1,20 @@
 "use client";
 
+import { useState } from "react";
+import Link from "next/link";
+import { CheckCircle2, ClipboardList, Download, ExternalLink, Eye, FileText, Play, ShieldCheck } from "lucide-react";
+import type { ChatArtifactRef, DeliveryPackageSummary, OutputProofEnvelope, OutputRef } from "@/store/useCortexStore";
 import {
-    CheckCircle2,
-    ClipboardList,
-    Download,
-    ExternalLink,
-    FileText,
-    ShieldAlert,
-    ShieldCheck,
-    ShieldQuestion,
-    ShieldX,
-} from "lucide-react";
-import type {
-    ChatArtifactRef,
-    DeliveryPackageFile,
-    DeliveryPackageSummary,
-    OutputProofEnvelope,
-    OutputRef,
-} from "@/store/useCortexStore";
-
-function isProofFile(path?: string, title?: string): boolean {
-    const lowerPath = path?.toLowerCase() ?? "";
-    const lowerTitle = title?.toLowerCase() ?? "";
-    return lowerPath.endsWith("proof.md") || lowerTitle.includes("proof");
-}
-
-const READBACK_STYLES: Record<string, { icon: typeof ShieldCheck; tone: string; label: string }> = {
-    verified: { icon: ShieldCheck, tone: "border-cortex-success/30 bg-cortex-success/10 text-cortex-success", label: "verified" },
-    degraded: { icon: ShieldAlert, tone: "border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning", label: "degraded" },
-    missing: { icon: ShieldX, tone: "border-red-500/30 bg-red-500/10 text-red-400", label: "missing" },
-    blocked: { icon: ShieldX, tone: "border-red-500/30 bg-red-500/10 text-red-400", label: "blocked" },
-};
-
-function readbackStyle(status?: string) {
-    return READBACK_STYLES[status ?? ""] ?? { icon: ShieldQuestion, tone: "border-cortex-border bg-cortex-bg text-cortex-text-muted", label: status || "unknown" };
-}
+    artifactForPath,
+    isPlayablePackageFile,
+    isProofFile,
+    packageTitle,
+    proofDetailRows,
+    proofStageState,
+    readbackStyle,
+    resolvePackageFiles,
+    STAGE_STYLES,
+} from "./outputWorkbenchHelpers";
 
 function ProofChip({ proof }: { proof?: OutputProofEnvelope }) {
     const { icon: Icon, tone, label } = readbackStyle(proof?.readback_status);
@@ -50,20 +30,9 @@ function ProofChip({ proof }: { proof?: OutputProofEnvelope }) {
 }
 
 function ProofDetails({ proof, openUrl }: { proof: OutputProofEnvelope; openUrl?: string }) {
-    const rows: [string, string | undefined][] = [
-        ["Storage ref", proof.storage_ref],
-        ["Checksum", proof.checksum ? `${proof.checksum_algorithm ?? "sha256"}:${proof.checksum.slice(0, 16)}...` : undefined],
-        ["Bytes", proof.bytes != null ? String(proof.bytes) : undefined],
-        ["Source run", proof.source_run_id],
-        ["Source contract", proof.source_contract_id],
-        ["Proof artifact", proof.artifact_id],
-        ["Path boundary", proof.path_boundary_status],
-        ["Readback status", proof.readback_status],
-        ["Created at", proof.created_at],
-    ];
     return (
         <div className="mt-1.5 space-y-1 rounded border border-cortex-border/60 bg-cortex-bg px-2 py-1.5">
-            {rows.filter(([, value]) => value).map(([key, value]) => (
+            {proofDetailRows(proof).map(([key, value]) => (
                 <div key={key} className="flex items-baseline justify-between gap-2 text-[9px] font-mono">
                     <span className="text-cortex-text-muted">{key}</span>
                     <span
@@ -92,36 +61,6 @@ function ProofDetails({ proof, openUrl }: { proof: OutputProofEnvelope; openUrl?
     );
 }
 
-function packageTitle(packageKind?: string): string {
-    switch (packageKind) {
-        case "codex_task_bundle":
-            return "Codex task bundle";
-        default:
-            return packageKind?.replace(/_/g, " ") ?? "Delivery package";
-    }
-}
-
-function proofStageState(status?: string): "completed" | "active" | "failed" {
-    const normalized = status?.toLowerCase().trim() ?? "";
-    if (normalized === "pending_review") return "active";
-    if (normalized === "failed" || normalized === "blocked" || normalized === "missing") return "failed";
-    return "completed";
-}
-
-const STAGE_STYLES: Record<"completed" | "active" | "failed", string> = {
-    completed: "border-cortex-success/30 bg-cortex-success/10 text-cortex-success",
-    active: "border-cortex-warning/30 bg-cortex-warning/10 text-cortex-warning",
-    failed: "border-red-500/30 bg-red-500/10 text-red-400",
-};
-
-function artifactForPath(artifacts: ChatArtifactRef[], path?: string, title?: string): ChatArtifactRef | undefined {
-    if (!path && !title) return undefined;
-    return artifacts.find((artifact) => (
-        (path && artifact.saved_path === path)
-        || (title && artifact.title === title)
-    ));
-}
-
 export default function OutputWorkbench({
     deliveryPackage,
     artifacts = [],
@@ -133,28 +72,25 @@ export default function OutputWorkbench({
     outputRefs?: OutputRef[];
     runId?: string;
 }) {
+    const [activePreviewPath, setActivePreviewPath] = useState<string | null>(null);
+
     if (!deliveryPackage && artifacts.length === 0 && outputRefs.length === 0) return null;
 
     const refs = outputRefs.length > 0 ? outputRefs : deliveryPackage?.items ?? [];
-    const files: DeliveryPackageFile[] = deliveryPackage?.files
-        ?? (refs.length > 0
-            ? refs.map((ref) => ({
-                path: ref.storage_ref || ref.label,
-                title: ref.label,
-                content_type: ref.content_type,
-                bytes: ref.bytes,
-                sha256: ref.sha256,
-            }))
-            : artifacts.map((artifact) => ({
-                path: artifact.saved_path || artifact.title,
-                title: artifact.title,
-                content_type: artifact.content_type,
-            })));
+    const files = resolvePackageFiles(deliveryPackage, refs, artifacts);
     const proof = files.find((file) => isProofFile(file.path, file.title));
     const packageRunId = runId || deliveryPackage?.run_id;
     const packageIdentity = deliveryPackage?.base_path || deliveryPackage?.package_id;
     const packageStatus = deliveryPackage?.status || "verified";
     const contentArtifacts = artifacts.filter((artifact) => artifact.content?.trim());
+    const playableEntry = files.find((file) => {
+        const artifact = artifactForPath(artifacts, file.path, file.title);
+        return Boolean(artifact?.content) && isPlayablePackageFile(file, artifact);
+    });
+    const activeFile = activePreviewPath
+        ? files.find((file) => (file.path || file.title) === activePreviewPath || file.path === activePreviewPath)
+        : undefined;
+    const activeArtifact = activeFile ? artifactForPath(artifacts, activeFile.path, activeFile.title) : undefined;
     const stages: { label: string; state: "completed" | "active" | "failed" }[] = [
         { label: "Intent", state: "completed" },
         { label: "Approval", state: "completed" },
@@ -175,6 +111,24 @@ export default function OutputWorkbench({
                         <div className="truncate text-[9px] font-mono text-cortex-text-muted">{packageIdentity}</div>
                     ) : null}
                 </div>
+                {playableEntry ? (
+                    <button
+                        type="button"
+                        data-testid="output-workbench-play-inline"
+                        onClick={() => setActivePreviewPath(activePreviewPath === playableEntry.path ? null : (playableEntry.path || playableEntry.title || null))}
+                        className="inline-flex items-center gap-1 rounded border border-cortex-primary/40 bg-cortex-primary/15 px-2 py-0.5 text-[9px] font-mono font-bold text-cortex-primary hover:bg-cortex-primary/25"
+                    >
+                        <Play className="h-2.5 w-2.5" />
+                        {activePreviewPath === playableEntry.path ? "Hide Preview" : "Play / Live Preview"}
+                    </button>
+                ) : null}
+                <Link
+                    href="/resources"
+                    data-testid="output-workbench-open-resources"
+                    className="inline-flex items-center gap-1 rounded border border-cortex-border bg-cortex-surface px-2 py-0.5 text-[9px] font-mono text-cortex-text-main hover:border-cortex-primary/40 hover:text-cortex-primary"
+                >
+                    Open in Deliverables
+                </Link>
                 <span className="inline-flex items-center gap-1 rounded border border-cortex-success/30 bg-cortex-success/10 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-cortex-success">
                     <CheckCircle2 className="h-2.5 w-2.5" />
                     {packageStatus}
@@ -205,6 +159,24 @@ export default function OutputWorkbench({
                 ))}
             </div>
 
+            {activeFile && activeArtifact?.content ? (
+                <div className="border-b border-cortex-primary/20 bg-cortex-bg p-3" data-testid="output-workbench-inline-preview">
+                    {isPlayablePackageFile(activeFile, activeArtifact) ? (
+                        <iframe
+                            title={activeFile.title || "Live Deliverable Preview"}
+                            data-testid="output-workbench-inline-iframe"
+                            sandbox="allow-scripts"
+                            srcDoc={activeArtifact.content}
+                            className="w-full h-[460px] rounded-lg border border-cortex-primary/30 bg-slate-950"
+                        />
+                    ) : (
+                        <pre className="max-h-72 overflow-auto rounded-lg border border-cortex-border bg-cortex-surface p-3 text-xs font-mono text-cortex-text-main whitespace-pre-wrap">
+                            {activeArtifact.content}
+                        </pre>
+                    )}
+                </div>
+            ) : null}
+
             <div className="divide-y divide-cortex-border/60">
                 {files.map((file) => {
                     const artifact = artifactForPath(artifacts, file.path, file.title);
@@ -212,6 +184,7 @@ export default function OutputWorkbench({
                     const proofFile = isProofFile(file.path, file.title);
                     const role = ref?.role || (proofFile ? "proof" : "");
                     const openUrl = ref?.open_url ?? artifact?.url;
+                    const playable = isPlayablePackageFile(file, artifact);
                     return (
                         <div key={`${file.path}-${file.title}`} className="px-3 py-2">
                             <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
@@ -231,6 +204,16 @@ export default function OutputWorkbench({
                                 <div className="flex items-center gap-1.5">
                                     {role ? (
                                         <span className="text-[8px] font-mono text-cortex-text-muted">{role}</span>
+                                    ) : null}
+                                    {artifact?.content ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePreviewPath(activePreviewPath === file.path ? null : (file.path || file.title || null))}
+                                            className="inline-flex items-center gap-1 rounded border border-cortex-primary/30 bg-cortex-primary/10 px-1.5 py-0.5 text-[8px] font-mono font-bold text-cortex-primary hover:bg-cortex-primary/20"
+                                        >
+                                            {playable ? <Play className="h-2.5 w-2.5" /> : <Eye className="h-2.5 w-2.5" />}
+                                            {playable ? "Play" : "View"}
+                                        </button>
                                     ) : null}
                                     <ProofChip proof={ref?.proof} />
                                     {openUrl ? (

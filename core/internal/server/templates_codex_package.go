@@ -30,6 +30,8 @@ type packageOutputSummary struct {
 	PackageKind string                     `json:"package_kind"`
 	PackageSlug string                     `json:"package_slug"`
 	PackageID   string                     `json:"package_id"`
+	TeamID      string                     `json:"team_id,omitempty"`
+	TeamName    string                     `json:"team_name,omitempty"`
 	BasePath    string                     `json:"base_path"`
 	ProofPath   string                     `json:"proof_path"`
 	RunID       string                     `json:"run_id"`
@@ -41,12 +43,20 @@ type packageOutputSummary struct {
 	ProofRef    *protocol.OutputRef        `json:"proof_ref,omitempty"`
 }
 
+func plannedTeamIdentity(planned []protocol.PlannedToolCall) (string, string) {
+	for _, call := range planned {
+		if strings.TrimSpace(call.Name) == "create_team" {
+			return firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
+		}
+	}
+	return "", ""
+}
+
 func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx, planned []protocol.PlannedToolCall, runID, proofID string) (*packageOutputSummary, error) {
 	basePath, slug, packageKind, ok := deliverablePackageMetadataFromCalls(planned)
 	if !ok {
 		return nil, nil
 	}
-
 	files := make([]packageOutputFile, 0, len(planned))
 	artifacts := make([]protocol.ChatArtifactRef, 0, len(planned)+1)
 	for _, call := range planned {
@@ -60,7 +70,6 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx,
 		files = append(files, file)
 		artifacts = append(artifacts, artifact)
 	}
-
 	proofPath := filepath.ToSlash(path.Join(basePath, "proof.md"))
 	proofContent := buildDeliverablePackageProof(packageKind, runID, proofID, basePath, files)
 	proofFile, proofArtifact, err := writeCodexPackageProof(proofPath, proofContent)
@@ -69,17 +78,11 @@ func (s *AdminServer) finalizeCodexTaskBundleTx(ctx context.Context, tx *sql.Tx,
 	}
 	files = append(files, proofFile)
 	artifacts = append(artifacts, proofArtifact)
-
+	teamID, teamName := plannedTeamIdentity(planned)
 	summary := &packageOutputSummary{
-		PackageKind: packageKind,
-		PackageSlug: slug,
-		PackageID:   packageKind + ":" + slug,
-		BasePath:    basePath,
-		ProofPath:   proofPath,
-		RunID:       runID,
-		ProofID:     proofID,
-		Files:       files,
-		Artifacts:   artifacts,
+		PackageKind: packageKind, PackageSlug: slug, PackageID: packageKind + ":" + slug,
+		TeamID: teamID, TeamName: teamName, BasePath: basePath, ProofPath: proofPath,
+		RunID: runID, ProofID: proofID, Files: files, Artifacts: artifacts,
 	}
 	if err := s.persistCodexPackageArtifactsTx(ctx, tx, summary); err != nil {
 		return nil, err
@@ -108,11 +111,8 @@ func packageFileFromPlannedCall(call protocol.PlannedToolCall) (packageOutputFil
 	}
 	file := packageOutputFileFromBytes(relativePath, title, data)
 	return file, protocol.ChatArtifactRef{
-		Type:        packageArtifactTypeForPath(relativePath),
-		Title:       title,
-		ContentType: file.ContentType,
-		Content:     string(data),
-		SavedPath:   filepath.ToSlash(relativePath),
+		Type: packageArtifactTypeForPath(relativePath), Title: title,
+		ContentType: file.ContentType, Content: string(data), SavedPath: filepath.ToSlash(relativePath),
 	}, nil
 }
 
@@ -128,11 +128,8 @@ func writeCodexPackageProof(proofPath, proofContent string) (packageOutputFile, 
 		return packageOutputFile{}, protocol.ChatArtifactRef{}, fmt.Errorf("write package proof: %w", err)
 	}
 	return packageOutputFileFromBytes(proofPath, "Package Proof", []byte(proofContent)), protocol.ChatArtifactRef{
-		Type:        "document",
-		Title:       "Package Proof",
-		ContentType: "text/markdown",
-		Content:     proofContent,
-		SavedPath:   proofPath,
+		Type: "document", Title: "Package Proof",
+		ContentType: "text/markdown", Content: proofContent, SavedPath: proofPath,
 	}, nil
 }
 

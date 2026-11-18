@@ -53,6 +53,13 @@ export function DeploymentDetailPane({
           >
             Work with Team in Soma
           </Link>
+          <Link
+            href={`/resources?team=${encodeURIComponent(record.id)}`}
+            data-testid="deployments-open-deliverables"
+            className="inline-flex items-center justify-center rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm font-medium text-cortex-text-main hover:border-cortex-primary/35 hover:text-cortex-primary"
+          >
+            View Deliverables
+          </Link>
           {advancedMode ? (
             <button
               type="button"
@@ -145,6 +152,7 @@ function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
       <p className="mt-2 text-sm text-cortex-text-muted" data-testid="deployments-outputs-summary">
         Retained outputs: {outputsSummaryLabel(record.outputs_summary)}
       </p>
+      <Link href={`/resources?team=${encodeURIComponent(record.id)}`} className="mt-2 inline-flex items-center text-xs font-medium text-cortex-primary hover:underline">Browse generated files in Deliverables &rarr;</Link>
     </section>
   );
 }

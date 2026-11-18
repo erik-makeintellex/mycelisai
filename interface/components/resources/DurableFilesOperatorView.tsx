@@ -26,15 +26,23 @@ export default function DurableFilesOperatorView() {
     const [openedNotice, setOpenedNotice] = useState<string | null>(null);
     const [refineId, setRefineId] = useState<string | null>(null);
     const [refinePrompt, setRefinePrompt] = useState<string>("");
+    const [producerFilter, setProducerFilter] = useState<string>("all");
 
     useEffect(() => {
         fetchArtifacts?.({ limit: 50 });
+        if (typeof window !== "undefined") {
+            const teamParam = new URLSearchParams(window.location.search).get("team")?.trim();
+            if (teamParam) setProducerFilter(teamParam);
+        }
     }, [fetchArtifacts]);
 
     const items = useMemo<DeliverableItem[]>(
         () => buildDeliverableItems(artifacts, missionChat, assistantName),
         [artifacts, missionChat, assistantName],
     );
+    const producers = useMemo(() => Array.from(new Set(items.map((i) => i.producer))), [items]);
+    const filteredItems = items.filter((i) => producerFilter === "all" || i.producer === producerFilter || i.teamId === producerFilter);
+    const visibleItems = filteredItems.length > 0 ? filteredItems : items;
 
     return (
         <div className="h-full overflow-y-auto bg-cortex-bg px-6 py-6" data-testid="durable-files-operator-view">
@@ -113,7 +121,14 @@ export default function DurableFilesOperatorView() {
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {items.map((item) => {
+                        <div className="flex flex-wrap items-center gap-2" data-testid="deliverables-producer-filter">
+                            {["all", ...producers].map((p) => (
+                                <button key={p} type="button" onClick={() => setProducerFilter(p)} className={`rounded-full border px-2.5 py-1 text-xs font-mono ${producerFilter === p ? "border-cortex-primary bg-cortex-primary/15 text-cortex-primary" : "border-cortex-border bg-cortex-surface text-cortex-text-muted hover:text-cortex-text-main"}`}>
+                                    {p === "all" ? "All" : p}
+                                </button>
+                            ))}
+                        </div>
+                        {visibleItems.map((item) => {
                             const isPreviewOpen = previewId === item.id;
                             const isPlayable = isPlayableHtmlDeliverable(item);
                             const isPlaying = playModeId === item.id && isPlayable;

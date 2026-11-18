@@ -8,8 +8,23 @@ export interface DeliverableItem {
     filePath?: string;
     content?: string;
     producer: string;
+    teamId?: string;
     createdAt?: string;
     saved: boolean;
+}
+
+export function formatProducerLabel(art: Artifact, assistantName: string): { producer: string; teamId?: string } {
+    const meta = (art.metadata ?? {}) as Record<string, unknown>;
+    const metaTeamName = typeof meta.team_name === "string" ? meta.team_name.trim() : "";
+    const metaTeamId = typeof meta.team_id === "string" ? meta.team_id.trim() : "";
+    const rawAgent = (art.agent_id || "").trim();
+    if (metaTeamName) {
+        return { producer: metaTeamName, teamId: metaTeamId || rawAgent || undefined };
+    }
+    if (!rawAgent || rawAgent === "admin" || rawAgent === "codex-package") {
+        return { producer: assistantName, teamId: metaTeamId || undefined };
+    }
+    return { producer: councilLabel(rawAgent, assistantName).name, teamId: metaTeamId || rawAgent };
 }
 
 export function isPlayableHtmlDeliverable(item: DeliverableItem): boolean {
@@ -55,16 +70,20 @@ export function buildDeliverableItems(
     missionChat: ChatMessage[],
     assistantName: string,
 ): DeliverableItem[] {
-    const list: DeliverableItem[] = artifacts.map((art: Artifact) => ({
-        id: art.id,
-        title: art.title || art.file_path || "Generated Deliverable",
-        contentType: art.content_type || "text/plain",
-        filePath: art.file_path,
-        content: art.content,
-        producer: councilLabel(art.agent_id || "admin", assistantName).name,
-        createdAt: art.created_at,
-        saved: Boolean(art.file_path) || art.status === "approved",
-    }));
+    const list: DeliverableItem[] = artifacts.map((art: Artifact) => {
+        const { producer, teamId } = formatProducerLabel(art, assistantName);
+        return {
+            id: art.id,
+            title: art.title || art.file_path || "Generated Deliverable",
+            contentType: art.content_type || "text/plain",
+            filePath: art.file_path,
+            content: art.content,
+            producer,
+            teamId,
+            createdAt: art.created_at,
+            saved: Boolean(art.file_path) || art.status === "approved",
+        };
+    });
 
     const seenIds = new Set(list.map((i) => i.id));
     for (const msg of missionChat) {
