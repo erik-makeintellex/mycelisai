@@ -105,7 +105,7 @@ func parseRuntimeTeamMembers(merged map[string]any, teamID, defaultRole, default
 			roles = append(roles, roleKey)
 		}
 		sort.Strings(roles)
-		members := make([]protocol.AgentManifest, 0, len(roles))
+		members := make([]protocol.AgentManifest, 0, len(roles)+1)
 		for _, roleKey := range roles {
 			agentID := normalizeRuntimeID(stringValue(membersMap[roleKey]))
 			if agentID == "" {
@@ -116,10 +116,10 @@ func parseRuntimeTeamMembers(merged map[string]any, teamID, defaultRole, default
 				SystemPrompt: fmt.Sprintf("You are %s (%s) in team %s. Execute assigned tasks and report outcomes.", roleKey, agentID, teamID),
 			})
 		}
-		return members
+		return ensureIdealReviewerMember(members, teamID, defaultTools)
 	}
 	if membersSlice, ok := merged["members"].([]any); ok && len(membersSlice) > 0 {
-		members := make([]protocol.AgentManifest, 0, len(membersSlice))
+		members := make([]protocol.AgentManifest, 0, len(membersSlice)+1)
 		for _, item := range membersSlice {
 			m, ok := item.(map[string]any)
 			if !ok {
@@ -146,12 +146,37 @@ func parseRuntimeTeamMembers(merged map[string]any, teamID, defaultRole, default
 			})
 		}
 		if len(members) > 0 {
+			return ensureIdealReviewerMember(members, teamID, defaultTools)
+		}
+	}
+	return ensureIdealReviewerMember([]protocol.AgentManifest{{
+		ID: defaultAgentID, Role: defaultRole, SystemPrompt: defaultPrompt, Tools: defaultTools, MaxIterations: 6,
+	}}, teamID, defaultTools)
+}
+
+func isIdealReviewerToken(value string) bool {
+	lower := strings.ToLower(strings.TrimSpace(value))
+	for _, token := range []string{"review", "verifier", "sentry", "qa", "audit", "validator"} {
+		if strings.Contains(lower, token) {
+			return true
+		}
+	}
+	return false
+}
+
+func ensureIdealReviewerMember(members []protocol.AgentManifest, teamID string, defaultTools []string) []protocol.AgentManifest {
+	for _, m := range members {
+		if isIdealReviewerToken(m.Role) || isIdealReviewerToken(m.ID) {
 			return members
 		}
 	}
-	return []protocol.AgentManifest{{
-		ID: defaultAgentID, Role: defaultRole, SystemPrompt: defaultPrompt, Tools: defaultTools, MaxIterations: 6,
-	}}
+	return append(members, protocol.AgentManifest{
+		ID:            teamID + "-delivery-reviewer",
+		Role:          "delivery_reviewer",
+		Tools:         defaultTools,
+		MaxIterations: 6,
+		SystemPrompt:  fmt.Sprintf("You are the Ideal Delivery Reviewer (council-sentry verification gate) for team %s. Audit every output for SHA-256 readback, path-boundary safety, and expected delivery completeness.", teamID),
+	})
 }
 
 func parseTeamAskRouting(raw any) map[string]string {

@@ -47,7 +47,11 @@ func plannedTeamIdentity(planned []protocol.PlannedToolCall) (string, string) {
 	teamID, teamName := "", ""
 	for _, call := range planned {
 		if strings.TrimSpace(call.Name) == "create_team" {
-			return firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
+			cid, cname := firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
+			if teamID == "" || !strings.HasSuffix(cid, "-review-team") {
+				teamID, teamName = cid, cname
+			}
+			continue
 		}
 		if teamID == "" {
 			teamID, teamName = firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "team_name")

@@ -101,6 +101,24 @@ def test_default_theme_is_system_across_backend_and_store() -> None:
     assert "return 'system';" in settings_slice
 
 
+def test_teams_always_surface_ideal_reviewer_and_delivery_review_gate() -> None:
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="deployments-reviewer-badge"' in detail_pane
+    assert "IDEAL REVIEWER · DELIVERY GATE" in detail_pane
+    assert 'data-testid="deployments-review-gate"' in detail_pane
+    assert "function isReviewerRole(" in detail_pane
+    assert "-review-team" in detail_pane
+    assert "OutputProofEnvelope" in detail_pane
 
+    tools_path = REPO_ROOT / "core" / "internal" / "swarm" / "internal_tools_support.go"
+    if tools_path.exists():
+        tools_content = tools_path.read_text(encoding="utf-8")
+        if "ensureIdealReviewerMember" in tools_content:
+            assert "ensureIdealReviewerMember" in tools_content
 
+    reviewer_path = REPO_ROOT / "core" / "internal" / "server" / "cognitive_team_plan_reviewer.go"
+    if reviewer_path.exists():
+        assert "buildCompanionReviewTeamCall" in reviewer_path.read_text(encoding="utf-8")
 

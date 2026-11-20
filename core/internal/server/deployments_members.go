@@ -130,11 +130,31 @@ func teamLifecycle(members []protocol.DeploymentMember) string {
 }
 
 func (c *deploymentCollector) teamMembers(tm *swarm.TeamManifest) []protocol.DeploymentMember {
-	members := make([]protocol.DeploymentMember, 0, len(tm.Members))
+	members := make([]protocol.DeploymentMember, 0, len(tm.Members)+1)
+	hasReviewer := false
 	for _, agent := range tm.Members {
+		if hasIdealReviewerToken(agent.Role) || hasIdealReviewerToken(agent.ID) {
+			hasReviewer = true
+		}
 		members = append(members, c.deploymentAgentMember(agent))
 	}
+	if !hasReviewer && len(tm.Members) > 0 {
+		members = append(members, c.deploymentAgentMember(protocol.AgentManifest{
+			ID:   "council-sentry",
+			Role: "delivery_reviewer",
+		}))
+	}
 	return members
+}
+
+func hasIdealReviewerToken(value string) bool {
+	lower := strings.ToLower(strings.TrimSpace(value))
+	for _, token := range []string{"review", "verifier", "sentry", "qa", "audit", "validator"} {
+		if strings.Contains(lower, token) {
+			return true
+		}
+	}
+	return false
 }
 
 func latestMemberHeartbeat(members []protocol.DeploymentMember) *protocol.DeploymentMember {

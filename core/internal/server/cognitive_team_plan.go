@@ -75,32 +75,6 @@ func extractTargetTeamFromRequest(text string) (string, string) {
 	return slug, teamName
 }
 
-func teamExecutionBundleCalls(text string) []protocol.PlannedToolCall {
-	teamID, teamName := extractTargetTeamFromRequest(text)
-	cmdSub := "swarm.team." + teamID + ".internal.command"
-	resSub := "swarm.team." + teamID + ".signal.result"
-	specs := []deliverableBundleFileSpec{
-		{
-			name: "team_execution_plan.md", title: teamName + " — Team Execution Plan", contentType: "text/markdown",
-			content: "# " + teamName + " — Team Execution Plan\n\n## Mission Goal\n" + text + "\n\n## Specialist Role Assignments\n- **Lead Architect (`council-architect`):** Decomposes scope and validates write-isolation partitions.\n- **Delivery Specialist (`prime-development-agent`):** Executes next steps and produces verifiable workspace artifacts.\n- **Verification Sentry (`council-sentry`):** Audits SHA-256 readback and OutputProofEnvelope gates.\n\n## Governed NATS Channels\n- **Command Input:** `" + cmdSub + "`\n- **Verified Result:** `" + resSub + "`\n",
-		},
-		{
-			name: "next_steps_action_matrix.md", title: teamName + " — Next Steps & Action Matrix", contentType: "text/markdown",
-			content: "# " + teamName + " — Next Steps & Action Matrix\n\n| Step | Owner Role | Verification Gate | Expected Output |\n| --- | --- | --- | --- |\n| 1. Scope & Channel Alignment | `council-architect` | NATS subject contract verified | `team_execution_plan.md` |\n| 2. Deliverable Execution | `prime-development-agent` | Disjoint write-isolation pass | `next_steps_action_matrix.md` |\n| 3. Proof & Handoff Release | `council-sentry` | SHA-256 `OutputProofEnvelope` verified | `team_handoff_summary.json`, `proof.md` |\n",
-		},
-		{
-			name: "team_handoff_summary.json", title: teamName + " — Channel & Handoff Summary (JSON)", contentType: "application/json",
-			content: "{\n  \"team_id\": " + strconvQuoteSafe(teamID) + ",\n  \"team_name\": " + strconvQuoteSafe(teamName) + ",\n  \"command_channel\": " + strconvQuoteSafe(cmdSub) + ",\n  \"result_channel\": " + strconvQuoteSafe(resSub) + ",\n  \"status\": \"verified\",\n  \"next_steps\": [\n    \"Execute scoped team deliverables under disjoint file ownership\",\n    \"Publish verified OutputProofEnvelope result on " + resSub + "\"\n  ]\n}\n",
-		},
-	}
-	calls := buildDeliverableBundleCalls("deliverables/teams/"+teamID, "team_execution_bundle", teamID, specs)
-	for i := range calls {
-		calls[i].Arguments["team_id"] = teamID
-		calls[i].Arguments["team_name"] = teamName
-	}
-	return calls
-}
-
 func hasTeamCreationIntent(text string) bool {
 	lower := strings.ToLower(strings.TrimSpace(text))
 	if lower == "" {
@@ -203,8 +177,9 @@ func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []pro
 					"inputs":      []string{"swarm.team.mcp-upstream-discovery-team.signal.result", "swarm.team.chained-downstream-delivery-team.internal.command"},
 					"deliveries":  []string{"swarm.team.chained-downstream-delivery-team.signal.result", "swarm.team.chained-downstream-delivery-team.signal.status"},
 					"members": map[string]any{
-						"lead-integrator": "prime-development-agent",
-						"output-verifier": "agui-design-architect-agent",
+						"lead-integrator":   "prime-development-agent",
+						"output-verifier":   "agui-design-architect-agent",
+						"delivery-reviewer": "council-sentry",
 					},
 					"tools": []string{"write_file", "publish_signal"},
 				},
@@ -221,6 +196,10 @@ func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []pro
 	}
 	if call.Arguments["deliveries"] == nil {
 		call.Arguments["deliveries"] = []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"}
+	}
+	call.Arguments["members"] = ensureTeamMembersMapHasReviewer(call.Arguments["members"])
+	if isComplexProjectReviewTeamNeeded(latestRequest, call) {
+		return []protocol.PlannedToolCall{call, buildCompanionReviewTeamCall(call)}
 	}
 	return []protocol.PlannedToolCall{call}
 }
@@ -241,7 +220,7 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 				"description": firstNonEmptyString(rawMap["instructions"], rawMap["description"], cleanRequest),
 				"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"},
 				"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
-				"members":     rawMap["members"],
+				"members":     ensureTeamMembersMapHasReviewer(rawMap["members"]),
 				"tools":       rawMap["tools"],
 			},
 		}, true
@@ -258,14 +237,15 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 			Arguments: map[string]any{
 				"team_id":     "tetris-street-fighter",
 				"name":        "Street Fighter II Tetris Team",
-				"description": "Arcade game design, architecture, development, and character theme team",
+				"description": "Arcade game design, architecture, development,character theme, and delivery review team",
 				"inputs":      []string{"swarm.team.tetris-street-fighter.internal.command", "swarm.global.broadcast"},
 				"deliveries":  []string{"swarm.team.tetris-street-fighter.signal.result", "swarm.team.tetris-street-fighter.signal.status"},
 				"members": map[string]any{
-					"designer":  "agui-design-architect-agent",
-					"architect": "council-architect",
-					"developer": "prime-development-agent",
-					"artist":    "council-creative",
+					"designer":          "agui-design-architect-agent",
+					"architect":         "council-architect",
+					"developer":         "prime-development-agent",
+					"artist":            "council-creative",
+					"delivery-reviewer": "council-sentry",
 				},
 				"tools": []string{"generate_image", "local_command", "write_file"},
 			},
@@ -285,10 +265,10 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 			"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"},
 			"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
 			"members": map[string]any{
-				"architect": "council-architect",
-				"developer": "prime-development-agent",
-				"designer":  "agui-design-architect-agent",
-				"reviewer":  "council-sentry",
+				"architect":         "council-architect",
+				"developer":         "prime-development-agent",
+				"designer":          "agui-design-architect-agent",
+				"delivery-reviewer": "council-sentry",
 			},
 			"tools": []string{"write_file", "delegate_task"},
 		},

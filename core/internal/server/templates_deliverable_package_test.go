@@ -281,4 +281,12 @@ func TestInferUserDeliverableBundlePlanFromRequest_TeamExecutionBundle(t *testin
 	if !containsString(tools, "create_team") || !containsString(tools, "write_file") {
 		t.Fatalf("inferMutationToolsFromText(%q) = %v, want create_team and write_file", prompt, tools)
 	}
+	teamCalls := inferCreateTeamPlanCallsFromRequest(prompt, "")
+	if len(teamCalls) != 2 || teamCalls[0].Arguments["team_id"] != "alpha-strike" || teamCalls[1].Arguments["team_id"] != "alpha-strike-review-team" {
+		t.Fatalf("teamCalls = %#v, want primary team + companion review team", teamCalls)
+	}
+	members, _ := teamCalls[0].Arguments["members"].(map[string]any)
+	if members["delivery-reviewer"] != "council-sentry" {
+		t.Fatalf("primary team members = %#v, want delivery-reviewer: council-sentry", members)
+	}
 }

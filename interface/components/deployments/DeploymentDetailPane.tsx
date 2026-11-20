@@ -11,13 +11,12 @@ import {
 import { KindBadge, StateBadge } from "./DeploymentList";
 import { ConfigViewer } from "./ConfigViewer";
 
-export function DeploymentDetailPane({
-  record,
-  advancedMode,
-}: {
-  record: DeploymentRecord | null;
-  advancedMode: boolean;
-}) {
+function isReviewerRole(role: string, id: string): boolean {
+  const hay = `${role} ${id}`.toLowerCase();
+  return ["review", "verifier", "sentry", "qa", "audit", "validator"].some((k) => hay.includes(k));
+}
+
+export function DeploymentDetailPane({ record, advancedMode }: { record: DeploymentRecord | null; advancedMode: boolean }) {
   const [configViewerOpen, setConfigViewerOpen] = useState(false);
 
   if (!record) {
@@ -28,10 +27,7 @@ export function DeploymentDetailPane({
     );
   }
   return (
-    <section
-      className="relative min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-cortex-border bg-cortex-surface p-4"
-      data-testid="deployments-detail"
-    >
+    <section className="relative min-h-0 min-w-0 overflow-y-auto rounded-2xl border border-cortex-border bg-cortex-surface p-4" data-testid="deployments-detail">
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-cortex-border pb-4">
         <div className="min-w-0">
           <div className="flex flex-wrap gap-2">
@@ -41,9 +37,7 @@ export function DeploymentDetailPane({
             </span>
           </div>
           <h2 className="mt-3 text-2xl font-semibold text-cortex-text-main">{record.name}</h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-cortex-text-muted">
-            {record.what_runs}
-          </p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-cortex-text-muted">{record.what_runs}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
@@ -79,10 +73,7 @@ export function DeploymentDetailPane({
           ) : (
             <button
               type="button"
-              onClick={() => {
-                useCortexStore.getState().toggleAdvancedMode();
-                setConfigViewerOpen(true);
-              }}
+              onClick={() => { useCortexStore.getState().toggleAdvancedMode(); setConfigViewerOpen(true); }}
               data-testid="deployments-enable-advanced-config"
               className="inline-flex items-center justify-center rounded-xl border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-muted hover:border-cortex-primary/25 hover:text-cortex-text-main"
             >
@@ -92,9 +83,7 @@ export function DeploymentDetailPane({
         </div>
       </div>
 
-      {advancedMode && configViewerOpen ? (
-        <ConfigViewer configRef={record.config_ref} onClose={() => setConfigViewerOpen(false)} />
-      ) : null}
+      {advancedMode && configViewerOpen ? <ConfigViewer configRef={record.config_ref} onClose={() => setConfigViewerOpen(false)} /> : null}
 
       {advancedMode ? (
         <div className="mt-3 flex flex-wrap gap-3 text-[11px] font-mono uppercase tracking-[0.1em] text-cortex-text-muted">
@@ -123,27 +112,27 @@ function MembersPanel({ members, advancedMode }: { members: DeploymentMember[]; 
         <p className="mt-2 text-sm text-cortex-text-muted">No members recorded.</p>
       ) : (
         <div className="mt-3 space-y-2" data-testid="deployments-members">
-          {members.map((member) => (
-            <div
-              key={member.id}
-              data-testid={`deployments-member-${member.id}`}
-              className="rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2"
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-cortex-text-main">{member.role}</span>
-                <span className="text-[11px] font-mono uppercase tracking-[0.1em] text-cortex-text-muted">
-                  {member.provider ?? "unassigned"}
-                  {member.model ? `/${member.model}` : ""}
-                  {advancedMode && member.provider_origin ? ` (${member.provider_origin})` : ""}
-                </span>
+          {members.map((member) => {
+            const isReviewer = isReviewerRole(member.role, member.id);
+            return (
+              <div key={member.id} data-testid={`deployments-member-${member.id}`} className="rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-cortex-text-main">{member.role}</span>
+                    {isReviewer ? (
+                      <span data-testid="deployments-reviewer-badge" className="rounded border border-cortex-primary/40 bg-cortex-primary/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-cortex-primary">
+                        IDEAL REVIEWER · DELIVERY GATE
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="text-[11px] font-mono uppercase tracking-[0.1em] text-cortex-text-muted">
+                    {member.provider ?? "unassigned"}{member.model ? `/${member.model}` : ""}{advancedMode && member.provider_origin ? ` (${member.provider_origin})` : ""}
+                  </span>
+                </div>
+                {member.tools.length > 0 ? <p className="mt-1 truncate text-xs text-cortex-text-muted">Tools: {member.tools.map((tool) => tool.name).join(", ")}</p> : null}
               </div>
-              {member.tools.length > 0 ? (
-                <p className="mt-1 truncate text-xs text-cortex-text-muted">
-                  Tools: {member.tools.map((tool) => tool.name).join(", ")}
-                </p>
-              ) : null}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>
@@ -152,11 +141,17 @@ function MembersPanel({ members, advancedMode }: { members: DeploymentMember[]; 
 
 function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
   const recentOutputs = record.recent_outputs ?? [];
+  const reviewerNames = record.members.filter((m) => isReviewerRole(m.role, m.id)).map((m) => m.role);
+  const reviewerLabel = reviewerNames.length > 0 ? reviewerNames.join(", ") : "council-sentry (Ideal Delivery Reviewer)";
   return (
     <section className="rounded-xl border border-cortex-border bg-cortex-bg p-4">
       <h3 className="text-sm font-semibold text-cortex-text-main">Work mode and outputs</h3>
       <p className="mt-2 text-sm leading-6 text-cortex-text-muted" data-testid="deployments-approval-posture">
         {approvalPostureSentence(record)}
+      </p>
+      <p className="mt-2 text-xs leading-5 text-cortex-text-muted" data-testid="deployments-review-gate">
+        <span className="font-semibold text-cortex-text-main">Delivery Review &amp; Verification Gate:</span>{" "}
+        {reviewerLabel} — complex deliveries chain through <code className="font-mono text-[11px]">{record.id}-review-team</code> (<code className="font-mono text-[11px]">swarm.team.{record.id}.signal.result</code>) for SHA-256 <code className="font-mono text-[11px]">OutputProofEnvelope</code> verification before final release.
       </p>
       <p className="mt-2 text-sm text-cortex-text-muted" data-testid="deployments-outputs-summary">
         Retained outputs: {outputsSummaryLabel(record.outputs_summary)}
