@@ -22,7 +22,7 @@ import MissionControlMessageBubble from "./MissionControlMessageBubble";
 import { MissionControlAdvancedInput } from "./MissionControlAdvancedInput";
 import OrchestrationInspector from "./OrchestrationInspector";
 import WorkspaceContextHeader from "./WorkspaceContextHeader";
-import { somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
+import { buildTeamActionPrefillPrompt, somaPlaceholder, teamSuggestions } from "./missionControlChatUi";
 
 export default function MissionControlChat({
     simpleMode = false,
@@ -61,16 +61,16 @@ export default function MissionControlChat({
     const currentTeam = selectedTeamId
         ? teamsDetail.find((team) => team.id === selectedTeamId) ?? null
         : null;
-    const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name) : suggestions;
+    const activeSuggestions = currentTeam ? teamSuggestions(currentTeam.name, currentTeam.id) : suggestions;
     const isLoading = isMissionChatting || isBroadcasting;
     const lastUserMessage = [...missionChat].reverse().find((m) => m.role === "user");
 
     useEffect(() => {
         setCouncilTarget("admin");
         if (typeof window !== "undefined") {
-            const chainChannel = new URLSearchParams(window.location.search).get("chain_channel")?.trim();
-            if (chainChannel) {
-                setInput(`Chain the output published on channel ${chainChannel} into a downstream team that listens on ${chainChannel} and generates the next deliverable package.`);
+            const prefill = buildTeamActionPrefillPrompt(new URLSearchParams(window.location.search));
+            if (prefill) {
+                setInput(prefill);
             }
         }
     }, [setCouncilTarget]);

@@ -47,6 +47,13 @@ export function DeploymentDetailPane({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link
+            href={`/dashboard?team_id=${encodeURIComponent(record.id)}&team_name=${encodeURIComponent(record.name)}&team_action=plan_execute`}
+            data-testid="deployments-plan-and-execute"
+            className="inline-flex items-center justify-center rounded-xl border border-cortex-primary/50 bg-cortex-primary/15 px-3 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/25"
+          >
+            Plan &amp; Execute Next Steps
+          </Link>
+          <Link
             href={`/dashboard?team_id=${encodeURIComponent(record.id)}`}
             data-testid="deployments-engage-soma"
             className="inline-flex items-center justify-center rounded-xl border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 text-sm font-medium text-cortex-primary hover:bg-cortex-primary/20"

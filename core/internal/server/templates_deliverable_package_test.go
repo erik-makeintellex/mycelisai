@@ -257,3 +257,28 @@ func TestInferMutationToolsFromText_IncludesWriteFileForPuzzleAndMarketingBundle
 		}
 	}
 }
+
+func TestInferUserDeliverableBundlePlanFromRequest_TeamExecutionBundle(t *testing.T) {
+	prompt := "Plan for team Alpha Strike (team_id: alpha-strike) and execute next steps to produce its deliverable package."
+	calls, ok := inferUserDeliverableBundlePlanFromRequest(prompt)
+	if !ok || len(calls) != 3 {
+		t.Fatalf("ok=%v len=%d, want true & 3", ok, len(calls))
+	}
+	wantPaths := []string{
+		"deliverables/teams/alpha-strike/team_execution_plan.md",
+		"deliverables/teams/alpha-strike/next_steps_action_matrix.md",
+		"deliverables/teams/alpha-strike/team_handoff_summary.json",
+	}
+	for i, call := range calls {
+		if call.Arguments["path"] != wantPaths[i] || call.Arguments["package_kind"] != "team_execution_bundle" || call.Arguments["package_slug"] != "alpha-strike" {
+			t.Fatalf("call[%d] args = %#v", i, call.Arguments)
+		}
+		if call.Arguments["team_id"] != "alpha-strike" || call.Arguments["team_name"] != "Alpha Strike" {
+			t.Fatalf("call[%d] team metadata = %v / %v", i, call.Arguments["team_id"], call.Arguments["team_name"])
+		}
+	}
+	tools := inferMutationToolsFromText(prompt)
+	if !containsString(tools, "create_team") || !containsString(tools, "write_file") {
+		t.Fatalf("inferMutationToolsFromText(%q) = %v, want create_team and write_file", prompt, tools)
+	}
+}

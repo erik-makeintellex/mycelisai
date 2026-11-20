@@ -71,6 +71,9 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 		return nil, false
 	}
 
+	if isTeamExecutionBundleRequest(lower) {
+		return teamExecutionBundleCalls(trimmed), true
+	}
 	if isChainedPipelineBundleRequest(lower) {
 		return buildDeliverableBundleCalls("deliverables/pipelines/chained-team-pipeline", "chained_pipeline_bundle", "chained-team-pipeline", chainedPipelineBundleSpecs(trimmed)), true
 	}

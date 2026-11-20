@@ -19,12 +19,94 @@ func isChainedTeamPipelineRequest(text string) bool {
 	})
 }
 
+func isTeamExecutionBundleRequest(lower string) bool {
+	if lower == "" {
+		return false
+	}
+	return (strings.Contains(lower, "plan for") && (strings.Contains(lower, "execute next steps") || strings.Contains(lower, "next steps"))) ||
+		strings.Contains(lower, "plan the next move for") ||
+		(strings.Contains(lower, "work with") && strings.Contains(lower, "produce a concise brief")) ||
+		(strings.Contains(lower, "execute next steps") && (strings.Contains(lower, "team") || strings.Contains(lower, "deliverable")))
+}
+
+func extractTargetTeamFromRequest(text string) (string, string) {
+	trimmed := strings.TrimSpace(text)
+	lower := strings.ToLower(trimmed)
+	teamID, teamName := "", ""
+	for _, marker := range []string{"(team_id:", "(id:", "team:"} {
+		if idx := strings.Index(lower, marker); idx >= 0 {
+			rest := strings.TrimSpace(trimmed[idx+len(marker):])
+			for i, r := range rest {
+				if r == ')' || r == ' ' || r == ',' || r == ';' {
+					rest = rest[:i]
+					break
+				}
+			}
+			teamID = strings.TrimSpace(rest)
+			break
+		}
+	}
+	for _, prefix := range []string{"plan for team ", "plan for ", "plan the next move for ", "work with "} {
+		if idx := strings.Index(lower, prefix); idx >= 0 {
+			rest := strings.TrimSpace(trimmed[idx+len(prefix):])
+			lowerRest := strings.ToLower(rest)
+			for _, stop := range []string{" (", " and execute", " to produce", " on the", " next steps", "."} {
+				if sIdx := strings.Index(lowerRest, stop); sIdx > 0 {
+					rest = strings.TrimSpace(rest[:sIdx])
+					lowerRest = strings.ToLower(rest)
+				}
+			}
+			if rest != "" {
+				teamName = strings.Trim(rest, "\"'`")
+				break
+			}
+		}
+	}
+	if teamID == "" && teamName != "" {
+		teamID = teamName
+	}
+	slug := sanitizeCodexBundleSlug(teamID)
+	if slug == "" || slug == "codex-task-package" {
+		slug = "mission-delivery-team"
+	}
+	if teamName == "" {
+		teamName = titleCaseTeamID(slug)
+	}
+	return slug, teamName
+}
+
+func teamExecutionBundleCalls(text string) []protocol.PlannedToolCall {
+	teamID, teamName := extractTargetTeamFromRequest(text)
+	cmdSub := "swarm.team." + teamID + ".internal.command"
+	resSub := "swarm.team." + teamID + ".signal.result"
+	specs := []deliverableBundleFileSpec{
+		{
+			name: "team_execution_plan.md", title: teamName + " — Team Execution Plan", contentType: "text/markdown",
+			content: "# " + teamName + " — Team Execution Plan\n\n## Mission Goal\n" + text + "\n\n## Specialist Role Assignments\n- **Lead Architect (`council-architect`):** Decomposes scope and validates write-isolation partitions.\n- **Delivery Specialist (`prime-development-agent`):** Executes next steps and produces verifiable workspace artifacts.\n- **Verification Sentry (`council-sentry`):** Audits SHA-256 readback and OutputProofEnvelope gates.\n\n## Governed NATS Channels\n- **Command Input:** `" + cmdSub + "`\n- **Verified Result:** `" + resSub + "`\n",
+		},
+		{
+			name: "next_steps_action_matrix.md", title: teamName + " — Next Steps & Action Matrix", contentType: "text/markdown",
+			content: "# " + teamName + " — Next Steps & Action Matrix\n\n| Step | Owner Role | Verification Gate | Expected Output |\n| --- | --- | --- | --- |\n| 1. Scope & Channel Alignment | `council-architect` | NATS subject contract verified | `team_execution_plan.md` |\n| 2. Deliverable Execution | `prime-development-agent` | Disjoint write-isolation pass | `next_steps_action_matrix.md` |\n| 3. Proof & Handoff Release | `council-sentry` | SHA-256 `OutputProofEnvelope` verified | `team_handoff_summary.json`, `proof.md` |\n",
+		},
+		{
+			name: "team_handoff_summary.json", title: teamName + " — Channel & Handoff Summary (JSON)", contentType: "application/json",
+			content: "{\n  \"team_id\": " + strconvQuoteSafe(teamID) + ",\n  \"team_name\": " + strconvQuoteSafe(teamName) + ",\n  \"command_channel\": " + strconvQuoteSafe(cmdSub) + ",\n  \"result_channel\": " + strconvQuoteSafe(resSub) + ",\n  \"status\": \"verified\",\n  \"next_steps\": [\n    \"Execute scoped team deliverables under disjoint file ownership\",\n    \"Publish verified OutputProofEnvelope result on " + resSub + "\"\n  ]\n}\n",
+		},
+	}
+	calls := buildDeliverableBundleCalls("deliverables/teams/"+teamID, "team_execution_bundle", teamID, specs)
+	for i := range calls {
+		calls[i].Arguments["team_id"] = teamID
+		calls[i].Arguments["team_name"] = teamName
+	}
+	return calls
+}
+
 func hasTeamCreationIntent(text string) bool {
 	lower := strings.ToLower(strings.TrimSpace(text))
 	if lower == "" {
 		return false
 	}
-	if isChainedTeamPipelineRequest(lower) {
+	if isChainedTeamPipelineRequest(lower) || isTeamExecutionBundleRequest(lower) {
 		return true
 	}
 	if requestContainsAny(lower, []string{
@@ -190,14 +272,18 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 		}, true
 	}
 
+	teamID, teamName := "mission-delivery-team", "Mission Delivery Team"
+	if isTeamExecutionBundleRequest(lower) {
+		teamID, teamName = extractTargetTeamFromRequest(cleanRequest)
+	}
 	return protocol.PlannedToolCall{
 		Name: "create_team",
 		Arguments: map[string]any{
-			"team_id":     "mission-delivery-team",
-			"name":        "Mission Delivery Team",
+			"team_id":     teamID,
+			"name":        teamName,
 			"description": cleanRequest,
-			"inputs":      []string{"swarm.team.mission-delivery-team.internal.command", "swarm.global.broadcast"},
-			"deliveries":  []string{"swarm.team.mission-delivery-team.signal.result", "swarm.team.mission-delivery-team.signal.status"},
+			"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"},
+			"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
 			"members": map[string]any{
 				"architect": "council-architect",
 				"developer": "prime-development-agent",

@@ -47,7 +47,10 @@ func plannedTeamIdentity(planned []protocol.PlannedToolCall) (string, string) {
 	teamID, teamName := "", ""
 	for _, call := range planned {
 		if strings.TrimSpace(call.Name) == "create_team" {
-			teamID, teamName = firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
+			return firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "name")
+		}
+		if teamID == "" {
+			teamID, teamName = firstStringArgument(call.Arguments, "team_id"), firstStringArgument(call.Arguments, "team_name")
 		}
 	}
 	return teamID, teamName
@@ -135,33 +138,28 @@ func writeCodexPackageProof(proofPath, proofContent string) (packageOutputFile, 
 }
 
 func packageContentTypeForPath(relativePath string) string {
-	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(relativePath)), ".html") {
-		return "text/html"
+	lower := strings.ToLower(strings.TrimSpace(relativePath))
+	switch {
+	case strings.HasSuffix(lower, ".html"): return "text/html"
+	case strings.HasSuffix(lower, ".json"): return "application/json"
+	case strings.HasSuffix(lower, ".yaml"), strings.HasSuffix(lower, ".yml"): return "text/yaml"
+	default: return "text/markdown"
 	}
-	return "text/markdown"
 }
 func packageArtifactTypeForPath(relativePath string) string {
-	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(relativePath)), ".html") {
-		return "code"
-	}
+	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(relativePath)), ".html") { return "code" }
 	return "document"
 }
 func packageOutputFileFromBytes(relativePath, title string, data []byte) packageOutputFile {
 	sum := sha256.Sum256(data)
-	return packageOutputFile{
-		Path: filepath.ToSlash(relativePath), Title: title,
-		ContentType: packageContentTypeForPath(relativePath), Bytes: len(data), SHA256: fmt.Sprintf("%x", sum),
-	}
+	return packageOutputFile{Path: filepath.ToSlash(relativePath), Title: title, ContentType: packageContentTypeForPath(relativePath), Bytes: len(data), SHA256: fmt.Sprintf("%x", sum)}
 }
-
 func isDeliverablePackageKind(kind string) bool { return isSupportedDeliverablePackageKind(kind) }
-
 func isSupportedDeliverablePackageKind(kind string) bool {
 	switch strings.TrimSpace(kind) {
-	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle":
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle", "team_execution_bundle":
 		return true
-	default:
-		return false
+	default: return false
 	}
 }
 
@@ -245,6 +243,7 @@ func deliverablePackageProofTitle(packageKind string) string {
 	case "product_wireframe_bundle": return "Product Wireframe Bundle Proof"
 	case "mission_blueprint_bundle": return "Mission Blueprint Bundle Proof"
 	case "chained_pipeline_bundle": return "Chained Team Pipeline Proof"
+	case "team_execution_bundle": return "Team Execution Plan & Next Steps Proof"
 	default: return "Codex Task Bundle Proof"
 	}
 }

@@ -68,4 +68,27 @@ def test_run_chain_node_links_to_team_workspace_and_outputs() -> None:
     assert "/deployments?team=" in content
 
 
+def test_deployments_detail_pane_exposes_plan_and_execute_next_steps_action() -> None:
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="deployments-plan-and-execute"' in detail_pane
+    assert "team_action=plan_execute" in detail_pane
+    assert "Plan &amp; Execute Next Steps" in detail_pane or "Plan & Execute Next Steps" in detail_pane
+
+    chat = (REPO_ROOT / "interface" / "components" / "dashboard" / "MissionControlChat.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "buildTeamActionPrefillPrompt" in chat
+    assert "teamSuggestions(currentTeam.name, currentTeam.id)" in chat
+
+    chat_ui = (REPO_ROOT / "interface" / "components" / "dashboard" / "missionControlChatUi.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "export function buildTeamActionPrefillPrompt" in chat_ui
+    assert 'teamAction === "plan_execute"' in chat_ui
+    assert "execute next steps to produce its execution plan, action matrix, and handoff deliverable package" in chat_ui
+
+
+
 

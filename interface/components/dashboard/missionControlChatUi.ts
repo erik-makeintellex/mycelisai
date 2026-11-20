@@ -1,12 +1,12 @@
 import { councilLabel } from "@/lib/labels";
 import type { SomaSuggestion } from "@/components/soma/SomaSuggestionBar";
 
-export function teamSuggestions(teamName: string): SomaSuggestion[] {
+export function teamSuggestions(teamName: string, teamId?: string): SomaSuggestion[] {
     return [
         {
-            label: "Plan this team",
-            detail: `Shape the next priority for ${teamName}.`,
-            prompt: `Plan the next move for ${teamName}`,
+            label: "Plan & Execute Next Steps",
+            detail: `Shape the execution plan and action matrix for ${teamName}.`,
+            prompt: `Plan for team ${teamName}${teamId ? ` (team_id: ${teamId})` : ""} and execute next steps to produce its execution plan, action matrix, and handoff deliverable package.`,
         },
         {
             label: "Review state",
@@ -24,6 +24,20 @@ export function teamSuggestions(teamName: string): SomaSuggestion[] {
             prompt: `Check whether ${teamName} has the agents, tools, and inputs needed for its next run.`,
         },
     ];
+}
+
+export function buildTeamActionPrefillPrompt(searchParams: URLSearchParams): string {
+    const chainChannel = searchParams.get("chain_channel")?.trim();
+    if (chainChannel) {
+        return `Chain the output published on channel ${chainChannel} into a downstream team that listens on ${chainChannel} and generates the next deliverable package.`;
+    }
+    const teamAction = searchParams.get("team_action")?.trim();
+    if (teamAction === "plan_execute" || (teamAction && searchParams.get("team_id")?.trim())) {
+        const teamId = searchParams.get("team_id")?.trim() || "mission-delivery-team";
+        const teamName = searchParams.get("team_name")?.trim() || teamId;
+        return `Plan for team ${teamName} (team_id: ${teamId}) and execute next steps to produce its execution plan, action matrix, and handoff deliverable package.`;
+    }
+    return "";
 }
 
 export function somaPlaceholder({
