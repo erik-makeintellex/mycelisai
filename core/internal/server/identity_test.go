@@ -134,7 +134,7 @@ func TestHandleUserSettings_GET(t *testing.T) {
 	var settings map[string]any
 	assertJSON(t, rr, &settings)
 	for k, want := range map[string]string{
-		"theme":                          "aero-light",
+		"theme":                          "system",
 		"assistant_name":                 "Soma",
 		"access_management_tier":         "release",
 		"product_edition":                "self_hosted_release",

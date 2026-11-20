@@ -90,5 +90,17 @@ def test_deployments_detail_pane_exposes_plan_and_execute_next_steps_action() ->
     assert "execute next steps to produce its execution plan, action matrix, and handoff deliverable package" in chat_ui
 
 
+def test_default_theme_is_system_across_backend_and_store() -> None:
+    backend = (REPO_ROOT / "core" / "internal" / "server" / "identity_settings.go").read_text(encoding="utf-8")
+    assert '"theme":                 "system"' in backend
+
+    initial_state = (REPO_ROOT / "interface" / "store" / "cortexStoreInitialState.ts").read_text(encoding="utf-8")
+    assert "theme: 'system'" in initial_state
+
+    settings_slice = (REPO_ROOT / "interface" / "store" / "cortexStoreUserSettingsSlice.ts").read_text(encoding="utf-8")
+    assert "return 'system';" in settings_slice
+
+
+
 
 

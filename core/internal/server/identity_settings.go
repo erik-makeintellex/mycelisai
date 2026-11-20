@@ -10,7 +10,7 @@ import (
 
 func defaultPersistedUserSettings() map[string]any {
 	return map[string]any{
-		"theme":                 "aero-light",
+		"theme":                 "system",
 		"matrix_view":           "grid",
 		"assistant_name":        defaultAssistantName,
 		"role":                  "owner",

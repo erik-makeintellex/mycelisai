@@ -84,9 +84,9 @@ export default function ProfileSettings() {
                             onChange={(e) => setThemeDraft(e.target.value as typeof themeDraft)}
                             className="flex-1 bg-cortex-bg border border-cortex-border rounded px-2 py-1 text-sm text-cortex-text-main focus:outline-none focus:ring-1 focus:ring-cortex-primary"
                         >
-                            <option value="aero-light">Aero Light</option>
-                            <option value="midnight-cortex">Midnight Cortex</option>
                             <option value="system">System</option>
+                            <option value="midnight-cortex">Midnight Cortex</option>
+                            <option value="aero-light">Aero Light</option>
                         </select>
                         <button
                             type="button"

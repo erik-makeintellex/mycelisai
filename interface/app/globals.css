@@ -48,6 +48,22 @@ html[data-theme="midnight-cortex"] {
   --color-cortex-border: #2a3342;
 }
 
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme="aero-light"]) {
+    --color-cortex-bg: #0f1116;
+    --color-cortex-surface: #171b23;
+    --color-cortex-primary: #84dcc6;
+    --color-cortex-primary-glow: rgba(132, 220, 198, 0.26);
+    --color-cortex-success: #7ecfb2;
+    --color-cortex-warning: #aeb9c9;
+    --color-cortex-danger: #d38aa7;
+    --color-cortex-info: #9eb0d1;
+    --color-cortex-text-main: #eef3f8;
+    --color-cortex-text-muted: #a6b2c3;
+    --color-cortex-border: #2a3342;
+  }
+}
+
 @layer base {
   /* Cortex readability: bump base from 16px to 17px so all rem-based
      Tailwind classes scale up proportionally. text-xs → 12.75px,
@@ -74,6 +90,15 @@ html[data-theme="midnight-cortex"] {
       radial-gradient(circle at top, rgba(132, 220, 198, 0.1), transparent 34%),
       radial-gradient(circle at 82% 14%, rgba(93, 105, 135, 0.16), transparent 24%),
       linear-gradient(180deg, #0d1016 0%, var(--color-cortex-bg) 52%, #111621 100%);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html:not([data-theme="aero-light"]) body {
+      background:
+        radial-gradient(circle at top, rgba(132, 220, 198, 0.1), transparent 34%),
+        radial-gradient(circle at 82% 14%, rgba(93, 105, 135, 0.16), transparent 24%),
+        linear-gradient(180deg, #0d1016 0%, var(--color-cortex-bg) 52%, #111621 100%);
+    }
   }
 
   h1, h2, h3, h4, h5, h6 {

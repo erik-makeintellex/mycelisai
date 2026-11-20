@@ -135,7 +135,7 @@ const initialAutomationRunsState: StripActions<CortexAutomationRunsContract> = {
 
 const initialProfilesSettingsState: StripActions<CortexProfilesSettingsContract> = {
     advancedMode: false,
-    theme: 'aero-light',
+    theme: 'system',
     missionProfiles: [],
     activeProfileId: null,
     contextSnapshots: [],
