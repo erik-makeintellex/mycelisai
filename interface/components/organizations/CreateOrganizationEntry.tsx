@@ -124,11 +124,11 @@ export default function CreateOrganizationEntry() {
                         )}
                         {templatesState === "ready" && isTemplateMode && templates.length > 0 && (
                             <div className="space-y-3">
-                                <div>
+                                <div className="flex flex-wrap items-baseline justify-between gap-2">
                                     <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-cortex-text-muted">Starter templates</h3>
-                                    <p className="mt-1 text-sm text-cortex-text-muted">Choose an AI Organization starter using operator-facing terms only.</p>
+                                    <p className="text-xs text-cortex-text-muted">Choose an AI Organization starter to inspect its target delivery &amp; execution plan.</p>
                                 </div>
-                                <div className="grid gap-3">
+                                <div className="grid gap-2.5 sm:grid-cols-2" data-testid="starter-cards-grid">
                                     {templates.map((template) => (
                                         <StarterCard
                                             key={template.id}

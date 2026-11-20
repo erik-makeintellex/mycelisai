@@ -101,6 +101,24 @@ def test_default_theme_is_system_across_backend_and_store() -> None:
     assert "return 'system';" in settings_slice
 
 
+def test_organization_starters_use_compact_grid_and_thorough_delivery_breakdown() -> None:
+    entry = (REPO_ROOT / "interface" / "components" / "organizations" / "CreateOrganizationEntry.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="starter-cards-grid"' in entry
+    assert "sm:grid-cols-2" in entry
+
+    entry_ui = (REPO_ROOT / "interface" / "components" / "organizations" / "createOrganizationEntryUi.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="starter-target-delivery-breakdown"' in entry_ui
+    assert "Target Delivery &amp; Execution Breakdown" in entry_ui
+    assert "+ Ideal Reviewer Gate" in entry_ui
+    assert "starter-department-execution-lanes" in entry_ui
+    assert "Delivery Verification Gate:" in entry_ui
+
+
+
 def test_teams_always_surface_ideal_reviewer_and_delivery_review_gate() -> None:
     detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
         encoding="utf-8"

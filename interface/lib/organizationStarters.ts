@@ -42,6 +42,16 @@ export interface OrganizationStarterDeliverySummary {
     team_shape: string;
 }
 
+export interface OrganizationStarterLoopProfile {
+    id: string;
+    name: string;
+    type: string;
+    description?: string;
+    owner_type?: string;
+    owner_id?: string;
+    interval_seconds?: number;
+}
+
 // OrganizationStarterTemplate is one item of
 // GET /api/v1/templates?view=organization-starters. It carries every
 // OrganizationTemplateSummary field plus the RC-004A starter projection.
@@ -52,4 +62,5 @@ export interface OrganizationStarterTemplate extends OrganizationTemplateSummary
     starter?: OrganizationStarterLabels;
     delivery_defaults?: OrganizationDeliveryDefaults;
     delivery_summary?: OrganizationStarterDeliverySummary;
+    loop_profiles?: OrganizationStarterLoopProfile[];
 }

@@ -47,15 +47,15 @@ export function CreateOrganizationRecentList({
         return null;
     }
     return (
-        <section className="space-y-3">
+        <section className="space-y-2.5">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                    <h2 className="text-lg font-semibold text-cortex-text-main">Recent AI Organizations</h2>
-                    <p className="text-sm text-cortex-text-muted">Reopen an existing organization when you want to continue instead of starting over.</p>
+                    <h2 className="text-base font-semibold text-cortex-text-main">Recent AI Organizations</h2>
+                    <p className="text-xs text-cortex-text-muted">Reopen an existing organization when you want to continue instead of starting over.</p>
                 </div>
                 {diagnosticOrganizations.length > 0 && (
-                    <div className="flex flex-col items-start gap-2 lg:items-end">
-                        <button type="button" onClick={onToggleDiagnostics} className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-sm font-medium text-cortex-text-muted transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary">
+                    <div className="flex flex-col items-start gap-1.5 lg:items-end">
+                        <button type="button" onClick={onToggleDiagnostics} className="inline-flex items-center gap-2 rounded-xl border border-cortex-border bg-cortex-surface px-3 py-1.5 text-xs font-medium text-cortex-text-muted transition-colors hover:border-cortex-primary/25 hover:text-cortex-primary">
                             {showDiagnosticOrganizations ? "Hide" : "Show"} {visibleDiagnosticOrganizations.length} {testingSetupCountLabel}
                         </button>
                         {showDiagnosticOrganizations && hiddenDiagnosticCount > 0 && (
@@ -75,35 +75,35 @@ export function CreateOrganizationRecentList({
                 />
             )}
             {organizationsState === "ready" && visibleOrganizations.length > 0 && (
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid max-h-[260px] gap-2.5 overflow-y-auto pr-1 md:grid-cols-2 xl:grid-cols-3" data-testid="recent-organizations-grid">
                     {visibleOrganizations.map((organization) => (
                         <button
                             key={organization.id}
                             type="button"
                             onClick={() => onOpenOrganization(organization)}
                             disabled={openingOrganizationId === organization.id || isSubmitting}
-                            className="rounded-2xl border border-cortex-border bg-cortex-surface p-4 text-left transition-colors hover:border-cortex-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
+                            className="rounded-2xl border border-cortex-border bg-cortex-surface p-3.5 text-left transition-colors hover:border-cortex-primary/25 disabled:cursor-not-allowed disabled:opacity-70"
                             aria-busy={openingOrganizationId === organization.id}
                         >
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-base font-semibold text-cortex-text-main">{organization.name}</p>
-                                    <p className="mt-1 text-sm leading-6 text-cortex-text-muted">{organization.purpose || "Reopen this AI Organization and continue where you left off."}</p>
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-cortex-text-main">{organization.name}</p>
+                                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-cortex-text-muted">{organization.purpose || "Reopen this AI Organization and continue where you left off."}</p>
                                 </div>
                                 <span className="rounded-full border border-cortex-primary/25 bg-cortex-primary/10 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-primary">
                                     {organization.start_mode === "template" ? "Template" : "Empty"}
                                 </span>
                             </div>
-                            <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-cortex-text-muted">
-                                <Metric label="Team Lead" value={organization.team_lead_label} />
-                                <Metric label="Departments" value={String(organization.department_count)} />
-                                <Metric label="Specialists" value={String(organization.specialist_count)} />
-                                <Metric label="AI Organization" value={organization.status} />
+                            <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-mono text-cortex-text-muted">
+                                <span className="rounded border border-cortex-border bg-cortex-bg px-2 py-0.5 text-cortex-text-main">{organization.team_lead_label}</span>
+                                <span className="rounded border border-cortex-border bg-cortex-bg px-2 py-0.5">{organization.department_count} Depts</span>
+                                <span className="rounded border border-cortex-border bg-cortex-bg px-2 py-0.5">{organization.specialist_count} Specialists</span>
+                                <span className="rounded border border-cortex-border bg-cortex-bg px-2 py-0.5">{organization.status}</span>
                             </div>
-                            <div className="mt-4 inline-flex items-center gap-2 rounded-xl border border-cortex-primary/30 px-3 py-2 text-sm font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10">
-                                {openingOrganizationId === organization.id ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                            <div className="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-cortex-primary/30 px-2.5 py-1.5 text-xs font-medium text-cortex-primary transition-colors hover:bg-cortex-primary/10">
+                                {openingOrganizationId === organization.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                                 Open AI Organization
-                                <ArrowRight className="h-4 w-4" />
+                                <ArrowRight className="h-3.5 w-3.5" />
                             </div>
                         </button>
                     ))}

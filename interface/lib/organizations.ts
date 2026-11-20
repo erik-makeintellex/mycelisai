@@ -126,6 +126,7 @@ export interface OrganizationTemplateSummary {
     advisor_count: number;
     department_count: number;
     specialist_count: number;
+    departments?: OrganizationDepartmentSummary[];
     ai_engine_profile_id?: OrganizationAIEngineProfileId;
     ai_engine_settings_summary: string;
     response_contract_profile_id?: ResponseContractProfileId;
