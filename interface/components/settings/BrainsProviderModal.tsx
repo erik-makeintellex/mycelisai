@@ -51,17 +51,18 @@ export function ProviderForm({
     return (
         <div className="space-y-3">
             {showPresets && (
-                <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-cortex-text-muted">Quick Preset</label>
+                <div className="space-y-1" data-testid="brains-web-service-presets">
+                    <label className="text-[10px] uppercase tracking-wider text-cortex-text-muted">Web &amp; Local Engine Presets</label>
                     <div className="flex flex-wrap gap-1.5">
                         {Object.entries(PRESET_LABELS).map(([key, label]) => (
                             <button
                                 key={key}
                                 type="button"
+                                data-testid={`brain-preset-${key}`}
                                 onClick={() => {
                                     const preset = PROVIDER_PRESETS[key];
                                     const suggestedId = key === "custom" ? "" : key;
-                                    onChange({ ...blankForm(), ...preset, id: form.id || suggestedId });
+                                    onChange({ ...blankForm(), ...preset, id: suggestedId || form.id });
                                 }}
                                 className="px-2 py-0.5 rounded text-[10px] border border-cortex-border text-cortex-text-muted hover:border-cortex-primary hover:text-cortex-primary transition-colors"
                             >
@@ -111,7 +112,16 @@ export function ProviderForm({
                         type="password"
                         value={form.api_key}
                         onChange={(e) => onChange({ ...form, api_key: e.target.value })}
-                        placeholder={isEdit ? "leave blank to keep existing" : "optional"}
+                        placeholder={isEdit ? "leave blank to keep existing" : "optional if using API Key Env Var"}
+                        className={inputCls}
+                    />
+                ))}
+                {field("api_key_env", "API Key Env Var (Secret Ref)", (
+                    <input
+                        data-testid="brain-form-api-key-env"
+                        value={form.api_key_env}
+                        onChange={(e) => onChange({ ...form, api_key_env: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, "") })}
+                        placeholder="e.g. OPENAI_API_KEY / ANTHROPIC_API_KEY"
                         className={inputCls}
                     />
                 ))}

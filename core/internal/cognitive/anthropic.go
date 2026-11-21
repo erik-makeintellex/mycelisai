@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 const (
@@ -71,10 +72,32 @@ type anthropicResponse struct {
 }
 
 func (a *AnthropicAdapter) Infer(ctx context.Context, prompt string, opts InferOptions) (*InferResponse, error) {
-	// 1. Prepare Request Payload
+	// 1. Prepare Request Payload (support multi-turn opts.Messages + system prompt extraction)
+	var sysParts []string
+	var messages []anthropicMessage
+	for _, m := range opts.Messages {
+		role := strings.ToLower(strings.TrimSpace(m.Role))
+		content := strings.TrimSpace(m.Content)
+		if content == "" {
+			continue
+		}
+		if role == "system" {
+			sysParts = append(sysParts, content)
+			continue
+		}
+		if role != "assistant" {
+			role = "user"
+		}
+		messages = append(messages, anthropicMessage{Role: role, Content: content})
+	}
+	if len(messages) == 0 {
+		messages = []anthropicMessage{{Role: "user", Content: prompt}}
+	}
+
 	payload := anthropicRequest{
 		Model:     a.model,
-		Messages:  []anthropicMessage{{Role: "user", Content: prompt}},
+		Messages:  messages,
+		System:    strings.Join(sysParts, "\n\n"),
 		MaxTokens: opts.MaxTokens,
 	}
 

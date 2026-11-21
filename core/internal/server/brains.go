@@ -54,12 +54,9 @@ func (s *AdminServer) HandleToggleBrain(w http.ResponseWriter, r *http.Request) 
 	}
 
 	prov.Enabled = req.Enabled
-	s.Cognitive.Config.Providers[id] = prov
-
-	// Persist to YAML so toggle survives restart
-	if err := s.Cognitive.SaveConfig(); err != nil {
+	if err := s.Cognitive.UpdateProvider(id, prov); err != nil {
 		log.Printf("Failed to persist brain toggle for %s: %v", id, err)
-		respondError(w, "Toggle applied but failed to persist: "+err.Error(), http.StatusInternalServerError)
+		respondError(w, "Toggle failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 

@@ -99,7 +99,12 @@ export default function MissionProfilesPage() {
         <div className="space-y-4">
             {/* Header */}
             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Mission Profiles</h3>
+                <div>
+                    <h3 className="text-sm font-semibold text-cortex-text-muted uppercase tracking-wider">Mission Profiles</h3>
+                    <p className="mt-1 text-xs text-cortex-text-muted">
+                        Assign local or web-based agentry engines (OpenAI, Claude, Gemini, OpenRouter, Groq, DeepSeek, Ollama) to Soma and team roles.
+                    </p>
+                </div>
                 <button
                     onClick={() => { setEditor({ mode: "new" }); setSaveError(null); }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-cortex-primary/10 border border-cortex-primary/30 text-cortex-primary text-xs hover:bg-cortex-primary/20 transition-colors"

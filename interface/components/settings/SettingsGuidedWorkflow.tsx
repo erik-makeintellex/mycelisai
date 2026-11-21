@@ -56,7 +56,7 @@ const ADVANCED_WORKFLOW_CARDS: WorkflowCardDefinition[] = [
   {
     id: "engines",
     title: "Inspect AI engine posture",
-    summary: "Review how Soma and the wider workspace are tuned.",
+    summary: "Configure local Ollama/vLLM or hosted web agentry services (OpenAI, Anthropic Claude, Google Gemini, OpenRouter, Groq, DeepSeek).",
     buttonLabel: "Open AI Engines",
     icon: Brain,
   },

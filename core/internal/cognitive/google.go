@@ -57,7 +57,8 @@ type googleContent struct {
 }
 
 type googleRequest struct {
-	Contents []googleContent `json:"contents"`
+	Contents          []googleContent `json:"contents"`
+	SystemInstruction *googleContent  `json:"systemInstruction,omitempty"`
 
 	// Safety, Generation Config could go here
 	GenerationConfig struct {
@@ -84,14 +85,44 @@ type googleResponse struct {
 }
 
 func (g *GoogleAdapter) Infer(ctx context.Context, prompt string, opts InferOptions) (*InferResponse, error) {
-	// 1. Prepare Payload
-	payload := googleRequest{
-		Contents: []googleContent{
+	// 1. Prepare Payload (support multi-turn opts.Messages + systemInstruction extraction)
+	var sysParts []googlePart
+	var contents []googleContent
+	for _, m := range opts.Messages {
+		role := strings.ToLower(strings.TrimSpace(m.Role))
+		text := strings.TrimSpace(m.Content)
+		if text == "" {
+			continue
+		}
+		if role == "system" {
+			sysParts = append(sysParts, googlePart{Text: text})
+			continue
+		}
+		gRole := "user"
+		if role == "assistant" || role == "model" {
+			gRole = "model"
+		}
+		contents = append(contents, googleContent{
+			Role:  gRole,
+			Parts: []googlePart{{Text: text}},
+		})
+	}
+	if len(contents) == 0 {
+		contents = []googleContent{
 			{
 				Role:  "user",
 				Parts: []googlePart{{Text: prompt}},
 			},
-		},
+		}
+	}
+
+	payload := googleRequest{
+		Contents: contents,
+	}
+	if len(sysParts) > 0 {
+		payload.SystemInstruction = &googleContent{
+			Parts: sysParts,
+		}
 	}
 
 	// Apply Options

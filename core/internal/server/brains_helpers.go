@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/mycelis/core/internal/cognitive"
@@ -16,6 +18,8 @@ type BrainEntry struct {
 	Type               string   `json:"type"`
 	Endpoint           string   `json:"endpoint,omitempty"`
 	ModelID            string   `json:"model_id"`
+	APIKeyEnv          string   `json:"api_key_env,omitempty"`
+	AuthConfigured     bool     `json:"auth_configured"`
 	Location           string   `json:"location"`
 	DataBoundary       string   `json:"data_boundary"`
 	UsagePolicy        string   `json:"usage_policy"`
@@ -32,6 +36,7 @@ type brainUpsertRequest struct {
 	Endpoint           string   `json:"endpoint"`
 	ModelID            string   `json:"model_id"`
 	APIKey             string   `json:"api_key"`
+	APIKeyEnv          string   `json:"api_key_env"`
 	Location           string   `json:"location"`
 	DataBoundary       string   `json:"data_boundary"`
 	UsagePolicy        string   `json:"usage_policy"`
@@ -47,6 +52,7 @@ func providerConfigFromBrainRequest(req brainUpsertRequest, applyDefaults bool) 
 		Endpoint:           req.Endpoint,
 		ModelID:            req.ModelID,
 		AuthKey:            req.APIKey,
+		AuthKeyEnv:         strings.TrimSpace(req.APIKeyEnv),
 		Location:           req.Location,
 		DataBoundary:       req.DataBoundary,
 		UsagePolicy:        req.UsagePolicy,
@@ -73,6 +79,16 @@ func applyBrainProviderDefaults(cfg *cognitive.ProviderConfig) {
 	}
 }
 
+func providerAuthConfigured(prov cognitive.ProviderConfig) bool {
+	if strings.TrimSpace(prov.AuthKey) != "" {
+		return true
+	}
+	if envName := strings.TrimSpace(prov.AuthKeyEnv); envName != "" {
+		return strings.TrimSpace(os.Getenv(envName)) != ""
+	}
+	return prov.Location == "local" && (prov.Type == "openai_compatible" || prov.Type == "ollama")
+}
+
 func brainEntryFromProvider(id string, prov cognitive.ProviderConfig, status string) BrainEntry {
 	applyBrainProviderDefaults(&prov)
 	return BrainEntry{
@@ -80,6 +96,8 @@ func brainEntryFromProvider(id string, prov cognitive.ProviderConfig, status str
 		Type:               prov.Type,
 		Endpoint:           prov.Endpoint,
 		ModelID:            prov.ModelID,
+		APIKeyEnv:          prov.AuthKeyEnv,
+		AuthConfigured:     providerAuthConfigured(prov),
 		Location:           prov.Location,
 		DataBoundary:       prov.DataBoundary,
 		UsagePolicy:        prov.UsagePolicy,

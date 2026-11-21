@@ -76,9 +76,17 @@ export default function BrainsProviderTable({
                         <React.Fragment key={b.id}>
                             <tr className="border-t border-cortex-border hover:bg-cortex-surface/30 transition-colors">
                                 <td className="px-4 py-2.5">
-                                    <div className="flex items-center gap-2">
-                                        <Brain className="w-3.5 h-3.5 text-cortex-primary" />
-                                        <span className="text-cortex-text-main font-semibold">{b.id}</span>
+                                    <div className="flex flex-col gap-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <Brain className="w-3.5 h-3.5 text-cortex-primary" />
+                                            <span className="text-cortex-text-main font-semibold">{b.id}</span>
+                                        </div>
+                                        {b.api_key_env && (
+                                            <span className="text-[10px] text-cortex-text-muted">
+                                                env: <code className="text-cortex-primary">{b.api_key_env}</code>
+                                                {b.auth_configured ? " (ready)" : " (unset)"}
+                                            </span>
+                                        )}
                                     </div>
                                 </td>
                                 <td className="px-4 py-2.5">{locationBadge(b.location)}</td>

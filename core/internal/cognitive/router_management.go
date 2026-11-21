@@ -31,11 +31,11 @@ func (r *Router) buildAdapter(id string, cfg ProviderConfig) (LLMProvider, error
 }
 
 // AddProvider hot-injects a new provider without requiring a restart.
-// Builds and probes the adapter, then persists the updated config.
+// Builds the adapter when credentials are ready (or stores disabled template for env-backed setup), then persists.
 func (r *Router) AddProvider(id string, cfg ProviderConfig) error {
 	cfg = NormalizeProviderTokenDefaults(cfg)
 	adapter, err := r.buildAdapter(id, cfg)
-	if err != nil {
+	if err != nil && cfg.Enabled {
 		return fmt.Errorf("build adapter: %w", err)
 	}
 	r.mu.Lock()
@@ -43,7 +43,11 @@ func (r *Router) AddProvider(id string, cfg ProviderConfig) error {
 		r.Config.Providers = make(map[string]ProviderConfig)
 	}
 	r.Config.Providers[id] = cfg
-	r.Adapters[id] = adapter
+	if adapter != nil {
+		r.Adapters[id] = adapter
+	} else {
+		delete(r.Adapters, id)
+	}
 	r.mu.Unlock()
 	return r.SaveConfig()
 }
@@ -65,12 +69,16 @@ func (r *Router) UpdateProvider(id string, cfg ProviderConfig) error {
 	}
 	cfg = NormalizeProviderTokenDefaults(cfg)
 	adapter, err := r.buildAdapter(id, cfg)
-	if err != nil {
+	if err != nil && cfg.Enabled {
 		return fmt.Errorf("build adapter: %w", err)
 	}
 	r.mu.Lock()
 	r.Config.Providers[id] = cfg
-	r.Adapters[id] = adapter
+	if adapter != nil {
+		r.Adapters[id] = adapter
+	} else {
+		delete(r.Adapters, id)
+	}
 	r.mu.Unlock()
 	return r.SaveConfig()
 }

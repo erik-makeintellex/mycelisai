@@ -158,3 +158,28 @@ def test_deployments_output_preview_drawer_includes_review_team_audit_certificat
     assert 'data-testid="deployment-output-preview-source"' in drawer
 
 
+def test_web_based_agentry_services_presets_and_secret_ref_pipeline_are_wired() -> None:
+    brains_types = (REPO_ROOT / "interface" / "components" / "settings" / "brainsTypes.ts").read_text(encoding="utf-8")
+    for provider_key in ("openai", "anthropic", "google", "openrouter", "groq", "deepseek", "mistral", "xai"):
+        assert f"{provider_key}:" in brains_types
+    assert "OPENAI_API_KEY" in brains_types
+    assert "ANTHROPIC_API_KEY" in brains_types
+    assert "GEMINI_API_KEY" in brains_types
+    assert "OPENROUTER_API_KEY" in brains_types
+    assert "GROQ_API_KEY" in brains_types
+    assert "DEEPSEEK_API_KEY" in brains_types
+
+    brains_modal = (REPO_ROOT / "interface" / "components" / "settings" / "BrainsProviderModal.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="brains-web-service-presets"' in brains_modal
+    assert 'data-testid="brain-form-api-key-env"' in brains_modal
+
+    cog_yaml = (REPO_ROOT / "core" / "config" / "cognitive.yaml").read_text(encoding="utf-8")
+    assert "claude-3-7-sonnet-latest" in cog_yaml
+    assert "gemini-2.5-pro" in cog_yaml
+    assert "gpt-4o" in cog_yaml
+    assert "openrouter:" in cog_yaml
+    assert "groq:" in cog_yaml
+    assert "deepseek:" in cog_yaml
+

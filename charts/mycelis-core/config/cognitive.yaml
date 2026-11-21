@@ -47,41 +47,87 @@ providers:
         enabled: true
     production_claude:
         type: anthropic
-        endpoint: ""
-        model_id: claude-3-opus-20240229
+        endpoint: https://api.anthropic.com/v1/messages
+        model_id: claude-3-7-sonnet-latest
         api_key: ""
         api_key_env: ANTHROPIC_API_KEY
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
         roles_allowed:
-            - architect
-            - coder
+            - all
         enabled: false
     production_gemini:
         type: google
-        endpoint: ""
-        model_id: gemini-1.5-pro
+        endpoint: https://generativelanguage.googleapis.com/v1beta/models
+        model_id: gemini-2.5-pro
         api_key: ""
         api_key_env: GEMINI_API_KEY
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
         roles_allowed:
-            - architect
+            - all
         enabled: false
     production_gpt4:
         type: openai
         endpoint: https://api.openai.com/v1
-        model_id: gpt-4-turbo
+        model_id: gpt-4o
         api_key: ""
         api_key_env: OPENAI_API_KEY
         location: remote
         data_boundary: leaves_org
         usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
         roles_allowed:
-            - architect
-            - coder
+            - all
+        enabled: false
+    openrouter:
+        type: openai_compatible
+        endpoint: https://openrouter.ai/api/v1
+        model_id: anthropic/claude-3.7-sonnet
+        api_key: ""
+        api_key_env: OPENROUTER_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
+        roles_allowed:
+            - all
+        enabled: false
+    groq:
+        type: openai_compatible
+        endpoint: https://api.groq.com/openai/v1
+        model_id: llama-3.3-70b-versatile
+        api_key: ""
+        api_key_env: GROQ_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
+        roles_allowed:
+            - all
+        enabled: false
+    deepseek:
+        type: openai_compatible
+        endpoint: https://api.deepseek.com/v1
+        model_id: deepseek-chat
+        api_key: ""
+        api_key_env: DEEPSEEK_API_KEY
+        location: remote
+        data_boundary: leaves_org
+        usage_policy: require_approval
+        token_budget_profile: extended
+        max_output_tokens: 2048
+        roles_allowed:
+            - all
         enabled: false
     vllm:
         type: openai_compatible
