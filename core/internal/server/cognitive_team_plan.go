@@ -80,7 +80,7 @@ func hasTeamCreationIntent(text string) bool {
 	if lower == "" {
 		return false
 	}
-	if isChainedTeamPipelineRequest(lower) || isTeamExecutionBundleRequest(lower) || isInteractingMultiAppRequest(lower) {
+	if isChainedTeamPipelineRequest(lower) || isTeamExecutionBundleRequest(lower) || isInteractingMultiAppRequest(lower) || isDeploymentMCPAdditionRequest(lower) {
 		return true
 	}
 	if requestContainsAny(lower, []string{
@@ -154,6 +154,9 @@ func titleCaseTeamID(teamID string) string {
 }
 
 func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []protocol.PlannedToolCall {
+	if isDeploymentMCPAdditionRequest(latestRequest) {
+		return inferDeploymentMCPAdditionTeamCalls(latestRequest)
+	}
 	if isInteractingMultiAppRequest(latestRequest) {
 		return inferInteractingMultiAppTeamCalls(latestRequest)
 	}

@@ -90,32 +90,25 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
     const mcpServers = useCortexStore((s) => s.mcpServers);
 
     const [searchQuery, setSearchQuery] = useState("");
+    const [groupFilter, setGroupFilter] = useState<"all" | "standard" | "custom">("all");
     const [installingName, setInstallingName] = useState<string | null>(null);
     const [envModalEntry, setEnvModalEntry] = useState<MCPLibraryEntry | null>(null);
     const [installMessage, setInstallMessage] = useState<string | null>(null);
 
-    useEffect(() => {
-        fetchLibrary();
-    }, [fetchLibrary]);
-
+    useEffect(() => { fetchLibrary(); }, [fetchLibrary]);
     const installedNames = new Set(mcpServers.map((s) => s.name));
 
     const handleInstallClick = (entry: MCPLibraryEntry) => {
         const hasRequiredEnv = (entry.environment_variables && entry.environment_variables.length > 0) || (entry.env && Object.keys(entry.env).length > 0);
-        if (hasRequiredEnv) {
-            setEnvModalEntry(entry);
-        } else {
-            doInstall(entry.name);
-        }
+        if (hasRequiredEnv) setEnvModalEntry(entry);
+        else doInstall(entry.name);
     };
 
     const doInstall = async (name: string, env?: Record<string, string>) => {
         setInstallingName(name);
         setInstallMessage(null);
         const result = await installFromLibrary(name, env);
-        if (result.message) {
-            setInstallMessage(result.message);
-        }
+        if (result.message) setInstallMessage(result.message);
         setInstallingName(null);
         if (result.ok) {
             setEnvModalEntry(null);
@@ -124,13 +117,12 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
     };
 
     const filterEntries = (categories: MCPLibraryCategory[]) => {
-        if (!searchQuery.trim()) return categories;
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.trim().toLowerCase();
         return categories
+            .filter((cat) => groupFilter === "all" ? true : groupFilter === "custom" ? cat.name === "Custom Developed MCPs" : cat.name !== "Custom Developed MCPs")
             .map((cat) => ({
                 ...cat,
-                servers: cat.servers.filter((s) =>
-                    s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) || s.tags.some((t) => t.toLowerCase().includes(q))),
+                servers: q ? cat.servers.filter((s) => s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q) || s.tags.some((t) => t.toLowerCase().includes(q))) : cat.servers,
             }))
             .filter((cat) => cat.servers.length > 0);
     };
@@ -154,6 +146,28 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                     <p className="text-xs font-mono leading-5 text-cortex-text-main">{installMessage}</p>
                 </div>
             )}
+
+            <div className="flex flex-wrap items-center gap-2" data-testid="mcp-library-group-filters">
+                {([
+                    { id: "all", label: "All MCPs" },
+                    { id: "standard", label: "Standard Deployment MCPs" },
+                    { id: "custom", label: "Custom Developed MCPs" },
+                ] as const).map((tab) => (
+                    <button
+                        key={tab.id}
+                        type="button"
+                        data-testid={`mcp-library-filter-${tab.id}`}
+                        onClick={() => setGroupFilter(tab.id)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-mono font-bold transition-colors ${
+                            groupFilter === tab.id
+                                ? "border-cortex-primary/50 bg-cortex-primary/15 text-cortex-primary"
+                                : "border-cortex-border bg-cortex-surface text-cortex-text-muted hover:text-cortex-text-main"
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
 
             <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cortex-text-muted/50" />
@@ -246,24 +260,10 @@ export function MCPLibraryBrowserBody({ onInstalled }: MCPLibraryBrowserProps = 
                                     {(entry.repository || entry.homepage) && (
                                         <div className="flex flex-wrap gap-2 text-[9px] font-mono text-cortex-text-muted leading-relaxed">
                                             {entry.repository && (
-                                                <a
-                                                    href={entry.repository}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-cortex-primary hover:underline"
-                                                >
-                                                    Repository
-                                                </a>
+                                                <a href={entry.repository} target="_blank" rel="noreferrer" className="text-cortex-primary hover:underline">Repository</a>
                                             )}
                                             {entry.homepage && (
-                                                <a
-                                                    href={entry.homepage}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-cortex-primary hover:underline"
-                                                >
-                                                    Homepage
-                                                </a>
+                                                <a href={entry.homepage} target="_blank" rel="noreferrer" className="text-cortex-primary hover:underline">Homepage</a>
                                             )}
                                         </div>
                                     )}

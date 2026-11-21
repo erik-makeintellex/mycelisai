@@ -238,3 +238,43 @@ def test_instant_proposal_fast_path_and_stackable_work_queue_are_wired() -> None
     assert 'data-testid="soma-queued-prompts-tray"' in chat_ui
     assert "Stacked Work Queue for" in chat_ui
     assert "disabled={false}" in chat_ui
+
+
+def test_standard_deployment_mcps_and_custom_developed_mcp_grouping_are_wired() -> None:
+    mcp_panel = (
+        REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentMCPAdditionsPanel.tsx"
+    ).read_text(encoding="utf-8")
+    assert 'data-testid="deployments-mcp-additions-panel"' in mcp_panel
+    assert 'data-testid="deployments-mcp-tab-standard"' in mcp_panel
+    assert 'data-testid="deployments-mcp-tab-custom"' in mcp_panel
+    assert 'data-testid="deployments-standard-mcp-group"' in mcp_panel
+    assert 'data-testid="deployments-custom-mcp-group"' in mcp_panel
+    assert 'data-testid="deployments-custom-mcp-builder"' in mcp_panel
+    assert "STANDARD_DEPLOYMENT_MCPS" in mcp_panel
+    assert "CUSTOM_DEVELOPED_MCPS" in mcp_panel
+    for mcp_id in ("filesystem", "github", "git", "fetch", "postgres", "sqlite", "docker-kubernetes", "memory", "puppeteer", "sequential-thinking"):
+        assert f'id: "{mcp_id}"' in mcp_panel
+    for custom_id in ("custom-python-fastmcp", "custom-ts-mcp-sdk", "custom-http-sse-mcp", "custom-nats-service-bridge"):
+        assert f'id: "{custom_id}"' in mcp_panel
+
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "DeploymentMCPAdditionsPanel" in detail_pane
+
+    mcp_lib = (REPO_ROOT / "core" / "config" / "mcp-library.yaml").read_text(encoding="utf-8")
+    assert 'name: "Custom Developed MCPs"' in mcp_lib
+    assert 'name: "custom-python-fastmcp"' in mcp_lib
+    assert 'name: "custom-ts-mcp-sdk"' in mcp_lib
+    assert 'name: "custom-http-sse-mcp"' in mcp_lib
+    assert 'name: "custom-nats-service-bridge"' in mcp_lib
+    assert 'name: "git"' in mcp_lib
+    assert 'name: "docker-kubernetes"' in mcp_lib
+
+    mcp_browser = (REPO_ROOT / "interface" / "components" / "settings" / "MCPLibraryBrowser.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="mcp-library-group-filters"' in mcp_browser
+    assert "Standard Deployment MCPs" in mcp_browser
+    assert "Custom Developed MCPs" in mcp_browser
+

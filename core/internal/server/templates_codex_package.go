@@ -161,7 +161,7 @@ func packageOutputFileFromBytes(relativePath, title string, data []byte) package
 func isDeliverablePackageKind(kind string) bool { return isSupportedDeliverablePackageKind(kind) }
 func isSupportedDeliverablePackageKind(kind string) bool {
 	switch strings.TrimSpace(kind) {
-	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle", "team_execution_bundle", "dev_project_bundle", "multi_app_bundle":
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle", "team_execution_bundle", "dev_project_bundle", "multi_app_bundle", "mcp_addition_bundle":
 		return true
 	default: return false
 	}
@@ -171,7 +171,6 @@ func codexPackageBaseFromCalls(planned []protocol.PlannedToolCall) (string, stri
 	basePath, slug, _, ok := deliverablePackageMetadataFromCalls(planned)
 	return basePath, slug, ok
 }
-
 func deliverablePackageMetadataFromCalls(planned []protocol.PlannedToolCall) (string, string, string, bool) {
 	if len(planned) < 2 {
 		return "", "", "", false
@@ -250,6 +249,7 @@ func deliverablePackageProofTitle(packageKind string) string {
 	case "team_execution_bundle": return "Team Execution Plan & Next Steps Proof"
 	case "dev_project_bundle": return "Development Project Bundle Proof"
 	case "multi_app_bundle": return "Interacting Multi-App Suite Proof"
+	case "mcp_addition_bundle": return "Deployment MCP Addition & Binding Proof"
 	default: return "Codex Task Bundle Proof"
 	}
 }

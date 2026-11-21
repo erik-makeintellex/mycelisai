@@ -27,7 +27,31 @@ categories:
         environment_variables:
           - {name: "GITHUB_PERSONAL_ACCESS_TOKEN", description: "GitHub personal access token used for repository, issue, and PR access.", required: true, secret: true}
         deployment_boundary: "external_saas"
-        tags: ["git", "code", "vcs"]
+        tags: ["git", "code", "vcs", "standard-deployment"]
+        tool_set: "development"
+      - name: "git"
+        title: "Git Repository"
+        description: "Local Git version control — status, diff, log, branch, and commit inspection"
+        version: "latest"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "@modelcontextprotocol/server-git", "--repository", "./workspace"]
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-git", version: "latest", transport: {type: stdio}}]
+        repository: "https://github.com/modelcontextprotocol/servers"
+        homepage: "https://modelcontextprotocol.io"
+        tags: ["git", "vcs", "diff", "standard-deployment"]
+        tool_set: "development"
+      - name: "docker-kubernetes"
+        title: "Docker & Kubernetes"
+        description: "Container runtime and Kubernetes cluster deployment inspection, logs, and pod health"
+        version: "latest"
+        transport: stdio
+        command: "npx"
+        args: ["-y", "mcp-server-kubernetes"]
+        packages: [{registry_type: npm, identifier: "mcp-server-kubernetes", version: "latest", transport: {type: stdio}}]
+        repository: "https://github.com/Flux159/mcp-server-kubernetes"
+        homepage: "https://modelcontextprotocol.io"
+        tags: ["docker", "kubernetes", "containers", "cluster", "standard-deployment"]
         tool_set: "development"
   - name: "Data & Search"
     servers:
@@ -214,4 +238,47 @@ categories:
         packages: [{registry_type: npm, identifier: "@modelcontextprotocol/server-sequential-thinking", version: "latest", transport: {type: stdio}}]
         repository: "https://github.com/modelcontextprotocol/servers"
         homepage: "https://modelcontextprotocol.io"
-        tags: ["reasoning", "planning"]
+        tags: ["reasoning", "planning", "standard-deployment"]
+  - name: "Custom Developed MCPs"
+    servers:
+      - name: "custom-python-fastmcp"
+        title: "Custom Python FastMCP Server"
+        description: "User-developed Python FastMCP stdio server for custom domain tools, internal data adapters, and bespoke workflows"
+        version: "1.0.0"
+        transport: stdio
+        command: "python"
+        args: ["./workspace/mcp/custom_fastmcp_server.py"]
+        packages: [{registry_type: pypi, identifier: "fastmcp", version: "latest", transport: {type: stdio}}]
+        tags: ["custom-developed", "python", "fastmcp", "stdio"]
+        tool_set: "custom"
+      - name: "custom-ts-mcp-sdk"
+        title: "Custom TypeScript MCP SDK Server"
+        description: "User-developed Node/TypeScript @modelcontextprotocol/sdk stdio server for custom APIs and workspace automations"
+        version: "1.0.0"
+        transport: stdio
+        command: "node"
+        args: ["./workspace/mcp/custom_mcp_server.mjs"]
+        packages: [{registry_type: npm, identifier: "@modelcontextprotocol/sdk", version: "latest", transport: {type: stdio}}]
+        tags: ["custom-developed", "typescript", "node", "stdio"]
+        tool_set: "custom"
+      - name: "custom-http-sse-mcp"
+        title: "Custom HTTP / SSE Microservice MCP"
+        description: "Remote or in-cluster custom MCP server exposed over HTTP Server-Sent Events (SSE) for internal microservices"
+        version: "1.0.0"
+        transport: sse
+        url: "http://127.0.0.1:8787/sse"
+        env: {CUSTOM_MCP_SSE_URL: "http://127.0.0.1:8787/sse"}
+        environment_variables:
+          - {name: "CUSTOM_MCP_SSE_URL", description: "SSE endpoint URL of your custom-developed MCP service.", default_value: "http://127.0.0.1:8787/sse"}
+        tags: ["custom-developed", "sse", "http", "microservice"]
+        tool_set: "custom"
+      - name: "custom-nats-service-bridge"
+        title: "Custom Mycelis NATS & Service Bridge MCP"
+        description: "Custom-developed Mycelis bridge exposing team NATS request/result subjects and internal REST APIs as governed MCP tools"
+        version: "1.0.0"
+        transport: stdio
+        command: "python"
+        args: ["./workspace/mcp/custom_nats_bridge_mcp.py"]
+        packages: [{registry_type: pypi, identifier: "nats-py", version: "latest", transport: {type: stdio}}]
+        tags: ["custom-developed", "nats", "bridge", "mycelis"]
+        tool_set: "custom"

@@ -89,6 +89,9 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 		return nil, false
 	}
 	switch {
+	case isDeploymentMCPAdditionRequest(lower):
+		specs, slug := deploymentMCPAdditionBundleSpecs(trimmed)
+		return buildDeliverableBundleCalls("deliverables/mcp-additions/"+slug, "mcp_addition_bundle", slug, specs), true
 	case isInteractingMultiAppRequest(lower):
 		specs, slug := interactingMultiAppBundleSpecs(trimmed)
 		return buildDeliverableBundleCalls("deliverables/multi-app/"+slug, "multi_app_bundle", slug, specs), true

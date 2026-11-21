@@ -37,6 +37,15 @@ export function buildTeamActionPrefillPrompt(searchParams: URLSearchParams): str
         return `Chain the output published on channel ${chainChannel} into a downstream team that listens on ${chainChannel} and generates the next deliverable package.`;
     }
     const teamAction = searchParams.get("team_action")?.trim();
+    if (teamAction === "add_mcp") {
+        const teamId = searchParams.get("team_id")?.trim() || "mission-delivery-team";
+        const teamName = searchParams.get("team_name")?.trim() || teamId;
+        const mcpId = searchParams.get("mcp_id")?.trim() || "filesystem";
+        const mcpTitle = searchParams.get("mcp_title")?.trim() || mcpId;
+        const mcpGroup = searchParams.get("mcp_group")?.trim() === "custom" ? "custom" : "standard";
+        const groupLabel = mcpGroup === "custom" ? "Custom Developed MCP" : "Standard Deployment MCP";
+        return `Add ${groupLabel} ${mcpTitle} (mcp_id: ${mcpId}, mcp_group: ${mcpGroup}, mcp_title: ${mcpTitle}) to team ${teamName} (team_id: ${teamId}) as an MCP addition and generate its deployment binding manifest.`;
+    }
     if (teamAction === "companion_app") {
         const teamId = searchParams.get("team_id")?.trim() || "primary-core-app-team";
         const teamName = searchParams.get("team_name")?.trim() || teamId;

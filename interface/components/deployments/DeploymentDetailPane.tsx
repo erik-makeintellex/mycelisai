@@ -12,6 +12,7 @@ import {
 import { KindBadge, StateBadge } from "./DeploymentList";
 import { ConfigViewer } from "./ConfigViewer";
 import { DeploymentOutputPreviewDrawer } from "./DeploymentOutputPreviewDrawer";
+import { DeploymentMCPAdditionsPanel } from "./DeploymentMCPAdditionsPanel";
 
 function isReviewerRole(role: string, id: string): boolean {
   const hay = `${role} ${id}`.toLowerCase();
@@ -97,6 +98,7 @@ export function DeploymentDetailPane({ record, advancedMode }: { record: Deploym
       <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.75fr)]">
         <div className="space-y-4">
           <MembersPanel members={record.members} advancedMode={advancedMode} />
+          <DeploymentMCPAdditionsPanel record={record} />
           <PostureAndOutputsPanel record={record} />
           <ChannelsAndChainingPanel record={record} />
         </div>
