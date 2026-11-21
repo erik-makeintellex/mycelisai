@@ -244,13 +244,22 @@ function ChannelsAndChainingPanel({ record }: { record: DeploymentRecord }) {
           </div>
         </div>
       </div>
-      <Link
-        href={`/dashboard?team_id=${encodeURIComponent(record.id)}&chain_channel=${encodeURIComponent(primarySpeakChannel)}`}
-        data-testid="deployments-chain-output"
-        className="mt-3 inline-flex items-center rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-1.5 text-xs font-medium text-cortex-primary hover:bg-cortex-primary/20"
-      >
-        Chain This Team&apos;s Output to Another Team in Soma &rarr;
-      </Link>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Link
+          href={`/dashboard?team_id=${encodeURIComponent(record.id)}&team_name=${encodeURIComponent(record.name)}&team_action=companion_app`}
+          data-testid="deployments-build-companion-app"
+          className="inline-flex items-center rounded-lg border border-cortex-primary/50 bg-cortex-primary/15 px-3 py-1.5 text-xs font-semibold text-cortex-primary hover:bg-cortex-primary/25"
+        >
+          Have Another Team Build Interacting App &rarr;
+        </Link>
+        <Link
+          href={`/dashboard?team_id=${encodeURIComponent(record.id)}&chain_channel=${encodeURIComponent(primarySpeakChannel)}`}
+          data-testid="deployments-chain-output"
+          className="inline-flex items-center rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-1.5 text-xs font-medium text-cortex-primary hover:bg-cortex-primary/20"
+        >
+          Chain This Team&apos;s Output to Another Team in Soma &rarr;
+        </Link>
+      </div>
     </section>
   );
 }

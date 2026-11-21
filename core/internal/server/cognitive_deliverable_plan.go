@@ -16,6 +16,7 @@ type deliverableBundleFileSpec struct {
 func hasDeliverableCreationIntent(lower string) bool {
 	return requestContainsAny(lower, []string{
 		"create", "generate", "draft", "prepare", "make", "build", "write", "save", "design",
+		"work on", "spin up", "whip up", "set up", "put together", "start a", "i want a", "i need a",
 	})
 }
 
@@ -65,6 +66,9 @@ func isChainedPipelineBundleRequest(lower string) bool {
 }
 
 func isGeneralWebAppProjectBundleRequest(lower string) bool {
+	if isSimpleCasualBuildRequest(lower) {
+		return true
+	}
 	if !hasDeliverableCreationIntent(lower) && !hasTeamCreationIntent(lower) {
 		return false
 	}
@@ -85,6 +89,9 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 		return nil, false
 	}
 	switch {
+	case isInteractingMultiAppRequest(lower):
+		specs, slug := interactingMultiAppBundleSpecs(trimmed)
+		return buildDeliverableBundleCalls("deliverables/multi-app/"+slug, "multi_app_bundle", slug, specs), true
 	case isTeamExecutionBundleRequest(lower):
 		return teamExecutionBundleCalls(trimmed), true
 	case isChainedPipelineBundleRequest(lower):
@@ -273,7 +280,6 @@ func inferFallbackDeliverableWritePlan(latestRequest, agentReply string) (protoc
 	if lower == "" || !hasDeliverableCreationIntent(lower) {
 		return protocol.PlannedToolCall{}, false
 	}
-
 	reply := strings.TrimSpace(agentReply)
 	isRawJSON := strings.HasPrefix(reply, "{") || strings.HasPrefix(reply, "[")
 	content := "# Deliverable Draft\n\n## Request Summary\n" + trimmedReq + "\n\n## Key Notes\n- Generated as a governed workspace draft for operator review.\n"
@@ -284,14 +290,8 @@ func inferFallbackDeliverableWritePlan(latestRequest, agentReply string) (protoc
 			content = "# Deliverable Draft\n\n" + reply + "\n"
 		}
 	}
-
 	return protocol.PlannedToolCall{
-		Name: "write_file",
-		Arguments: map[string]any{
-			"path":          "deliverables/soma-draft.md",
-			"content":       content,
-			"artifact_role": "Deliverable Draft",
-			"content_type":  "text/markdown",
-		},
+		Name:      "write_file",
+		Arguments: map[string]any{"path": "deliverables/soma-draft.md", "content": content, "artifact_role": "Deliverable Draft", "content_type": "text/markdown"},
 	}, true
 }

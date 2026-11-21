@@ -203,3 +203,17 @@ def test_simple_project_development_asks_bypass_bureaucracy_and_compact_proposal
     )
     assert "isGeneralWebAppProjectBundleRequest" in deliverable_plan
     assert '"dev_project_bundle"' in deliverable_plan
+    assert '"multi_app_bundle"' in deliverable_plan
+
+    multi_app_plan = (REPO_ROOT / "core" / "internal" / "server" / "cognitive_multi_app_plan.go").read_text(
+        encoding="utf-8"
+    )
+    assert "func isInteractingMultiAppRequest(" in multi_app_plan
+    assert "func isSimpleCasualBuildRequest(" in multi_app_plan
+    assert "func inferInteractingMultiAppTeamCalls(" in multi_app_plan
+
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="deployments-build-companion-app"' in detail_pane
+    assert "team_action=companion_app" in detail_pane

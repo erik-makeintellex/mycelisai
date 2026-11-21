@@ -30,6 +30,8 @@ export function packageTitle(packageKind?: string): string {
             return "Codex task bundle";
         case "dev_project_bundle":
             return "Project files";
+        case "multi_app_bundle":
+            return "Interacting multi-app suite";
         case "interactive_game_bundle":
             return "Playable game files";
         case "product_wireframe_bundle":

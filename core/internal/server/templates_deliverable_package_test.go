@@ -163,22 +163,11 @@ func TestInferUserDeliverableBundlePlanFromRequest_OnboardingKPIDashboardAndWire
 }
 
 func TestBuildPlannedToolCalls_FallbackDeliverableWritePlan(t *testing.T) {
-	calls := buildPlannedToolCalls(
-		chatAgentResult{Text: "Here is a structured launch summary covering goals, audience, and next steps."},
-		"Create a one-page launch summary",
-		[]string{"write_file"},
-	)
-	if len(calls) != 1 {
-		t.Fatalf("planned calls = %d, want 1", len(calls))
+	calls := buildPlannedToolCalls(chatAgentResult{Text: "Here is a structured launch summary covering goals, audience, and next steps."}, "Create a one-page launch summary", []string{"write_file"})
+	if len(calls) != 1 || calls[0].Name != "write_file" || calls[0].Arguments["path"] != "deliverables/soma-draft.md" {
+		t.Fatalf("unexpected fallback write plan: %#v", calls)
 	}
-	if calls[0].Name != "write_file" {
-		t.Fatalf("call name = %q, want write_file", calls[0].Name)
-	}
-	if calls[0].Arguments["path"] != "deliverables/soma-draft.md" {
-		t.Fatalf("path = %v, want deliverables/soma-draft.md", calls[0].Arguments["path"])
-	}
-	content, _ := calls[0].Arguments["content"].(string)
-	if !strings.Contains(content, "structured launch summary") {
+	if content, _ := calls[0].Arguments["content"].(string); !strings.Contains(content, "structured launch summary") {
 		t.Fatalf("fallback content = %q, want agent reply text included", content)
 	}
 }
@@ -186,25 +175,9 @@ func TestBuildPlannedToolCalls_FallbackDeliverableWritePlan(t *testing.T) {
 func TestFinalizeCodexTaskBundleTx_SupportsGameAndWireframeBundles(t *testing.T) {
 	workspace := t.TempDir()
 	t.Setenv("MYCELIS_WORKSPACE", workspace)
-
-	for _, tc := range []struct {
-		prompt    string
-		wantKind  string
-		wantPkgID string
-		wantProof string
-	}{
-		{
-			prompt:    "Create a playable sliding-tile puzzle game for the browser.",
-			wantKind:  "interactive_game_bundle",
-			wantPkgID: "interactive_game_bundle:sliding-tile-puzzle",
-			wantProof: "deliverables/games/sliding-tile-puzzle/proof.md",
-		},
-		{
-			prompt:    "Build an interactive product wireframe and product spec.",
-			wantKind:  "product_wireframe_bundle",
-			wantPkgID: "product_wireframe_bundle:product-wireframe",
-			wantProof: "deliverables/product-wireframe/proof.md",
-		},
+	for _, tc := range []struct{ prompt, wantKind, wantPkgID, wantProof string }{
+		{"Create a playable sliding-tile puzzle game for the browser.", "interactive_game_bundle", "interactive_game_bundle:sliding-tile-puzzle", "deliverables/games/sliding-tile-puzzle/proof.md"},
+		{"Build an interactive product wireframe and product spec.", "product_wireframe_bundle", "product_wireframe_bundle:product-wireframe", "deliverables/product-wireframe/proof.md"},
 	} {
 		planned, ok := inferUserDeliverableBundlePlanFromRequest(tc.prompt)
 		if !ok {
@@ -221,23 +194,14 @@ func TestFinalizeCodexTaskBundleTx_SupportsGameAndWireframeBundles(t *testing.T)
 				t.Fatalf("write %s: %v", relPath, err)
 			}
 		}
-
-		s := &AdminServer{}
-		summary, err := s.finalizeCodexTaskBundleTx(context.Background(), nil, planned, "run-1", "proof-1")
-		if err != nil {
-			t.Fatalf("finalizeCodexTaskBundleTx(%s): %v", tc.wantKind, err)
-		}
-		if summary == nil || summary.PackageKind != tc.wantKind || summary.PackageID != tc.wantPkgID {
-			t.Fatalf("summary = %+v, want kind=%s id=%s", summary, tc.wantKind, tc.wantPkgID)
-		}
-		if len(summary.Files) != 4 || len(summary.Artifacts) != 4 {
-			t.Fatalf("files/artifacts = %d/%d, want 4/4", len(summary.Files), len(summary.Artifacts))
+		summary, err := (&AdminServer{}).finalizeCodexTaskBundleTx(context.Background(), nil, planned, "run-1", "proof-1")
+		if err != nil || summary == nil || summary.PackageKind != tc.wantKind || summary.PackageID != tc.wantPkgID || len(summary.Files) != 4 || len(summary.Artifacts) != 4 {
+			t.Fatalf("finalizeCodexTaskBundleTx(%s) err=%v summary=%+v", tc.wantKind, err, summary)
 		}
 		if _, err := os.Stat(filepath.Join(workspace, filepath.FromSlash(tc.wantProof))); err != nil {
 			t.Fatalf("expected %s on disk: %v", tc.wantProof, err)
 		}
 	}
-
 	_ = protocol.PlannedToolCall{}
 }
 
@@ -295,5 +259,21 @@ func TestInferUserDeliverableBundlePlanFromRequest_GeneralDevProjectBundle(t *te
 	s := newTestServer()
 	if review := s.buildSomaReferentialReview(t.Context(), []chatRequestMessage{{Role: "user", Content: "Build a team to create a calculator app project."}}); review.NeedsConfirmation {
 		t.Fatalf("expected project/team development ask to go directly to proposal card: %+v", review)
+	}
+}
+
+func TestInferUserDeliverableBundlePlanFromRequest_InteractingMultiAppAndCasualAsks(t *testing.T) {
+	prompt := "Build a storefront app and have a team work on another application for inventory that interacts with the initial ask."
+	calls, ok := inferUserDeliverableBundlePlanFromRequest(prompt)
+	if !ok || len(calls) != 3 || calls[0].Arguments["package_kind"] != "multi_app_bundle" {
+		t.Fatalf("expected multi_app_bundle, got ok=%v calls=%#v", ok, calls)
+	}
+	teamCalls := inferCreateTeamPlanCallsFromRequest(prompt, "")
+	if len(teamCalls) != 3 || teamCalls[0].Arguments["team_id"] != "storefront-app-team" || teamCalls[1].Arguments["team_id"] != "inventory-app-team" {
+		t.Fatalf("expected primary, companion, and review teams, got %#v", teamCalls)
+	}
+	casualCalls, casualOK := inferUserDeliverableBundlePlanFromRequest("make me a quick timer app")
+	if !casualOK || len(casualCalls) != 3 || casualCalls[0].Arguments["package_kind"] != "dev_project_bundle" {
+		t.Fatalf("expected casual ask to resolve to dev_project_bundle, got ok=%v calls=%#v", casualOK, casualCalls)
 	}
 }

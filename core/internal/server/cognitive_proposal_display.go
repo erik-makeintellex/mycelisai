@@ -102,10 +102,19 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 			if len(planned) > 1 && strings.TrimSpace(planned[1].Name) == "create_team" {
 				team2 := firstNonEmptyString(firstStringArgument(planned[1].Arguments, "name"), firstStringArgument(planned[1].Arguments, "team_id"), "downstream team")
 				fileCount := 0
+				isMultiApp := false
 				for _, call := range planned {
 					if strings.TrimSpace(call.Name) == "write_file" {
 						fileCount++
+						if firstStringArgument(call.Arguments, "package_kind") == "multi_app_bundle" {
+							isMultiApp = true
+						}
 					}
+				}
+				if isMultiApp && fileCount > 0 {
+					display.OperatorSummary = fmt.Sprintf("Set up %q and %q to build 2 interacting applications (%d files).", teamName, team2, fileCount)
+					display.ExpectedResult = fmt.Sprintf("Both teams will build their apps, connect their live NATS channels, and verify cross-app communication.")
+					return display
 				}
 				if strings.HasSuffix(firstStringArgument(planned[1].Arguments, "team_id"), "-review-team") && fileCount > 0 {
 					display.OperatorSummary = fmt.Sprintf("Set up %q and build %d project files.", teamName, fileCount)

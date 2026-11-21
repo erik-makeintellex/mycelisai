@@ -9,6 +9,11 @@ export function teamSuggestions(teamName: string, teamId?: string): SomaSuggesti
             prompt: `Plan for team ${teamName}${teamId ? ` (team_id: ${teamId})` : ""} and execute next steps to produce its execution plan, action matrix, and handoff deliverable package.`,
         },
         {
+            label: "Build Interacting Companion App",
+            detail: `Have another team build an app that interacts with ${teamName}.`,
+            prompt: `Have a second team work on another application that interacts with ${teamName}${teamId ? ` (team_id: ${teamId})` : ""} and connect their live outputs.`,
+        },
+        {
             label: "Review state",
             detail: `Check ${teamName} progress and current risk.`,
             prompt: `Review the current state of ${teamName}`,
@@ -32,6 +37,11 @@ export function buildTeamActionPrefillPrompt(searchParams: URLSearchParams): str
         return `Chain the output published on channel ${chainChannel} into a downstream team that listens on ${chainChannel} and generates the next deliverable package.`;
     }
     const teamAction = searchParams.get("team_action")?.trim();
+    if (teamAction === "companion_app") {
+        const teamId = searchParams.get("team_id")?.trim() || "primary-core-app-team";
+        const teamName = searchParams.get("team_name")?.trim() || teamId;
+        return `Have a team work on another application that interacts with ${teamName} (team_id: ${teamId}) and connect their live outputs.`;
+    }
     if (teamAction === "plan_execute" || (teamAction && searchParams.get("team_id")?.trim())) {
         const teamId = searchParams.get("team_id")?.trim() || "mission-delivery-team";
         const teamName = searchParams.get("team_name")?.trim() || teamId;

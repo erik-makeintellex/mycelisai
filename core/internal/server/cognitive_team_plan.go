@@ -80,7 +80,7 @@ func hasTeamCreationIntent(text string) bool {
 	if lower == "" {
 		return false
 	}
-	if isChainedTeamPipelineRequest(lower) || isTeamExecutionBundleRequest(lower) {
+	if isChainedTeamPipelineRequest(lower) || isTeamExecutionBundleRequest(lower) || isInteractingMultiAppRequest(lower) {
 		return true
 	}
 	if requestContainsAny(lower, []string{
@@ -92,10 +92,13 @@ func hasTeamCreationIntent(text string) bool {
 		"assemble a team",
 		"spawn a team",
 		"start a team",
+		"have a team",
+		"another team",
+		"second team",
 	}) {
 		return true
 	}
-	return requestContainsAny(lower, []string{"create", "build", "launch", "put together", "assemble", "spawn"}) &&
+	return requestContainsAny(lower, []string{"create", "build", "launch", "put together", "assemble", "spawn", "tell", "have"}) &&
 		requestContainsAny(lower, []string{"team", "teams", "specialists"})
 }
 
@@ -151,6 +154,9 @@ func titleCaseTeamID(teamID string) string {
 }
 
 func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []protocol.PlannedToolCall {
+	if isInteractingMultiAppRequest(latestRequest) {
+		return inferInteractingMultiAppTeamCalls(latestRequest)
+	}
 	if isChainedTeamPipelineRequest(latestRequest) {
 		return []protocol.PlannedToolCall{
 			{
