@@ -70,6 +70,7 @@ const initialMissionChatContractState: StripActions<CortexMissionChatContract> =
     workspaceChatScope: null,
     missionChat: initialMissionChat,
     isMissionChatting: false,
+    queuedChatPrompts: [],
     missionChatError: null,
     missionChatFailure: null,
     workspaceChatPrimed: false,

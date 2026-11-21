@@ -1,4 +1,4 @@
-import { Loader2, Send } from "lucide-react";
+import { Layers, Send } from "lucide-react";
 import type React from "react";
 
 export function MissionControlAdvancedInput({
@@ -29,9 +29,8 @@ export function MissionControlAdvancedInput({
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => event.key === "Enter" && onSubmit()}
         autoFocus={autoFocus}
-        placeholder={placeholder}
-        disabled={isLoading}
-        className={`flex-1 rounded-lg border bg-cortex-bg px-3 py-2 text-sm font-mono text-cortex-text-main placeholder-cortex-text-muted/60 focus:outline-none focus:ring-1 disabled:opacity-50 ${
+        placeholder={isLoading ? "Stack another work prompt into Soma's queue..." : placeholder}
+        className={`flex-1 rounded-lg border bg-cortex-bg px-3 py-2 text-sm font-mono text-cortex-text-main placeholder-cortex-text-muted/60 focus:outline-none focus:ring-1 ${
           broadcastMode
             ? "border-cortex-warning/40 focus:border-cortex-warning focus:ring-cortex-warning/30"
             : "border-cortex-border focus:border-cortex-primary focus:ring-cortex-primary/30"
@@ -40,15 +39,18 @@ export function MissionControlAdvancedInput({
       <button
         type="button"
         onClick={onSubmit}
-        disabled={isLoading || !value.trim()}
-        className={`flex h-10 min-w-10 items-center justify-center rounded-lg px-3 text-white transition-colors disabled:bg-cortex-border disabled:text-cortex-text-muted ${
+        disabled={!value.trim()}
+        className={`flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg px-3 text-xs font-mono text-white transition-colors disabled:bg-cortex-border disabled:text-cortex-text-muted ${
           broadcastMode
             ? "bg-cortex-warning hover:bg-cortex-warning/80"
             : "bg-cortex-primary hover:bg-cortex-primary/80"
         }`}
       >
         {isLoading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <>
+            <Layers className="h-3.5 w-3.5" />
+            <span>Queue</span>
+          </>
         ) : (
           <Send className="h-3.5 w-3.5" />
         )}

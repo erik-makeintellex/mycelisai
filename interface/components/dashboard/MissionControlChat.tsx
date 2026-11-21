@@ -37,6 +37,8 @@ export default function MissionControlChat({
 }) {
     const missionChat = useCortexStore((s) => s.missionChat);
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
+    const queuedChatPrompts = useCortexStore((s) => s.queuedChatPrompts ?? []);
+    const removeQueuedChatPrompt = useCortexStore((s) => s.removeQueuedChatPrompt);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const sendMissionChat = useCortexStore((s) => s.sendMissionChat);
     const clearMissionChat = useCortexStore((s) => s.clearMissionChat);
@@ -104,7 +106,7 @@ export default function MissionControlChat({
     };
 
     const handleSubmit = () => {
-        if (!input.trim() || isLoading) return;
+        if (!input.trim()) return;
         const trimmed = input.trim();
         const trimmedStart = input.trimStart();
         const isBroadcast = showAdvancedRouting && (broadcastMode || trimmedStart.startsWith("/all "));
@@ -122,7 +124,6 @@ export default function MissionControlChat({
     };
 
     const applyStarterPrompt = (prompt: string) => {
-        if (isLoading) return;
         setInput(prompt);
         inputRef.current?.focus();
     };
@@ -226,7 +227,26 @@ export default function MissionControlChat({
                 )}
             </div>
 
-            <div className="px-3 py-2 border-t border-cortex-border flex-shrink-0">
+            <div className="px-3 py-2 border-t border-cortex-border flex-shrink-0 space-y-2">
+                {queuedChatPrompts.length > 0 && (
+                    <div data-testid="soma-queued-prompts-tray" className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-2.5 py-1.5 text-xs">
+                        <div className="flex items-center justify-between gap-2 text-[10px] font-mono uppercase tracking-wider text-cortex-primary">
+                            <span>Stacked Work Queue for {assistantName} ({queuedChatPrompts.length})</span>
+                            <span className="text-cortex-text-muted">Auto-dispatches next</span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                            {queuedChatPrompts.map((queued, idx) => (
+                                <span key={`${idx}-${queued}`} className="inline-flex items-center gap-1.5 rounded border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[11px] text-cortex-text-main">
+                                    <span className="font-mono text-[10px] text-cortex-primary">#{idx + 1}</span>
+                                    <span className="max-w-[260px] truncate">{queued}</span>
+                                    <button type="button" onClick={() => removeQueuedChatPrompt(idx)} className="text-[10px] font-mono text-cortex-text-muted hover:text-cortex-danger" title="Remove from queue">
+                                        &times;
+                                    </button>
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 {simpleMode ? (
                     <SomaIntentInput
                         value={input}
@@ -235,7 +255,7 @@ export default function MissionControlChat({
                         inputRef={inputRef}
                         autoFocus={autoFocus}
                         loading={isLoading}
-                        disabled={isLoading}
+                        disabled={false}
                         placeholder={somaPlaceholder({
                             assistantName,
                             broadcastMode,

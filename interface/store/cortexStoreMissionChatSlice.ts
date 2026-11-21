@@ -21,12 +21,35 @@ export function createCortexMissionChatSlice(
     set: CortexSet,
     get: CortexGet,
 ): CortexSlice<
-    'sendMissionChat' | 'clearMissionChat' | 'setMissionChatScope' | 'restorePersistedClientState' | 'broadcastToSwarm'
+    'sendMissionChat' | 'removeQueuedChatPrompt' | 'clearMissionChat' | 'setMissionChatScope' | 'restorePersistedClientState' | 'broadcastToSwarm'
 > {
+    const drainNextQueuedPrompt = () => {
+        const queue = get().queuedChatPrompts ?? [];
+        if (queue.length === 0) return;
+        const [nextPrompt, ...remaining] = queue;
+        set({ queuedChatPrompts: remaining });
+        if (nextPrompt?.trim()) {
+            void get().sendMissionChat(nextPrompt);
+        }
+    };
+
     return {
+        removeQueuedChatPrompt: (index: number) => {
+            set((s) => ({
+                queuedChatPrompts: (s.queuedChatPrompts ?? []).filter((_, idx) => idx !== index),
+            }));
+        },
+
         sendMissionChat: async (message: string) => {
             const trimmed = message.trim();
             if (!trimmed) return;
+
+            if (get().isMissionChatting) {
+                set((s) => ({
+                    queuedChatPrompts: [...(s.queuedChatPrompts ?? []), trimmed],
+                }));
+                return;
+            }
 
             const { councilTarget, assistantName, workspaceChatPrimed } = get();
             const {
@@ -90,6 +113,7 @@ export function createCortexMissionChatSlice(
                             statusCode: res.status,
                             availability,
                         });
+                        drainNextQueuedPrompt();
                         return;
                     }
 
@@ -109,6 +133,7 @@ export function createCortexMissionChatSlice(
                             statusCode: res.status,
                             availability,
                         });
+                        drainNextQueuedPrompt();
                         return;
                     }
 
@@ -142,6 +167,7 @@ export function createCortexMissionChatSlice(
                     };
 
                     setMissionChatSuccess(set, get, chatMsg, isSomaRoute);
+                    drainNextQueuedPrompt();
                     return;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : `${routeLabel} failed`;
@@ -158,6 +184,7 @@ export function createCortexMissionChatSlice(
                         set,
                         content: `Error: ${msg}`,
                     });
+                    drainNextQueuedPrompt();
                     return;
                 }
             }
@@ -167,6 +194,7 @@ export function createCortexMissionChatSlice(
             clearPersistedChat(get().workspaceChatScope);
             set({
                 missionChat: [],
+                queuedChatPrompts: [],
                 missionChatError: null,
                 missionChatFailure: null,
                 workspaceChatPrimed: false,
@@ -209,6 +237,7 @@ export function createCortexMissionChatSlice(
                 workspaceChatScope: normalizedScope,
                 missionChat: scopedMessages,
                 isMissionChatting: false,
+                queuedChatPrompts: [],
                 missionChatError: null,
                 missionChatFailure: null,
                 workspaceChatPrimed: false,
@@ -225,70 +254,39 @@ export function createCortexMissionChatSlice(
         broadcastToSwarm: async (message: string) => {
             const trimmed = message.trim();
             if (!trimmed) return;
-
             set((s) => ({
                 missionChat: [...s.missionChat, { role: 'user', content: `[BROADCAST] ${trimmed}` }],
-                isBroadcasting: true,
-                missionChatError: null,
-                missionChatFailure: null,
+                isBroadcasting: true, missionChatError: null, missionChatFailure: null,
             }));
-
             try {
                 const res = await fetch('/api/v1/swarm/broadcast', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content: trimmed, source: 'mission-control' }),
                 });
-
                 if (!res.ok) {
                     const errText = `Broadcast failed (${res.status})`;
-                    set((s) => ({
-                        isBroadcasting: false,
-                        missionChatError: errText,
-                        missionChatFailure: null,
-                        missionChat: [...s.missionChat, { role: 'architect', content: errText }],
-                    }));
+                    set((s) => ({ isBroadcasting: false, missionChatError: errText, missionChatFailure: null, missionChat: [...s.missionChat, { role: 'architect', content: errText }] }));
                     return;
                 }
-
                 const data = await res.json();
                 const replyMessages: ChatMessage[] = [];
                 if (Array.isArray(data.replies)) {
                     for (const reply of data.replies) {
                         if (reply.error) {
-                            replyMessages.push({
-                                role: 'architect',
-                                content: `**${reply.team_id}**: _timed out or unavailable_`,
-                                source_node: reply.team_id,
-                            });
+                            replyMessages.push({ role: 'architect', content: `**${reply.team_id}**: _timed out or unavailable_`, source_node: reply.team_id });
                         } else if (reply.content) {
-                            replyMessages.push({
-                                role: 'council',
-                                content: reply.content,
-                                source_node: reply.team_id,
-                            });
+                            replyMessages.push({ role: 'council', content: reply.content, source_node: reply.team_id });
                         }
                     }
                 }
                 if (replyMessages.length === 0) {
-                    replyMessages.push({
-                        role: 'architect',
-                        content: `Broadcast sent to ${data.teams_hit} team(s) — no replies received.`,
-                    });
+                    replyMessages.push({ role: 'architect', content: `Broadcast sent to ${data.teams_hit} team(s) — no replies received.` });
                 }
-                set((s) => ({
-                    isBroadcasting: false,
-                    lastBroadcastResult: { teams_hit: data.teams_hit },
-                    missionChat: [...s.missionChat, ...replyMessages],
-                }));
+                set((s) => ({ isBroadcasting: false, lastBroadcastResult: { teams_hit: data.teams_hit }, missionChat: [...s.missionChat, ...replyMessages] }));
             } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Broadcast failed';
-                set((s) => ({
-                    isBroadcasting: false,
-                    missionChatError: msg,
-                    missionChatFailure: null,
-                    missionChat: [...s.missionChat, { role: 'architect', content: `Error: ${msg}` }],
-                }));
+                set((s) => ({ isBroadcasting: false, missionChatError: msg, missionChatFailure: null, missionChat: [...s.missionChat, { role: 'architect', content: `Error: ${msg}` }] }));
             }
         },
     };

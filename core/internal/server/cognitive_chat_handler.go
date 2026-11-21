@@ -122,11 +122,21 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subject := fmt.Sprintf(protocol.TopicCouncilRequestFmt, "admin")
-	agentResult, err := s.requestChatAgent(r.Context(), subject, req.Messages)
-	if err != nil {
-		log.Printf("Chat via Admin agent failed: %v", err)
-		respondChatTransportBlocker(w, "Soma", err)
-		return
+	var agentResult chatAgentResult
+	if fastPlanned, ok := hasDeterministicFastPathPlan(latestUserText, requestMutationTools); ok {
+		fastDisplay := buildProposalDisplayContract(fastPlanned, latestUserText, requestMutationTools)
+		agentResult = chatAgentResult{
+			Text:      buildFastPathProposalReplyText(fastDisplay),
+			ToolsUsed: requestMutationTools,
+		}
+	} else {
+		var err error
+		agentResult, err = s.requestChatAgent(r.Context(), subject, req.Messages)
+		if err != nil {
+			log.Printf("Chat via Admin agent failed: %v", err)
+			respondChatTransportBlocker(w, "Soma", err)
+			return
+		}
 	}
 
 	if shouldRetryDirectAnswer(agentResult, requestMutationTools) {

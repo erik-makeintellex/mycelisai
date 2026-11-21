@@ -140,6 +140,7 @@ export interface CortexMissionChatContract {
     workspaceChatScope: string | null;
     missionChat: ChatMessage[];
     isMissionChatting: boolean;
+    queuedChatPrompts: string[];
     missionChatError: string | null;
     missionChatFailure: MissionChatFailure | null;
     workspaceChatPrimed: boolean;
@@ -157,6 +158,7 @@ export interface CortexMissionChatContract {
     activeRole: string;
     governanceMode: 'passive' | 'active' | 'strict';
     sendMissionChat: (message: string) => Promise<void>;
+    removeQueuedChatPrompt: (index: number) => void;
     clearMissionChat: () => void;
     setMissionChatScope: (scope: string | null) => void;
     restorePersistedClientState: () => void;

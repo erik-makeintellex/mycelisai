@@ -122,6 +122,38 @@ func isRunnablePlannedToolCall(call protocol.PlannedToolCall) bool {
 	return true
 }
 
+func hasDeterministicFastPathPlan(latestRequest string, mutTools []string) ([]protocol.PlannedToolCall, bool) {
+	if len(mutTools) == 0 {
+		return nil, false
+	}
+	if isCodexTaskBundleRequest(latestRequest) {
+		planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
+		return planned, len(planned) > 0
+	}
+	if _, ok := inferUserDeliverableBundlePlanFromRequest(latestRequest); ok {
+		planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
+		return planned, len(planned) > 0
+	}
+	if hasTeamCreationIntent(latestRequest) {
+		planned := buildPlannedToolCalls(chatAgentResult{}, latestRequest, mutTools)
+		return planned, len(planned) > 0
+	}
+	return nil, false
+}
+
+func buildFastPathProposalReplyText(display proposalDisplayContract) string {
+	summary := strings.TrimSpace(display.OperatorSummary)
+	if summary == "" {
+		summary = "prepare your project files"
+	} else {
+		summary = strings.TrimSuffix(summary, ".")
+		if len(summary) > 1 {
+			summary = strings.ToLower(summary[:1]) + summary[1:]
+		}
+	}
+	return fmt.Sprintf("I'm ready to start: **%s**. Click **Approve & Execute** below to kick it off, or keep typing to stack more work into the queue for Soma to review.", summary)
+}
+
 func buildPlannedToolCalls(agentResult chatAgentResult, latestRequest string, mutTools []string) []protocol.PlannedToolCall {
 	var planned []protocol.PlannedToolCall
 	hasTeamTool := false

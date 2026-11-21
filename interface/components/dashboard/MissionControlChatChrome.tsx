@@ -8,19 +8,25 @@ import { COUNCIL_META, toolToActivity } from "./missionControlChatHelpers";
 
 export function SomaActivityIndicator({ isBroadcasting, assistantName }: { isBroadcasting: boolean; assistantName: string }) {
     const streamLogs = useCortexStore((s) => s.streamLogs);
+    const queuedCount = useCortexStore((s) => (s.queuedChatPrompts ?? []).length);
     const recentTool = isBroadcasting ? null : [...streamLogs].reverse().find((l) => l.type === "tool.invoked");
     const label = isBroadcasting
         ? "Broadcasting to all teams..."
         : recentTool
         ? toolToActivity(recentTool)
-        : `${assistantName} is thinking...`;
+        : `${assistantName} is preparing your action plan (type below to stack more work into the queue)...`;
 
     return (
-        <div className="flex items-center gap-2 px-3 py-2.5">
+        <div className="flex items-center gap-2 px-3 py-2.5" data-testid="soma-activity-indicator">
             <Loader2 className={`w-3 h-3 animate-spin flex-shrink-0 ${isBroadcasting ? "text-cortex-warning" : "text-cortex-primary"}`} />
             <span className={`text-sm font-mono ${isBroadcasting ? "text-cortex-warning/70" : "text-cortex-text-muted"}`}>
                 {label}
             </span>
+            {queuedCount > 0 && (
+                <span className="rounded border border-cortex-primary/35 bg-cortex-primary/15 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-cortex-primary">
+                    +{queuedCount} stacked
+                </span>
+            )}
             <span className="flex gap-0.5 ml-0.5">
                 {[0, 1, 2].map((i) => (
                     <span

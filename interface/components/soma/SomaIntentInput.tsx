@@ -1,4 +1,4 @@
-import { Loader2, Send } from "lucide-react";
+import { Layers, Send } from "lucide-react";
 import type React from "react";
 
 export function SomaIntentInput({
@@ -28,7 +28,7 @@ export function SomaIntentInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => event.key === "Enter" && onSubmit()}
-        placeholder={placeholder}
+        placeholder={loading ? "Type another work prompt to stack into Soma's queue..." : placeholder}
         autoFocus={autoFocus}
         disabled={disabled}
         className="flex-1 rounded-lg border border-cortex-border bg-cortex-bg px-3 py-2 text-sm text-cortex-text-main placeholder-cortex-text-muted/60 focus:border-cortex-primary focus:outline-none focus:ring-1 focus:ring-cortex-primary/30 disabled:opacity-50"
@@ -37,10 +37,14 @@ export function SomaIntentInput({
         type="button"
         onClick={onSubmit}
         disabled={disabled || !value.trim()}
-        className="flex h-10 min-w-10 items-center justify-center rounded-lg bg-cortex-primary px-3 text-white transition-colors hover:bg-cortex-primary/80 disabled:bg-cortex-border disabled:text-cortex-text-muted"
+        title={loading ? "Queue work prompt for Soma to review next" : "Send to Soma"}
+        className="flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg bg-cortex-primary px-3 text-xs font-semibold text-white transition-colors hover:bg-cortex-primary/80 disabled:bg-cortex-border disabled:text-cortex-text-muted"
       >
         {loading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <>
+            <Layers className="h-3.5 w-3.5" />
+            <span>Queue</span>
+          </>
         ) : (
           <Send className="h-3.5 w-3.5" />
         )}
