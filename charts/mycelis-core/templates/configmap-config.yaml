@@ -10,6 +10,8 @@ data:
 {{ .Files.Get "config/cognitive.yaml" | nindent 4 }}
   policy.yaml: |-
 {{ .Files.Get "config/policy.yaml" | nindent 4 }}
+  mcp-library.yaml: |-
+{{ .Files.Get "config/mcp-library.yaml" | nindent 4 }}
   homepage.yaml: |-
 {{ .Files.Get "config/homepage.yaml" | nindent 4 }}
   v8-migration-standing-team-bridge.yaml: |-

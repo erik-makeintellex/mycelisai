@@ -171,6 +171,8 @@ spec:
                 path: cognitive.yaml
               - key: policy.yaml
                 path: policy.yaml
+              - key: mcp-library.yaml
+                path: mcp-library.yaml
               - key: v8-migration-standing-team-bridge.yaml
                 path: templates/v8-migration-standing-team-bridge.yaml
               - key: starter-client-delivery-studio.yaml
