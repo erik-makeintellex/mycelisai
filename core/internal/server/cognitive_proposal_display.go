@@ -101,20 +101,41 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 			}
 			if len(planned) > 1 && strings.TrimSpace(planned[1].Name) == "create_team" {
 				team2 := firstNonEmptyString(firstStringArgument(planned[1].Arguments, "name"), firstStringArgument(planned[1].Arguments, "team_id"), "downstream team")
+				fileCount := 0
+				for _, call := range planned {
+					if strings.TrimSpace(call.Name) == "write_file" {
+						fileCount++
+					}
+				}
+				if strings.HasSuffix(firstStringArgument(planned[1].Arguments, "team_id"), "-review-team") && fileCount > 0 {
+					display.OperatorSummary = fmt.Sprintf("Set up %q and build %d project files.", teamName, fileCount)
+					display.ExpectedResult = fmt.Sprintf("%q will generate the files and run an automatic delivery review check.", teamName)
+					return display
+				}
 				display.OperatorSummary = fmt.Sprintf("Launch chained teams (%q -> %q) and execute inter-team channel handoff.", teamName, team2)
 				display.ExpectedResult = fmt.Sprintf("%q will publish outputs on its result channel, and %q will listen on that channel to generate the final deliverables.", teamName, team2)
 				return display
 			}
 			if len(planned) > 1 {
-				display.OperatorSummary = fmt.Sprintf("Launch %q and build the requested deliverable package (%d files).", teamName, len(planned)-1)
-				display.ExpectedResult = fmt.Sprintf("Team %q will be spawned in the active runtime (/deployments) and all deliverable files will be generated with verified proof.", teamName)
+				display.OperatorSummary = fmt.Sprintf("Set up %q and build %d project files.", teamName, len(planned)-1)
+				display.ExpectedResult = fmt.Sprintf("%q will be created and generate the requested files in your workspace.", teamName)
 			} else {
-				display.OperatorSummary = fmt.Sprintf("Launch %q in the active runtime.", teamName)
-				display.ExpectedResult = fmt.Sprintf("Team %q will be spawned and active in Teams (/deployments) after approval.", teamName)
+				display.OperatorSummary = fmt.Sprintf("Set up %q.", teamName)
+				display.ExpectedResult = fmt.Sprintf("%q will be active and ready in Teams (/deployments).", teamName)
 			}
 			return display
 		case "write_file":
 			path := firstStringArgument(planned[0].Arguments, "path")
+			if len(planned) > 1 {
+				slash := strings.LastIndex(strings.ReplaceAll(path, "\\", "/"), "/")
+				folder := path
+				if slash > 0 {
+					folder = strings.ReplaceAll(path[:slash], "\\", "/")
+				}
+				display.OperatorSummary = fmt.Sprintf("Build %d project files in %q.", len(planned), folder)
+				display.ExpectedResult = fmt.Sprintf("%d files will be created in %q and ready to open or preview.", len(planned), folder)
+				return display
+			}
 			if path != "" {
 				display.OperatorSummary = fmt.Sprintf("Create %q in the workspace.", path)
 				display.ExpectedResult = fmt.Sprintf("One new workspace file will be created at %q after approval.", path)

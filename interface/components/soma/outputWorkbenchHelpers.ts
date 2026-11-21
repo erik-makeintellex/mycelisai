@@ -28,6 +28,14 @@ export function packageTitle(packageKind?: string): string {
     switch (packageKind) {
         case "codex_task_bundle":
             return "Codex task bundle";
+        case "dev_project_bundle":
+            return "Project files";
+        case "interactive_game_bundle":
+            return "Playable game files";
+        case "product_wireframe_bundle":
+            return "Interactive app prototype";
+        case "team_execution_bundle":
+            return "Team execution plan";
         default:
             return packageKind?.replace(/_/g, " ") ?? "Delivery package";
     }

@@ -183,3 +183,23 @@ def test_web_based_agentry_services_presets_and_secret_ref_pipeline_are_wired() 
     assert "groq:" in cog_yaml
     assert "deepseek:" in cog_yaml
 
+
+def test_simple_project_development_asks_bypass_bureaucracy_and_compact_proposals() -> None:
+    suggestion_bar = (REPO_ROOT / "interface" / "components" / "soma" / "SomaSuggestionBar.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="toggle-advanced-playbooks"' in suggestion_bar
+    assert "displayPlaybooks = advancedMode || showAdvancedPlaybooks" in suggestion_bar
+
+    proposed_action = (REPO_ROOT / "interface" / "components" / "dashboard" / "ProposedActionBlock.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "const isSimpleDevView = simpleMode && !advancedMode;" in proposed_action
+    assert "What happens when you click" in proposed_action
+    assert "Files & teams to build" in proposed_action
+
+    deliverable_plan = (REPO_ROOT / "core" / "internal" / "server" / "cognitive_deliverable_plan.go").read_text(
+        encoding="utf-8"
+    )
+    assert "isGeneralWebAppProjectBundleRequest" in deliverable_plan
+    assert '"dev_project_bundle"' in deliverable_plan

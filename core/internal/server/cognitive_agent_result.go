@@ -83,7 +83,7 @@ func buildChatBlocker(agentResult chatAgentResult, fallbackSummary string) cogni
 func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 	if isMutation {
 		if _, ok := parsePlannedToolCall(agentResult.Text); ok || containsToolCallJSON(agentResult.Text) || containsRawJSONBlock(agentResult.Text) || isWeakDirectAnswerFallback(agentResult.Text) {
-			return "I've prepared a ready-to-run plan for your request. Review the files below and click Approve & Execute to build them."
+			return "Your project plan is ready. Click **Approve & Execute** below to build the files."
 		}
 	}
 	if !isMutation {
@@ -98,10 +98,10 @@ func readableChatText(agentResult chatAgentResult, isMutation bool) string {
 		return agentResult.Text
 	}
 	if isMutation {
-		return "I've prepared a ready-to-run plan for your request. Review the files below and click Approve & Execute to build them."
+		return "Your project plan is ready. Click **Approve & Execute** below to build the files."
 	}
 	if len(agentResult.Artifacts) > 0 {
-		return "Soma returned artifacts for this request."
+		return "Here is the requested output."
 	}
 	return ""
 }

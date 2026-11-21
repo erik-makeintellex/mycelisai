@@ -161,7 +161,7 @@ func packageOutputFileFromBytes(relativePath, title string, data []byte) package
 func isDeliverablePackageKind(kind string) bool { return isSupportedDeliverablePackageKind(kind) }
 func isSupportedDeliverablePackageKind(kind string) bool {
 	switch strings.TrimSpace(kind) {
-	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle", "team_execution_bundle":
+	case "codex_task_bundle", "marketing_launch_bundle", "interactive_game_bundle", "customer_onboarding_bundle", "kpi_dashboard_bundle", "product_wireframe_bundle", "mission_blueprint_bundle", "chained_pipeline_bundle", "team_execution_bundle", "dev_project_bundle":
 		return true
 	default: return false
 	}
@@ -248,6 +248,7 @@ func deliverablePackageProofTitle(packageKind string) string {
 	case "mission_blueprint_bundle": return "Mission Blueprint Bundle Proof"
 	case "chained_pipeline_bundle": return "Chained Team Pipeline Proof"
 	case "team_execution_bundle": return "Team Execution Plan & Next Steps Proof"
+	case "dev_project_bundle": return "Development Project Bundle Proof"
 	default: return "Codex Task Bundle Proof"
 	}
 }

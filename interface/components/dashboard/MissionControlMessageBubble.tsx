@@ -214,7 +214,7 @@ export default function MissionControlMessageBubble({ msg, simpleMode = false }:
                         <DelegationTrace consultations={msg.consultations} assistantName={assistantName} />
                     </div>
                 ) : null}
-                {!isUser && msg.proposal && <ProposedActionBlock message={msg} />}
+                {!isUser && msg.proposal && <ProposedActionBlock message={msg} simpleMode={simpleMode} />}
                 {!isUser && isPackageOutput ? (
                     <OutputWorkbench deliveryPackage={msg.delivery_package} artifacts={msg.artifacts} outputRefs={msg.output_refs} runId={msg.run_id} />
                 ) : null}

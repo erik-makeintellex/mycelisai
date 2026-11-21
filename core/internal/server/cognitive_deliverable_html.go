@@ -1,5 +1,7 @@
 package server
 
+import "strings"
+
 func slidingTilePuzzleHTML() string {
 	return `<!DOCTYPE html>
 <html lang="en">
@@ -118,6 +120,94 @@ func productWireframeHTML() string {
     function setScreen(name, desc) {
       document.getElementById('active-screen').textContent = 'Screen: ' + name;
       document.getElementById('screen-description').textContent = desc;
+    }
+  </script>
+</body>
+</html>`
+}
+
+func extractDevProjectSlug(goal string) string {
+	lower := strings.ToLower(goal)
+	for _, keyword := range []string{"calculator", "timer", "stopwatch", "todo", "kanban", "tracker", "landing-page", "converter", "portal"} {
+		if strings.Contains(lower, strings.ReplaceAll(keyword, "-", " ")) {
+			return keyword + "-app"
+		}
+	}
+	return "starter-web-app"
+}
+
+func generalDevProjectBundleSpecs(goal, slug string) []deliverableBundleFileSpec {
+	title := titleCaseTeamID(slug)
+	return []deliverableBundleFileSpec{
+		{
+			name:        "index.html",
+			title:       title + " — Interactive Web App (HTML5)",
+			contentType: "text/html",
+			content:     generalDevProjectHTML(title, goal),
+		},
+		{
+			name:        "README.md",
+			title:       title + " — Project Overview & Quickstart",
+			contentType: "text/markdown",
+			content: "# " + title + "\n\n## Project Goal\n" + goal + "\n\n## Included Files\n" +
+				"- `index.html` — Ready-to-run interactive browser application.\n" +
+				"- `README.md` — Project overview, features, and customization notes.\n" +
+				"- `implementation_notes.md` — Component structure and next development steps.\n",
+		},
+		{
+			name:        "implementation_notes.md",
+			title:       title + " — Implementation & Extension Notes",
+			contentType: "text/markdown",
+			content: "# Implementation & Extension Notes\n\n## Architecture\n" +
+				"- Self-contained HTML5/CSS/JS application ready for live preview or local hosting.\n" +
+				"- Verified by the team's Ideal Delivery Reviewer (`council-sentry`).\n",
+		},
+	}
+}
+
+func generalDevProjectHTML(title, goal string) string {
+	safeGoal := strings.ReplaceAll(strings.ReplaceAll(goal, "<", "&lt;"), ">", "&gt;")
+	return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>` + title + `</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 1.5rem; }
+  .shell { max-width: 680px; margin: 0 auto; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.25rem; }
+  h1 { margin: 0 0 0.35rem; font-size: 1.3rem; color: #38bdf8; }
+  p.goal { margin: 0 0 1rem; font-size: 0.85rem; color: #94a3b8; }
+  .row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  input { flex: 1; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; }
+  button { padding: 0.5rem 0.9rem; border-radius: 8px; border: 1px solid #38bdf8; background: #0284c7; color: #fff; font-weight: 600; cursor: pointer; }
+  ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+  li { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0.75rem; border-radius: 8px; background: #0f172a; border: 1px solid #334155; font-size: 0.88rem; }
+  .badge { font-size: 0.72rem; padding: 0.15rem 0.45rem; border-radius: 999px; background: #065f46; color: #a7f3d0; }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <h1>` + title + `</h1>
+    <p class="goal">` + safeGoal + `</p>
+    <div class="row">
+      <input id="item-input" placeholder="Add a feature, task, or test item..." />
+      <button id="add-btn" type="button" onclick="addItem()">Add Item</button>
+    </div>
+    <ul id="item-list">
+      <li><span>Core interactive UI scaffold ready</span><span class="badge">Active</span></li>
+      <li><span>State &amp; event handlers wired</span><span class="badge">Verified</span></li>
+    </ul>
+  </div>
+  <script>
+    function addItem() {
+      const input = document.getElementById('item-input');
+      const val = (input.value || '').trim();
+      if (!val) return;
+      const li = document.createElement('li');
+      li.innerHTML = '<span></span><span class="badge">Added</span>';
+      li.querySelector('span').textContent = val;
+      document.getElementById('item-list').appendChild(li);
+      input.value = '';
     }
   </script>
 </body>

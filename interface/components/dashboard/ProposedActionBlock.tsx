@@ -53,10 +53,12 @@ function explainApprovalPosture(proposal: ProposalData, approvalRequired: boolea
         : "This action is within current policy thresholds and can run without a mandatory approval.";
 }
 
-export default function ProposedActionBlock({ message }: { message: ChatMessage }) {
+export default function ProposedActionBlock({ message, simpleMode = false }: { message: ChatMessage; simpleMode?: boolean }) {
     const confirmProposal = useCortexStore((s) => s.confirmProposal);
     const cancelProposal = useCortexStore((s) => s.cancelProposal);
     const assistantName = useCortexStore((s) => s.assistantName);
+    const advancedMode = useCortexStore((s) => s.advancedMode);
+    const isSimpleDevView = simpleMode && !advancedMode;
     const [detailsOpen, setDetailsOpen] = React.useState(false);
     const [previewingArtifactId, setPreviewingArtifactId] = React.useState<string | null>(null);
 
@@ -132,27 +134,36 @@ export default function ProposedActionBlock({ message }: { message: ChatMessage 
                     <p className="text-sm leading-6 text-cortex-text-main">{operatorSummary}</p>
                 </div>
 
-                <ProposalRunIntent proposal={proposal} />
+                {!isSimpleDevView && <ProposalRunIntent proposal={proposal} />}
 
-                <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{approvalRequired ? "Why approval is needed" : "Execution posture"}</div>
-                        <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{approvalExplanation}</p>
+                {isSimpleDevView ? (
+                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2">
+                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">What happens when you click {actionLabel}</div>
+                        <p className="mt-1 text-xs leading-5 text-cortex-text-main">{expectedResult}</p>
                     </div>
-                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Expected result</div>
-                        <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{expectedResult}</p>
+                ) : (
+                    <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
+                            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">{approvalRequired ? "Why approval is needed" : "Execution posture"}</div>
+                            <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{approvalExplanation}</p>
+                        </div>
+                        <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
+                            <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">Expected result</div>
+                            <p className="mt-1.5 text-sm leading-6 text-cortex-text-main">{expectedResult}</p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {visibleResources.length > 0 ? (
-                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2.5">
-                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">What will change</div>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="rounded border border-cortex-border bg-cortex-bg/40 px-3 py-2">
+                        <div className="text-[10px] font-mono uppercase tracking-[0.18em] text-cortex-text-muted">
+                            {isSimpleDevView ? "Files & teams to build" : "What will change"}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {visibleResources.map((resource) => (
                                 <span
                                     key={resource}
-                                    className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-1 text-xs text-cortex-text-main"
+                                    className="rounded border border-cortex-border bg-cortex-bg/70 px-2 py-0.5 text-xs text-cortex-text-main"
                                 >
                                     {resource}
                                 </span>

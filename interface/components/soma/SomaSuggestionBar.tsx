@@ -1,5 +1,7 @@
+import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { BarChart3, BrainCircuit, ClipboardCheck, Compass, FileText, Gamepad2, GitBranch, LayoutTemplate, Megaphone, Search, Settings2, ShieldAlert, Sparkles, Terminal, Wrench } from "lucide-react";
+import { BarChart3, BrainCircuit, ChevronDown, ChevronUp, ClipboardCheck, Compass, FileText, Gamepad2, GitBranch, LayoutTemplate, Megaphone, Search, Settings2, ShieldAlert, Sparkles, Terminal, Wrench } from "lucide-react";
+import { useCortexStore } from "@/store/useCortexStore";
 
 export type SomaSuggestion = {
   id?: string;
@@ -15,32 +17,32 @@ export type SomaSuggestion = {
 export const DEFAULT_SOMA_SUGGESTIONS: SomaSuggestion[] = [
   {
     label: "Plan something",
-    detail: "Shape a goal into next steps.",
-    prompt: "Help me plan the next useful step and show what you understood.",
+    detail: "Break a project idea into simple steps.",
+    prompt: "Help me break my project idea into simple, practical steps.",
     icon: Compass,
   },
   {
     label: "Research something",
-    detail: "Search or review sources, then summarize.",
-    prompt: "Research this, cite sources, and tell me what changed.",
+    detail: "Look up options and summarize clearly.",
+    prompt: "Research this topic and give me a simple summary of the best options.",
     icon: Search,
   },
   {
     label: "Create something",
-    detail: "Draft an output and store it visibly.",
-    prompt: "Create a first version and tell me where the output was stored.",
+    detail: "Build an app, game, or project files.",
+    prompt: "Create a clean task tracker web app project with an interactive HTML UI and quickstart README.",
     icon: Sparkles,
   },
   {
     label: "Review something",
-    detail: "Check work, risks, and approvals.",
-    prompt: "Review this, identify the risks, and ask before taking action.",
+    detail: "Check work and highlight what matters.",
+    prompt: "Review this project and give me a simple summary of what looks good and what to fix next.",
     icon: FileText,
   },
   {
     label: "Configure tools",
-    detail: "Check tools and guide setup.",
-    prompt: "Check available tools and walk me through enabling what is missing.",
+    detail: "See active AI engines and tools.",
+    prompt: "What is the current runtime and AI engine status of Mycelis?",
     icon: Settings2,
   },
 ];
@@ -48,19 +50,19 @@ export const DEFAULT_SOMA_SUGGESTIONS: SomaSuggestion[] = [
 export const POPULAR_DELIVERABLE_STARTERS: SomaSuggestion[] = [
   {
     label: "Marketing Launch Kit",
-    detail: "Positioning brief, launch email, and FAQ.",
+    detail: "Launch brief, email copy, and FAQ.",
     prompt: "Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.",
     icon: Megaphone,
   },
   {
     label: "Playable Puzzle Game",
-    detail: "Interactive browser sliding-tile game + rules.",
+    detail: "Interactive browser game + rules.",
     prompt: "Create a simple browser sliding-tile puzzle game with playable HTML, game rules, and controls.",
     icon: Gamepad2,
   },
   {
     label: "Engineering Task Pack",
-    detail: "Scoped implementation spec and checklist.",
+    detail: "Simple project steps and test checklist.",
     prompt: "Create a Codex task package for MYC-RC-005 with task steps and validation checklist.",
     icon: Terminal,
   },
@@ -79,8 +81,8 @@ export const POPULAR_DELIVERABLE_STARTERS: SomaSuggestion[] = [
   {
     id: "product-wireframe",
     label: "Product Spec & Wireframe",
-    detail: "Interactive HTML5 clickable wireframe prototype, product requirements spec, and user flows",
-    summary: "Interactive HTML5 clickable wireframe prototype, product requirements spec, and user flows",
+    detail: "Interactive HTML5 clickable UI prototype and user flows.",
+    summary: "Interactive HTML5 clickable UI prototype and user flows.",
     prompt: "Create an interactive product wireframe prototype and product spec in the workspace with clickable screens and user flows.",
     icon: LayoutTemplate,
   },
@@ -132,6 +134,10 @@ export function SomaSuggestionBar({
   playbooks?: readonly SomaSuggestion[];
   onSelect: (prompt: string) => void;
 }) {
+  const advancedMode = useCortexStore((s) => s.advancedMode);
+  const [showAdvancedPlaybooks, setShowAdvancedPlaybooks] = useState(false);
+  const displayPlaybooks = advancedMode || showAdvancedPlaybooks;
+
   return (
     <div className="rounded-2xl border border-cortex-border bg-cortex-bg/70 p-3 space-y-3">
       <div>
@@ -193,31 +199,46 @@ export function SomaSuggestionBar({
 
       {playbooks.length > 0 && (
         <div className="border-t border-cortex-border/70 pt-2.5">
-          <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
-            Advanced orchestration & council playbooks
-          </p>
-          <div className="mt-2 grid gap-2 md:grid-cols-4">
-            {playbooks.map((item, index) => {
-              const Icon = item.icon ?? Sparkles;
-              return (
-                <button
-                  key={item.label}
-                  type="button"
-                  data-testid={`orchestration-playbook-starter-${index}`}
-                  onClick={() => onSelect(item.prompt)}
-                  className="rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-left transition hover:border-cortex-primary/35 hover:bg-cortex-primary/5"
-                >
-                  <span className="flex items-center gap-2 text-xs font-semibold text-cortex-text-main">
-                    <Icon className="h-3.5 w-3.5 text-cortex-primary" />
-                    {item.label}
-                  </span>
-                  <span className="mt-1 block text-xs leading-4 text-cortex-text-muted">
-                    {item.detail}
-                  </span>
-                </button>
-              );
-            })}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-mono uppercase tracking-[0.16em] text-cortex-text-muted">
+              Advanced orchestration & council playbooks
+            </p>
+            {!advancedMode && (
+              <button
+                type="button"
+                data-testid="toggle-advanced-playbooks"
+                onClick={() => setShowAdvancedPlaybooks((prev) => !prev)}
+                className="inline-flex items-center gap-1 rounded border border-cortex-border bg-cortex-surface px-2 py-0.5 text-[10px] font-mono text-cortex-text-muted hover:border-cortex-primary/40 hover:text-cortex-primary"
+              >
+                {showAdvancedPlaybooks ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {showAdvancedPlaybooks ? "Hide" : "Show"}
+              </button>
+            )}
           </div>
+          {displayPlaybooks && (
+            <div className="mt-2 grid gap-2 md:grid-cols-4">
+              {playbooks.map((item, index) => {
+                const Icon = item.icon ?? Sparkles;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    data-testid={`orchestration-playbook-starter-${index}`}
+                    onClick={() => onSelect(item.prompt)}
+                    className="rounded-xl border border-cortex-border bg-cortex-surface px-3 py-2 text-left transition hover:border-cortex-primary/35 hover:bg-cortex-primary/5"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-semibold text-cortex-text-main">
+                      <Icon className="h-3.5 w-3.5 text-cortex-primary" />
+                      {item.label}
+                    </span>
+                    <span className="mt-1 block text-xs leading-4 text-cortex-text-muted">
+                      {item.detail}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

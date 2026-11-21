@@ -242,17 +242,15 @@ func TestFinalizeCodexTaskBundleTx_SupportsGameAndWireframeBundles(t *testing.T)
 }
 
 func TestInferMutationToolsFromText_IncludesWriteFileForPuzzleAndMarketingBundles(t *testing.T) {
-	prompts := []string{
+	for _, prompt := range []string{
 		"Create a simple browser sliding-tile puzzle game with playable HTML, game rules, and controls.",
 		"Build a playable sliding-tile puzzle game in the browser.",
 		"Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.",
 		"Prepare a customer onboarding welcome kit for enterprise accounts.",
 		"Generate an executive KPI dashboard for governance metrics.",
 		"Create an interactive product wireframe and product spec.",
-	}
-	for _, prompt := range prompts {
-		tools := inferMutationToolsFromText(prompt)
-		if !containsString(tools, "write_file") {
+	} {
+		if tools := inferMutationToolsFromText(prompt); !containsString(tools, "write_file") {
 			t.Fatalf("inferMutationToolsFromText(%q) = %v, want write_file included", prompt, tools)
 		}
 	}
@@ -277,16 +275,25 @@ func TestInferUserDeliverableBundlePlanFromRequest_TeamExecutionBundle(t *testin
 			t.Fatalf("call[%d] team metadata = %v / %v", i, call.Arguments["team_id"], call.Arguments["team_name"])
 		}
 	}
-	tools := inferMutationToolsFromText(prompt)
-	if !containsString(tools, "create_team") || !containsString(tools, "write_file") {
+	if tools := inferMutationToolsFromText(prompt); !containsString(tools, "create_team") || !containsString(tools, "write_file") {
 		t.Fatalf("inferMutationToolsFromText(%q) = %v, want create_team and write_file", prompt, tools)
 	}
 	teamCalls := inferCreateTeamPlanCallsFromRequest(prompt, "")
 	if len(teamCalls) != 2 || teamCalls[0].Arguments["team_id"] != "alpha-strike" || teamCalls[1].Arguments["team_id"] != "alpha-strike-review-team" {
 		t.Fatalf("teamCalls = %#v, want primary team + companion review team", teamCalls)
 	}
-	members, _ := teamCalls[0].Arguments["members"].(map[string]any)
-	if members["delivery-reviewer"] != "council-sentry" {
+	if members, _ := teamCalls[0].Arguments["members"].(map[string]any); members["delivery-reviewer"] != "council-sentry" {
 		t.Fatalf("primary team members = %#v, want delivery-reviewer: council-sentry", members)
+	}
+}
+
+func TestInferUserDeliverableBundlePlanFromRequest_GeneralDevProjectBundle(t *testing.T) {
+	calls, ok := inferUserDeliverableBundlePlanFromRequest("Create a clean todo tracker web app project with an interactive UI.")
+	if !ok || len(calls) != 3 || calls[0].Arguments["package_kind"] != "dev_project_bundle" || calls[0].Arguments["path"] != "deliverables/projects/todo-app/index.html" {
+		t.Fatalf("unexpected dev_project_bundle calls: ok=%v calls=%#v", ok, calls)
+	}
+	s := newTestServer()
+	if review := s.buildSomaReferentialReview(t.Context(), []chatRequestMessage{{Role: "user", Content: "Build a team to create a calculator app project."}}); review.NeedsConfirmation {
+		t.Fatalf("expected project/team development ask to go directly to proposal card: %+v", review)
 	}
 }

@@ -140,7 +140,7 @@ func buildReferentialConfirmationText(review somaReferentialReview) string {
 	}
 	confirm := strings.TrimSpace(review.ConfirmationPrompt)
 	if confirm == "" {
-		confirm = "Reply \"confirm\" to proceed with this plan, or tell me what you'd like to adjust."
+		confirm = "Reply \"yes\" to build this now, or tell me what you'd like to change."
 	}
 	lines = append(lines, confirm)
 	return strings.Join(lines, "\n\n")

@@ -82,7 +82,13 @@ func (s *AdminServer) buildSomaReferentialReview(ctx context.Context, messages [
 		return review
 	}
 	if _, ok := inferUserDeliverableBundlePlanFromRequest(latest); ok || isCodexTaskBundleRequest(strings.ToLower(latest)) || requestContainsAny(normalizeIntentText(latest), []string{"tetris", "street fighter", "puzzle game", "launch kit", "onboarding kit", "kpi dashboard", "wireframe"}) {
+		if hasTeamCreationIntent(latest) {
+			return somaReferentialReview{LatestRequest: latest, EffectiveRequest: latest, NeedsConfirmation: false, MutationTools: []string{"create_team", "write_file"}}
+		}
 		return somaReferentialReview{LatestRequest: latest, EffectiveRequest: latest, NeedsConfirmation: false, MutationTools: []string{"write_file"}}
+	}
+	if hasTeamCreationIntent(latest) && !requestContainsAny(normalizeIntentText(latest), []string{"mcp", "mcps", "tool", "tools", "web search", "github", "fetch", "browser", "private service", "api token", "api key", "customer data", "deployment context"}) {
+		return somaReferentialReview{LatestRequest: latest, EffectiveRequest: latest, NeedsConfirmation: false, MutationTools: []string{"create_team"}}
 	}
 
 	action, tools := inferSomaReferentialAction(latest)

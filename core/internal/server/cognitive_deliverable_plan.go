@@ -64,41 +64,51 @@ func isChainedPipelineBundleRequest(lower string) bool {
 	return isChainedTeamPipelineRequest(lower)
 }
 
+func isGeneralWebAppProjectBundleRequest(lower string) bool {
+	if !hasDeliverableCreationIntent(lower) && !hasTeamCreationIntent(lower) {
+		return false
+	}
+	if requestContainsAny(lower, []string{"mcp", "mcps", "target mcp", "web search", "private service", "api token"}) {
+		return false
+	}
+	return requestContainsAny(lower, []string{
+		"project", "app", "application", "website", "web app", "landing page", "calculator", "timer",
+		"stopwatch", "todo", "to-do", "tracker", "board", "kanban", "utility", "converter",
+		"form", "simulator", "visualizer", "frontend", "ui", "interface", "portal", "prototype",
+	})
+}
+
 func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedToolCall, bool) {
 	trimmed := strings.TrimSpace(text)
 	lower := strings.ToLower(trimmed)
 	if lower == "" {
 		return nil, false
 	}
-
-	if isTeamExecutionBundleRequest(lower) {
+	switch {
+	case isTeamExecutionBundleRequest(lower):
 		return teamExecutionBundleCalls(trimmed), true
-	}
-	if isChainedPipelineBundleRequest(lower) {
+	case isChainedPipelineBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/pipelines/chained-team-pipeline", "chained_pipeline_bundle", "chained-team-pipeline", chainedPipelineBundleSpecs(trimmed)), true
-	}
-	if isTetrisGameBundleRequest(lower) {
+	case isTetrisGameBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/games/street-fighter-tetris", "interactive_game_bundle", "street-fighter-tetris", streetFighterTetrisBundleSpecs(trimmed)), true
-	}
-	if isInteractiveGameBundleRequest(lower) {
+	case isInteractiveGameBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/games/sliding-tile-puzzle", "interactive_game_bundle", "sliding-tile-puzzle", interactiveGameBundleSpecs(trimmed)), true
-	}
-	if isMarketingDeliverableBundleRequest(lower) {
+	case isMarketingDeliverableBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/marketing-launch-kit", "marketing_launch_bundle", "marketing-launch-kit", marketingLaunchBundleSpecs(trimmed)), true
-	}
-	if isCustomerOnboardingBundleRequest(lower) {
+	case isCustomerOnboardingBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/customer-onboarding-kit", "customer_onboarding_bundle", "customer-onboarding-kit", customerOnboardingBundleSpecs(trimmed)), true
-	}
-	if isKPIDashboardBundleRequest(lower) {
+	case isKPIDashboardBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/dashboards/executive-kpi-dashboard", "kpi_dashboard_bundle", "executive-kpi-dashboard", kpiDashboardBundleSpecs(trimmed)), true
-	}
-	if isProductWireframeBundleRequest(lower) {
+	case isProductWireframeBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/product-wireframe", "product_wireframe_bundle", "product-wireframe", productWireframeBundleSpecs(trimmed)), true
-	}
-	if isMissionBlueprintBundleRequest(lower) {
+	case isMissionBlueprintBundleRequest(lower):
 		return buildDeliverableBundleCalls("deliverables/blueprints/multi-team-mission-blueprint", "mission_blueprint_bundle", "multi-team-mission-blueprint", missionBlueprintBundleSpecs(trimmed)), true
+	case isGeneralWebAppProjectBundleRequest(lower):
+		slug := extractDevProjectSlug(trimmed)
+		return buildDeliverableBundleCalls("deliverables/projects/"+slug, "dev_project_bundle", slug, generalDevProjectBundleSpecs(trimmed, slug)), true
+	default:
+		return nil, false
 	}
-	return nil, false
 }
 
 func deliverableArtifactRole(idx int) string {

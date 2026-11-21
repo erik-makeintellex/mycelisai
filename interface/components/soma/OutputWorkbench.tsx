@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CheckCircle2, ClipboardList, Download, ExternalLink, FileText, ShieldCheck } from "lucide-react";
-import type { ChatArtifactRef, DeliveryPackageSummary, OutputProofEnvelope, OutputRef } from "@/store/useCortexStore";
+import { useCortexStore, type ChatArtifactRef, type DeliveryPackageSummary, type OutputProofEnvelope, type OutputRef } from "@/store/useCortexStore";
 import {
     artifactForPath,
     isProofFile,
@@ -70,6 +70,7 @@ export default function OutputWorkbench({
     outputRefs?: OutputRef[];
     runId?: string;
 }) {
+    const advancedMode = useCortexStore((s) => s.advancedMode);
     if (!deliveryPackage && artifacts.length === 0 && outputRefs.length === 0) return null;
 
     const refs = outputRefs.length > 0 ? outputRefs : deliveryPackage?.items ?? [];
@@ -191,7 +192,7 @@ export default function OutputWorkbench({
                                     </Link>
                                 </div>
                             </div>
-                            {ref?.proof ? (
+                            {advancedMode && ref?.proof ? (
                                 <details className="mt-1">
                                     <summary className="cursor-pointer select-none text-[8px] font-mono font-bold uppercase tracking-wider text-cortex-primary">
                                         Inspect
