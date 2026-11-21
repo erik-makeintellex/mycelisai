@@ -140,3 +140,21 @@ def test_teams_always_surface_ideal_reviewer_and_delivery_review_gate() -> None:
     if reviewer_path.exists():
         assert "buildCompanionReviewTeamCall" in reviewer_path.read_text(encoding="utf-8")
 
+
+def test_deployments_output_preview_drawer_includes_review_team_audit_certificate() -> None:
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert "DeploymentOutputPreviewDrawer" in detail_pane
+    assert "setPreviewItem(item)" in detail_pane
+
+    drawer = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentOutputPreviewDrawer.tsx").read_text(
+        encoding="utf-8"
+    )
+    assert 'data-testid="deployment-output-preview-drawer"' in drawer
+    assert 'data-testid="deployment-output-review-certificate"' in drawer
+    assert "VERIFIED BY IDEAL REVIEWER & DELIVERY REVIEW TEAM" in drawer
+    assert 'data-testid="deployment-output-preview-iframe"' in drawer
+    assert 'data-testid="deployment-output-preview-source"' in drawer
+
+

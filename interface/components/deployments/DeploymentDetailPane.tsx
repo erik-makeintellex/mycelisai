@@ -6,10 +6,12 @@ import {
   outputsSummaryLabel,
   relativeTime,
   type DeploymentMember,
+  type DeploymentOutputItem,
   type DeploymentRecord,
 } from "./deploymentTypes";
 import { KindBadge, StateBadge } from "./DeploymentList";
 import { ConfigViewer } from "./ConfigViewer";
+import { DeploymentOutputPreviewDrawer } from "./DeploymentOutputPreviewDrawer";
 
 function isReviewerRole(role: string, id: string): boolean {
   const hay = `${role} ${id}`.toLowerCase();
@@ -140,6 +142,7 @@ function MembersPanel({ members, advancedMode }: { members: DeploymentMember[]; 
 }
 
 function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
+  const [previewItem, setPreviewItem] = useState<DeploymentOutputItem | null>(null);
   const recentOutputs = record.recent_outputs ?? [];
   const reviewerNames = record.members.filter((m) => isReviewerRole(m.role, m.id)).map((m) => m.role);
   const reviewerLabel = reviewerNames.length > 0 ? reviewerNames.join(", ") : "council-sentry (Ideal Delivery Reviewer)";
@@ -183,13 +186,14 @@ function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
                   >
                     Download
                   </a>
-                  <Link
-                    href={item.view_url || `/resources?team=${encodeURIComponent(record.id)}`}
+                  <button
+                    type="button"
                     data-testid={`team-output-view-${item.id}`}
+                    onClick={() => setPreviewItem(item)}
                     className="rounded border border-cortex-border bg-cortex-bg px-2 py-1 font-mono text-[11px] text-cortex-text-main hover:border-cortex-primary/35"
                   >
                     View / Open
-                  </Link>
+                  </button>
                 </div>
               </div>
             ))}
@@ -198,6 +202,7 @@ function PostureAndOutputsPanel({ record }: { record: DeploymentRecord }) {
           <p className="text-xs text-cortex-text-muted">No recent outputs indexed yet.</p>
         )}
       </div>
+      <DeploymentOutputPreviewDrawer record={record} item={previewItem} reviewerLabel={reviewerLabel} onClose={() => setPreviewItem(null)} />
       <Link href={`/resources?team=${encodeURIComponent(record.id)}`} className="mt-3 inline-flex items-center text-xs font-medium text-cortex-primary hover:underline">
         Browse all generated files in Deliverables &rarr;
       </Link>
