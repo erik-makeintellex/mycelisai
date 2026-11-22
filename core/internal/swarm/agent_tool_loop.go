@@ -3,6 +3,7 @@ package swarm
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/mycelis/core/internal/cognitive"
 	"github.com/mycelis/core/pkg/protocol"
@@ -19,6 +20,10 @@ type agentToolLoopResult struct {
 func (a *Agent) runToolLoop(input string, priorHistory []cognitive.ChatMessage, req *cognitive.InferRequest, resp *cognitive.InferResponse, profile string) agentToolLoopResult {
 	result := agentToolLoopResult{resp: resp, responseText: resp.Text}
 	if a.toolExecutor == nil || len(a.Manifest.Tools) == 0 {
+		return result
+	}
+	isDirectRoute := strings.Contains(input, "[DIRECT ANSWER ROUTE]") || strings.Contains(input, "[DIRECT ANSWER RETRY]")
+	if isDirectRoute && parseToolCall(result.responseText) == nil {
 		return result
 	}
 

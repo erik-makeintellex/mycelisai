@@ -223,32 +223,26 @@ def test_instant_proposal_fast_path_and_stackable_work_queue_are_wired() -> None
     assert "func hasDeterministicFastPathPlan(" in tool_plan
     assert "func buildFastPathProposalReplyText(" in tool_plan
     assert "keep typing to stack more work into the queue for Soma to review" in tool_plan
-
     chat_handler = (REPO_ROOT / "core" / "internal" / "server" / "cognitive_chat_handler.go").read_text(encoding="utf-8")
     assert "hasDeterministicFastPathPlan(latestUserText, requestMutationTools)" in chat_handler
-
     chat_slice = (REPO_ROOT / "interface" / "store" / "cortexStoreMissionChatSlice.ts").read_text(encoding="utf-8")
     assert "queuedChatPrompts" in chat_slice
     assert "drainNextQueuedPrompt" in chat_slice
     assert "enqueueChatPrompt" in chat_slice
-
     intent_input = (REPO_ROOT / "interface" / "components" / "soma" / "SomaIntentInput.tsx").read_text(encoding="utf-8")
     assert 'data-testid="soma-queue-prompt-btn"' in intent_input
-
-    chat_ui = (REPO_ROOT / "interface" / "components" / "dashboard" / "MissionControlChat.tsx").read_text(
-        encoding="utf-8"
-    )
+    chat_ui = (REPO_ROOT / "interface" / "components" / "dashboard" / "MissionControlChat.tsx").read_text(encoding="utf-8")
     assert 'data-testid="soma-queued-prompts-tray"' in chat_ui
     assert 'data-testid="soma-queue-run-next-btn"' in chat_ui
     assert "Stacked Work Queue for" in chat_ui
     assert "disabled={false}" in chat_ui
-
     exec_slice = (REPO_ROOT / "interface" / "store" / "cortexStoreProposalExecutionSlice.ts").read_text(encoding="utf-8")
     assert "dispatchNextQueuedPrompt" in exec_slice
-
     helpers = (REPO_ROOT / "interface" / "components" / "soma" / "outputWorkbenchHelpers.ts").read_text(encoding="utf-8")
     assert "Marketing launch kit" in helpers
     assert "MCP deployment addition" in helpers
+    assert (REPO_ROOT / "core" / "internal" / "server" / "soma_interaction_matrix_test.go").exists()
+    assert (REPO_ROOT / "interface" / "__tests__" / "dashboard" / "SomaInteractionMatrix.test.tsx").exists()
 
 
 def test_standard_deployment_mcps_and_custom_developed_mcp_grouping_are_wired() -> None:

@@ -52,6 +52,7 @@ Every accepted user-interaction proof must verify:
 - guided team creation or a temporary workflow lane completes and remains reviewable
 - retained outputs survive refresh/reload
 - AI-host failure produces a visible blocker and recovery restores the lane
+- **Multi-Form Soma Interaction & Anti-"Can't Deliver" Matrix:** Every Soma interaction change must pass the 3-layer interaction matrix (`core/internal/server/soma_interaction_matrix_test.go` covering 29 casual build, game, doc/script/checklist, team/multi-app/MCP, and poisoned-history prompts; `core/internal/swarm/agent_soma_interaction_test.go` covering `[REFERENTIAL REVIEW]` system promotion, direct-route tool-loop guards, and single-pass refusal recovery; and `interface/__tests__/dashboard/SomaInteractionMatrix.test.tsx` covering frontend answer, proposal, `+ Queue` auto-drain, and cold-start retry recovery).
 
 Use [Remote User Testing](REMOTE_USER_TESTING.md) for human walkthrough proof and [V8 UI Team Full Test Set](architecture-library/V8_UI_TEAM_FULL_TEST_SET.md) for the full browser matrix.
 

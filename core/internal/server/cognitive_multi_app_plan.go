@@ -32,7 +32,7 @@ func isInteractingMultiAppRequest(text string) bool {
 }
 
 func isSimpleCasualBuildRequest(lower string) bool {
-	if lower == "" {
+	if lower == "" || namedFilePattern.MatchString(lower) {
 		return false
 	}
 	if requestContainsAny(lower, []string{"mcp", "mcps", "target mcp", "web search", "private service", "api token"}) {
@@ -40,12 +40,16 @@ func isSimpleCasualBuildRequest(lower string) bool {
 	}
 	casualVerbs := []string{
 		"make me", "build me", "create me", "give me", "put together",
-		"spin up", "whip up", "set up", "start a", "i want a", "i need a", "can we make", "can you make", "can you build",
+		"spin up", "whip up", "set up", "start a", "i want a", "i need a", "i'd like a", "id like a",
+		"can we make", "can you make", "can you build", "can you create", "could you make", "could you build", "could you create",
+		"please make", "please build", "please create", "help me make", "help me build", "help me create",
+		"let's make", "let's build", "let's create", "lets make", "lets build", "lets create",
 	}
 	casualTargets := []string{
 		"app", "application", "project", "game", "site", "website", "page",
-		"tool", "widget", "tracker", "calculator", "timer", "todo", "board",
+		"tool", "widget", "tracker", "calculator", "timer", "stopwatch", "todo", "to-do", "board", "kanban",
 		"chat", "store", "shop", "cart", "api", "backend", "frontend", "service", "companion",
+		"checklist", "runbook", "roadmap", "guide", "report", "script", "utility", "notes",
 	}
 	return requestContainsAny(lower, casualVerbs) && requestContainsAny(lower, casualTargets)
 }

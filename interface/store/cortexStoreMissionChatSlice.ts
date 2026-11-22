@@ -168,7 +168,7 @@ export function createCortexMissionChatSlice(
                     };
 
                     setMissionChatSuccess(set, get, chatMsg, isSomaRoute);
-                    drainNextQueuedPrompt();
+                    if (!chatMsg.proposal) drainNextQueuedPrompt();
                     return;
                 } catch (err) {
                     const msg = err instanceof Error ? err.message : `${routeLabel} failed`;

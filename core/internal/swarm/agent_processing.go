@@ -51,6 +51,27 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 
 	loop := a.runToolLoop(input, priorHistory, &req, resp, profile)
 	responseText := stripToolCallJSON(loop.responseText)
+	if isRefusalAssistantReply(responseText) && len(loop.toolsUsed) == 0 {
+		cleanInput, workspaceCtx, _, _ := extractDirectAnswerPayload(input, priorHistory)
+		recoverySys := "You are Soma, the helpful central orchestrator of the Mycelis AI Organization platform. Answer the user's request directly, constructively, and concisely in plain text."
+		if workspaceCtx != "" {
+			recoverySys += "\n\n" + workspaceCtx
+		}
+		recoveryReq := cognitive.InferRequest{
+			Profile:  profile,
+			Provider: a.Manifest.Provider,
+			Messages: []cognitive.ChatMessage{
+				{Role: "system", Content: recoverySys},
+				{Role: "user", Content: cleanInput},
+			},
+		}
+		if recovered, recErr := a.brain.InferWithContract(a.ctx, recoveryReq); recErr == nil && recovered != nil {
+			if candidate := strings.TrimSpace(stripToolCallJSON(recovered.Text)); candidate != "" && !isRefusalAssistantReply(candidate) {
+				responseText = candidate
+				loop.resp = recovered
+			}
+		}
+	}
 	if a.internalTools != nil && len(priorHistory) > 0 && len(priorHistory)%15 == 0 {
 		histCopy := make([]cognitive.ChatMessage, len(priorHistory))
 		copy(histCopy, priorHistory)

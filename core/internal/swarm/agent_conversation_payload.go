@@ -55,23 +55,39 @@ func isRefusalAssistantReply(text string) bool {
 	return strings.Contains(lower, "can't assist with that") ||
 		strings.Contains(lower, "cannot assist with that") ||
 		strings.Contains(lower, "i'm unable to help") ||
-		strings.Contains(lower, "i am unable to help")
+		strings.Contains(lower, "i am unable to help") ||
+		strings.Contains(lower, "can't deliver") ||
+		strings.Contains(lower, "cannot deliver") ||
+		strings.Contains(lower, "unable to deliver") ||
+		strings.Contains(lower, "can't fulfill") ||
+		strings.Contains(lower, "cannot fulfill") ||
+		strings.Contains(lower, "unable to fulfill") ||
+		strings.Contains(lower, "can't complete") ||
+		strings.Contains(lower, "cannot complete") ||
+		strings.Contains(lower, "unable to complete") ||
+		strings.Contains(lower, "can't help with") ||
+		strings.Contains(lower, "cannot help with")
+}
+
+func unwrapTransportUserContent(raw string) string {
+	hasWrapper := strings.Contains(raw, "[DIRECT ANSWER ROUTE]") ||
+		strings.Contains(raw, "[DIRECT ANSWER RETRY]") ||
+		strings.Contains(raw, "[GOVERNED MUTATION ROUTE]") ||
+		strings.Contains(raw, "[USER GOVERNANCE PROFILE]")
+	if !hasWrapper {
+		return raw
+	}
+	if idx := strings.LastIndex(raw, "Original request:\n"); idx >= 0 {
+		if extracted := strings.TrimSpace(raw[idx+len("Original request:\n"):]); extracted != "" {
+			return extracted
+		}
+	}
+	return raw
 }
 
 func extractDirectAnswerPayload(input string, priorHistory []cognitive.ChatMessage) (string, string, []cognitive.ChatMessage, bool) {
 	isDirect := strings.Contains(input, "[DIRECT ANSWER ROUTE]") || strings.Contains(input, "[DIRECT ANSWER RETRY]")
-	hasTransportWrapper := isDirect ||
-		strings.Contains(input, "[GOVERNED MUTATION ROUTE]") ||
-		strings.Contains(input, "[USER GOVERNANCE PROFILE]")
-	cleanInput := input
-	if hasTransportWrapper {
-		if idx := strings.LastIndex(cleanInput, "Original request:\n"); idx >= 0 {
-			extracted := strings.TrimSpace(cleanInput[idx+len("Original request:\n"):])
-			if extracted != "" {
-				cleanInput = extracted
-			}
-		}
-	}
+	cleanInput := unwrapTransportUserContent(input)
 
 	var workspaceBlocks []string
 	cleanedHistory := make([]cognitive.ChatMessage, 0, len(priorHistory))
@@ -80,7 +96,7 @@ func extractDirectAnswerPayload(input string, priorHistory []cognitive.ChatMessa
 		if trimmed == "" {
 			continue
 		}
-		if msg.Role == "user" && strings.HasPrefix(trimmed, "[WORKSPACE CONTEXT]") {
+		if msg.Role == "user" && (strings.HasPrefix(trimmed, "[WORKSPACE CONTEXT]") || strings.HasPrefix(trimmed, "[REFERENTIAL REVIEW]")) {
 			workspaceBlocks = append(workspaceBlocks, trimmed)
 			continue
 		}
@@ -89,6 +105,9 @@ func extractDirectAnswerPayload(input string, priorHistory []cognitive.ChatMessa
 				cleanedHistory = cleanedHistory[:len(cleanedHistory)-1]
 			}
 			continue
+		}
+		if msg.Role == "user" {
+			msg.Content = unwrapTransportUserContent(trimmed)
 		}
 		cleanedHistory = append(cleanedHistory, msg)
 	}

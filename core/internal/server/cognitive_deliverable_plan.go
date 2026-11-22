@@ -39,26 +39,20 @@ func isTetrisGameBundleRequest(lower string) bool {
 
 func isInteractiveGameBundleRequest(lower string) bool {
 	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
-		"puzzle game", "sliding-tile", "sliding tile", "tile puzzle", "browser game", "simple game", "playable game",
+		"puzzle game", "sliding-tile", "sliding tile", "tile puzzle", "browser game", "simple game", "playable game", "game",
 	})
 }
 
 func isCustomerOnboardingBundleRequest(lower string) bool {
-	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
-		"onboarding", "customer kickoff", "welcome kit",
-	})
+	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{"onboarding", "customer kickoff", "welcome kit"})
 }
 
 func isKPIDashboardBundleRequest(lower string) bool {
-	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
-		"kpi", "dashboard",
-	})
+	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{"kpi", "dashboard"})
 }
 
 func isProductWireframeBundleRequest(lower string) bool {
-	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{
-		"wireframe", "product spec", "interactive prototype",
-	})
+	return hasDeliverableCreationIntent(lower) && requestContainsAny(lower, []string{"wireframe", "product spec", "interactive prototype"})
 }
 
 func isChainedPipelineBundleRequest(lower string) bool {
@@ -66,6 +60,9 @@ func isChainedPipelineBundleRequest(lower string) bool {
 }
 
 func isGeneralWebAppProjectBundleRequest(lower string) bool {
+	if namedFilePattern.MatchString(lower) {
+		return false
+	}
 	if isSimpleCasualBuildRequest(lower) {
 		return true
 	}
@@ -79,6 +76,7 @@ func isGeneralWebAppProjectBundleRequest(lower string) bool {
 		"project", "app", "application", "website", "web app", "landing page", "calculator", "timer",
 		"stopwatch", "todo", "to-do", "tracker", "board", "kanban", "utility", "converter",
 		"form", "simulator", "visualizer", "frontend", "ui", "interface", "portal", "prototype",
+		"game", "script", "checklist", "runbook", "roadmap", "guide", "report", "notes", "markdown", "document",
 	})
 }
 
