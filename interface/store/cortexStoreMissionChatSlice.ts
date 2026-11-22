@@ -21,23 +21,24 @@ export function createCortexMissionChatSlice(
     set: CortexSet,
     get: CortexGet,
 ): CortexSlice<
-    'sendMissionChat' | 'removeQueuedChatPrompt' | 'clearMissionChat' | 'setMissionChatScope' | 'restorePersistedClientState' | 'broadcastToSwarm'
+    'sendMissionChat' | 'enqueueChatPrompt' | 'dispatchNextQueuedPrompt' | 'removeQueuedChatPrompt' | 'clearMissionChat' | 'setMissionChatScope' | 'restorePersistedClientState' | 'broadcastToSwarm'
 > {
     const drainNextQueuedPrompt = () => {
         const queue = get().queuedChatPrompts ?? [];
         if (queue.length === 0) return;
         const [nextPrompt, ...remaining] = queue;
         set({ queuedChatPrompts: remaining });
-        if (nextPrompt?.trim()) {
-            void get().sendMissionChat(nextPrompt);
-        }
+        if (nextPrompt?.trim()) void get().sendMissionChat(nextPrompt);
     };
 
     return {
+        enqueueChatPrompt: (message: string) => {
+            const t = message.trim();
+            if (t) set((s) => ({ queuedChatPrompts: [...(s.queuedChatPrompts ?? []), t] }));
+        },
+        dispatchNextQueuedPrompt: () => drainNextQueuedPrompt(),
         removeQueuedChatPrompt: (index: number) => {
-            set((s) => ({
-                queuedChatPrompts: (s.queuedChatPrompts ?? []).filter((_, idx) => idx !== index),
-            }));
+            set((s) => ({ queuedChatPrompts: (s.queuedChatPrompts ?? []).filter((_, idx) => idx !== index) }));
         },
 
         sendMissionChat: async (message: string) => {

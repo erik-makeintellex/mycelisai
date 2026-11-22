@@ -38,6 +38,18 @@ export function packageTitle(packageKind?: string): string {
             return "Interactive app prototype";
         case "team_execution_bundle":
             return "Team execution plan";
+        case "marketing_launch_bundle":
+            return "Marketing launch kit";
+        case "customer_onboarding_bundle":
+            return "Customer onboarding kit";
+        case "kpi_dashboard_bundle":
+            return "Interactive KPI dashboard";
+        case "mission_blueprint_bundle":
+            return "Multi-team mission blueprint";
+        case "chained_pipeline_bundle":
+            return "Chained team pipeline";
+        case "mcp_addition_bundle":
+            return "MCP deployment addition";
         default:
             return packageKind?.replace(/_/g, " ") ?? "Delivery package";
     }

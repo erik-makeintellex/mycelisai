@@ -25,7 +25,8 @@ When you open the Soma workspace (`/dashboard` or `/organizations/[id]`), Soma's
 
 Selecting a starter or typing a natural-language goal routes through Soma:
 - **Direct Answer (`answer`):** Read-only questions, summaries, and explanations return immediately in chat.
-- **Governed Proposal (`proposal`):** Actions that write files, launch team workflows, or mutate state present an outcome-first proposal card showing plain-English intent, planned deliverables, and **Confirm** / **Cancel** buttons. Technical telemetry (`run_id` UUIDs, token counts, capability IDs, and risk badges) stays tucked behind **`[View Proof Details]`**.
+- **Governed Proposal (`proposal`):** Actions that write files, launch team workflows, or mutate state present an outcome-first proposal card (`<50ms` deterministic fast-path) showing plain-English intent, planned deliverables, and **Approve & Execute** / **Cancel** buttons. Technical telemetry (`run_id` UUIDs, token counts, capability IDs, and risk badges) stays tucked behind **`[View Proof Details]`**.
+- **Stackable Work Queue (`+ Queue` / `Run Next`):** You can click **`+ Queue`** next to the prompt input (or keep typing while Soma is working) to stack follow-up work items into the **Stacked Work Queue for Soma** tray. When you click **Approve & Execute** on an active proposal (or click **`Run Next`** in the queue tray), Soma automatically drains and dispatches the next stacked work item.
 
 ## 2. Governed Confirmation & Deliverable Bundles
 

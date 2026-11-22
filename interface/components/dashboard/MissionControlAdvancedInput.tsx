@@ -10,6 +10,7 @@ export function MissionControlAdvancedInput({
   inputRef,
   onChange,
   onSubmit,
+  onQueue,
 }: {
   value: string;
   autoFocus?: boolean;
@@ -19,6 +20,7 @@ export function MissionControlAdvancedInput({
   inputRef: React.RefObject<HTMLInputElement | null>;
   onChange: (value: string) => void;
   onSubmit: () => void;
+  onQueue?: () => void;
 }) {
   return (
     <div className="flex gap-2">
@@ -36,6 +38,19 @@ export function MissionControlAdvancedInput({
             : "border-cortex-border focus:border-cortex-primary focus:ring-cortex-primary/30"
         }`}
       />
+      {!isLoading && onQueue && (
+        <button
+          type="button"
+          data-testid="soma-queue-prompt-btn"
+          onClick={onQueue}
+          disabled={!value.trim()}
+          title="Stack work prompt into Soma's queue"
+          className="flex h-10 items-center justify-center gap-1 rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-2.5 text-xs font-mono text-cortex-primary transition-colors hover:bg-cortex-primary/20 disabled:border-cortex-border disabled:bg-cortex-bg disabled:text-cortex-text-muted"
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>+ Queue</span>
+        </button>
+      )}
       <button
         type="button"
         onClick={onSubmit}

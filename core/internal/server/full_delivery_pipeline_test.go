@@ -92,6 +92,38 @@ func TestFullDeliveryPipeline_AllBundleKindsProduceVerifiedOutputRefsAndProofEnv
 			wantFiles:       4,
 			wantPrimaryType: "text/yaml",
 		},
+		{
+			name:            "marketing_launch_bundle (Marketing Launch Kit)",
+			prompt:          "Create marketing documentation for our product launch including a positioning brief, launch email, and customer FAQ.",
+			wantPackageKind: "marketing_launch_bundle",
+			wantMinTeams:    0,
+			wantFiles:       4,
+			wantPrimaryType: "text/markdown",
+		},
+		{
+			name:            "customer_onboarding_bundle (Customer Onboarding Kit)",
+			prompt:          "Create a customer onboarding welcome kit and kickoff checklist for new enterprise workspaces.",
+			wantPackageKind: "customer_onboarding_bundle",
+			wantMinTeams:    0,
+			wantFiles:       4,
+			wantPrimaryType: "text/markdown",
+		},
+		{
+			name:            "kpi_dashboard_bundle (Interactive KPI Dashboard)",
+			prompt:          "Create an interactive executive KPI dashboard in the workspace with metrics definitions and governance notes.",
+			wantPackageKind: "kpi_dashboard_bundle",
+			wantMinTeams:    0,
+			wantFiles:       4,
+			wantPrimaryType: "text/html",
+		},
+		{
+			name:            "product_wireframe_bundle (Product Spec & Wireframe)",
+			prompt:          "Create an interactive product wireframe prototype and product spec in the workspace with clickable screens and user flows.",
+			wantPackageKind: "product_wireframe_bundle",
+			wantMinTeams:    0,
+			wantFiles:       4,
+			wantPrimaryType: "text/html",
+		},
 	}
 
 	s := newTestServer()

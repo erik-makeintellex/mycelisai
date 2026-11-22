@@ -141,6 +141,9 @@ export function createCortexProposalExecutionSlice(
                         pendingProposal: null,
                         activeConfirmToken: null,
                     }));
+                    if (!get().isMissionChatting && (get().queuedChatPrompts ?? []).length > 0) {
+                        get().dispatchNextQueuedPrompt?.();
+                    }
                     return { ok: true, runId };
                 }
 

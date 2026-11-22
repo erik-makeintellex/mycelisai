@@ -38,6 +38,8 @@ export default function MissionControlChat({
     const missionChat = useCortexStore((s) => s.missionChat);
     const isMissionChatting = useCortexStore((s) => s.isMissionChatting);
     const queuedChatPrompts = useCortexStore((s) => s.queuedChatPrompts ?? []);
+    const enqueueChatPrompt = useCortexStore((s) => s.enqueueChatPrompt);
+    const dispatchNextQueuedPrompt = useCortexStore((s) => s.dispatchNextQueuedPrompt);
     const removeQueuedChatPrompt = useCortexStore((s) => s.removeQueuedChatPrompt);
     const missionChatFailure = useCortexStore((s) => s.missionChatFailure);
     const sendMissionChat = useCortexStore((s) => s.sendMissionChat);
@@ -232,16 +234,19 @@ export default function MissionControlChat({
                     <div data-testid="soma-queued-prompts-tray" className="rounded-lg border border-cortex-primary/30 bg-cortex-primary/10 px-2.5 py-1.5 text-xs">
                         <div className="flex items-center justify-between gap-2 text-[10px] font-mono uppercase tracking-wider text-cortex-primary">
                             <span>Stacked Work Queue for {assistantName} ({queuedChatPrompts.length})</span>
-                            <span className="text-cortex-text-muted">Auto-dispatches next</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-cortex-text-muted">Auto-dispatches next</span>
+                                <button type="button" data-testid="soma-queue-run-next-btn" onClick={dispatchNextQueuedPrompt} disabled={isLoading} className="rounded border border-cortex-primary/40 bg-cortex-primary/15 px-1.5 py-0.5 text-[10px] font-mono text-cortex-primary hover:bg-cortex-primary/25 disabled:opacity-50">
+                                    Run Next
+                                </button>
+                            </div>
                         </div>
                         <div className="mt-1 flex flex-wrap gap-1.5">
                             {queuedChatPrompts.map((queued, idx) => (
                                 <span key={`${idx}-${queued}`} className="inline-flex items-center gap-1.5 rounded border border-cortex-border bg-cortex-bg px-2 py-0.5 text-[11px] text-cortex-text-main">
                                     <span className="font-mono text-[10px] text-cortex-primary">#{idx + 1}</span>
                                     <span className="max-w-[260px] truncate">{queued}</span>
-                                    <button type="button" onClick={() => removeQueuedChatPrompt(idx)} className="text-[10px] font-mono text-cortex-text-muted hover:text-cortex-danger" title="Remove from queue">
-                                        &times;
-                                    </button>
+                                    <button type="button" onClick={() => removeQueuedChatPrompt(idx)} className="text-[10px] font-mono text-cortex-text-muted hover:text-cortex-danger" title="Remove from queue">&times;</button>
                                 </span>
                             ))}
                         </div>
@@ -252,36 +257,24 @@ export default function MissionControlChat({
                         value={input}
                         onChange={setInput}
                         onSubmit={handleSubmit}
+                        onQueue={() => { if (input.trim()) { enqueueChatPrompt(input.trim()); setInput(""); } }}
                         inputRef={inputRef}
                         autoFocus={autoFocus}
                         loading={isLoading}
                         disabled={false}
-                        placeholder={somaPlaceholder({
-                            assistantName,
-                            broadcastMode,
-                            currentTeamName: currentTeam?.name,
-                            directTarget,
-                            showAdvancedRouting,
-                            simpleMode,
-                        })}
+                        placeholder={somaPlaceholder({ assistantName, broadcastMode, currentTeamName: currentTeam?.name, directTarget, showAdvancedRouting, simpleMode })}
                     />
                 ) : (
                     <MissionControlAdvancedInput
                         value={input}
                         onChange={setInput}
                         onSubmit={handleSubmit}
+                        onQueue={() => { if (input.trim()) { enqueueChatPrompt(input.trim()); setInput(""); } }}
                         inputRef={inputRef}
                         autoFocus={autoFocus}
                         isLoading={isLoading}
                         broadcastMode={broadcastMode}
-                        placeholder={somaPlaceholder({
-                            assistantName,
-                            broadcastMode,
-                            currentTeamName: currentTeam?.name,
-                            directTarget,
-                            showAdvancedRouting,
-                            simpleMode,
-                        })}
+                        placeholder={somaPlaceholder({ assistantName, broadcastMode, currentTeamName: currentTeam?.name, directTarget, showAdvancedRouting, simpleMode })}
                     />
                 )}
             </div>

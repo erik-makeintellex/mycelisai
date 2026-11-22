@@ -158,6 +158,8 @@ export interface CortexMissionChatContract {
     activeRole: string;
     governanceMode: 'passive' | 'active' | 'strict';
     sendMissionChat: (message: string) => Promise<void>;
+    enqueueChatPrompt: (message: string) => void;
+    dispatchNextQueuedPrompt: () => void;
     removeQueuedChatPrompt: (index: number) => void;
     clearMissionChat: () => void;
     setMissionChatScope: (scope: string | null) => void;
