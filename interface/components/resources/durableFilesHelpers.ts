@@ -31,6 +31,16 @@ export function isPlayableHtmlDeliverable(item: DeliverableItem): boolean {
     return item.contentType.toLowerCase().includes("html") || Boolean(item.filePath?.toLowerCase().endsWith(".html"));
 }
 
+export function inferDeliverablePackageFolder(filePath?: string): string | null {
+    if (!filePath) return null;
+    const parts = filePath.replace(/\\/g, "/").split("/").filter(Boolean);
+    return parts.length >= 2 ? parts.slice(0, -1).join("/") : null;
+}
+
+export function buildDeliverableFollowUpPrompt(item: DeliverableItem): string {
+    return `Refine and extend deliverable "${item.title}" (${item.filePath || item.id}) with next-step improvements and updated verification proof.`;
+}
+
 function downloadBlob(body: string, contentType: string, filename: string) {
     if (typeof document === "undefined") return;
     if (typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {

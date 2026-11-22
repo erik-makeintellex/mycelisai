@@ -37,13 +37,13 @@ Use these documents instead of rebuilding a large workflow spec here:
 
 ## Workflow Routes
 
-The current product center is Soma-first:
+The current product center is Soma-first (`v1.2.0`):
 
-1. Start in the Soma workspace or an AI Organization home, or pick one of the **Popular deliverable starters** in the `Start with Soma` suggestion bar (`Marketing Launch Kit`, `Playable Puzzle Game`, `Customer Onboarding Kit`, `Interactive KPI Dashboard`, `Engineering Task Pack`).
-2. Describe the outcome in natural language.
-3. Let Soma answer directly, propose a compact team, or split broad work into lanes.
-4. Confirm governed actions (`POST /api/v1/intent/confirm-action`) before mutation, private-data use, credentialed service use, recurring behavior, or durable memory promotion to materialize multi-file deliverable bundles (`marketing_launch_bundle`, `interactive_game_bundle`, `customer_onboarding_bundle`, `kpi_dashboard_bundle`, `codex_task_bundle`, plus fallback `deliverables/soma-draft.md`) with `proof.md` and `OutputProofEnvelope` verification.
-5. Review visible outputs in the chat response, team lead surface, Groups, retained artifacts on `/resources` (`DurableFilesOperatorView` with **`Play / Live Preview`** mounting a sandboxed `<iframe sandbox="allow-scripts">` for interactive HTML5 games and dashboards), Activity, or Run Timeline.
+1. Start in the Soma workspace or an AI Organization home, pick one of the 6 **Popular deliverable starters** in the `Start with Soma` suggestion bar (`Marketing Launch Kit`, `Playable Puzzle Game`, `Customer Onboarding Kit`, `Interactive KPI Dashboard`, `Product Spec & Wireframe`, `Engineering Task Pack`), or open **Advanced orchestration & council playbooks** (`Council Architecture & Security Review`, `Multi-Team Mission Blueprint`, `Trusted-Memory & Doctrine Audit`, `Service & Tool Capability Plan`).
+2. Describe the outcome in natural language, or queue multiple follow-on instructions using the **`+ Queue` / `Run Next`** stackable work queue (`Stacked Work Queue for Soma`) while Soma is busy or proposing.
+3. Let Soma answer directly, return a `<50ms` deterministic fast-path proposal for everyday project (`dev_project_bundle`), interacting multi-application (`multi_app_bundle`), team execution (`team_execution_bundle`), chained pipeline (`chained_pipeline_bundle`), or MCP addition (`mcp_addition_bundle`) asks, or split broad work into lanes.
+4. Confirm governed actions (`POST /api/v1/intent/confirm-action`) before mutation, private-data use, credentialed service use, recurring behavior, or durable memory promotion to materialize multi-file deliverable bundles (`marketing_launch_bundle`, `interactive_game_bundle`, `customer_onboarding_bundle`, `kpi_dashboard_bundle`, `product_wireframe_bundle`, `codex_task_bundle`, `dev_project_bundle`, `multi_app_bundle`, `team_execution_bundle`, `chained_pipeline_bundle`, `mcp_addition_bundle`, plus fallback `deliverables/soma-draft.md`) with `proof.md` and `OutputProofEnvelope` verification.
+5. Review visible outputs in the chat response, team lead surface, Groups, `/deployments` (`DeploymentOutputPreviewDrawer` with inline deliverable preview and the **Review Team Audit Certificate** — `VERIFIED BY IDEAL REVIEWER & DELIVERY REVIEW TEAM`), retained artifacts on `/resources` (`DurableFilesOperatorView` with **`Play / Live Preview`** mounting a sandboxed `<iframe sandbox="allow-scripts">` for interactive HTML5 games and dashboards), Activity, or Run Timeline.
 
 Use the smallest workflow that preserves clarity and recovery:
 

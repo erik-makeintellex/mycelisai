@@ -46,20 +46,19 @@ def test_team_generated_content_access_surfaces_are_wired() -> None:
     workbench = (REPO_ROOT / "interface" / "components" / "soma" / "OutputWorkbench.tsx").read_text(encoding="utf-8")
     assert "output-workbench-open-team" in workbench
     assert "output-workbench-open-resources" in workbench
+    assert "output-workbench-queue-followup" in workbench
     assert "output-workbench-inline-iframe" not in workbench
-
-    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(
-        encoding="utf-8"
-    )
+    detail_pane = (REPO_ROOT / "interface" / "components" / "deployments" / "DeploymentDetailPane.tsx").read_text(encoding="utf-8")
     assert "deployments-open-deliverables" in detail_pane
     assert "deployments-team-outputs" in detail_pane
     assert "deployments-team-channels" in detail_pane
     assert "deployments-chain-output" in detail_pane
-
-    durable_files = (
-        REPO_ROOT / "interface" / "components" / "resources" / "DurableFilesOperatorView.tsx"
-    ).read_text(encoding="utf-8")
+    durable_files = (REPO_ROOT / "interface" / "components" / "resources" / "DurableFilesOperatorView.tsx").read_text(encoding="utf-8")
     assert "deliverables-producer-filter" in durable_files
+    assert "queue-followup-deliverable-" in durable_files
+    assert "deliverable-package-folder-" in durable_files
+    durable_helpers = (REPO_ROOT / "interface" / "components" / "resources" / "durableFilesHelpers.ts").read_text(encoding="utf-8")
+    assert "inferDeliverablePackageFolder" in durable_helpers
 
 
 def test_run_chain_node_links_to_team_workspace_and_outputs() -> None:

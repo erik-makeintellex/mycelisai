@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ClipboardList, Download, ExternalLink, FileText, ShieldCheck } from "lucide-react";
 import { useCortexStore, type ChatArtifactRef, type DeliveryPackageSummary, type OutputProofEnvelope, type OutputRef } from "@/store/useCortexStore";
@@ -71,6 +72,8 @@ export default function OutputWorkbench({
     runId?: string;
 }) {
     const advancedMode = useCortexStore((s) => s.advancedMode);
+    const enqueueChatPrompt = useCortexStore((s) => s.enqueueChatPrompt);
+    const [queuedNotice, setQueuedNotice] = useState(false);
     if (!deliveryPackage && artifacts.length === 0 && outputRefs.length === 0) return null;
 
     const refs = outputRefs.length > 0 ? outputRefs : deliveryPackage?.items ?? [];
@@ -116,6 +119,19 @@ export default function OutputWorkbench({
                 >
                     Download / View Files
                 </Link>
+                <button
+                    type="button"
+                    data-testid="output-workbench-queue-followup"
+                    onClick={() => {
+                        const label = packageTitle(deliveryPackage?.package_kind);
+                        const target = packageIdentity ? ` (${packageIdentity})` : "";
+                        enqueueChatPrompt?.(`Extend ${label}${target} with automated verification tests and next-iteration enhancements.`);
+                        setQueuedNotice(true);
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-cortex-primary/35 bg-cortex-bg px-2 py-0.5 text-[9px] font-mono text-cortex-primary hover:bg-cortex-primary/15"
+                >
+                    {queuedNotice ? "Stacked in Queue ✓" : "+ Stack Follow-Up"}
+                </button>
                 <span className="inline-flex items-center gap-1 rounded border border-cortex-success/30 bg-cortex-success/10 px-1.5 py-0.5 text-[8px] font-mono font-bold uppercase text-cortex-success">
                     <CheckCircle2 className="h-2.5 w-2.5" />
                     {packageStatus}

@@ -19,7 +19,7 @@
 
 ## Overview
 
-`/deployments` lists every standing team, mission team, group, and planned department in one place. Pick a filter chip to narrow by kind or state, then select a row to open its detail pane. The page is read-only: it explains what is running, it does not launch or stop anything.
+`/deployments` lists every standing team, mission team, group, and planned department in one place, and serves as both the live status view and the actionable team & delivery hub. Pick a filter chip to narrow by kind or state, then select a row to open its detail pane, inspect outputs inline, add MCP capabilities, or dispatch follow-on work through Soma.
 
 `/teams` now redirects here. Deployments is in the main navigation rail for every user, not just Advanced mode.
 
@@ -42,9 +42,15 @@ Selecting a row opens a detail pane with:
 
 - scope and origin (where the deployment lives and how it was created)
 - members, each with role, provider/model, and tools
+- **Universal Ideal Delivery Reviewer & Delivery Review Gate:** every standing and runtime team includes an Ideal Reviewer (`council-sentry`, `IDEAL REVIEWER · DELIVERY GATE`), and complex project/deliverable asks automatically coordinate a companion `<team_id>-review-team`
+- **Actionable Team Engagement CTAs:**
+  - `Work with Team in Soma` and `Plan & Execute Next Steps` (`team_execution_bundle`)
+  - `Have Another Team Build Interacting App ->` (`multi_app_bundle`)
+  - `View Deliverables` and `Chain This Team's Output to Another Team in Soma ->` (`chained_pipeline_bundle`)
+- **Generated Team Outputs & Inline Preview Drawer:** retained outputs show a count and proof status (or **unknown** when Core has not reported a summary yet — never shown as zero, because zero and unknown mean different things), and clicking `View / Open` opens `DeploymentOutputPreviewDrawer` with playable HTML5 `<iframe sandbox="allow-scripts">` / source preview and the **Review Team Audit Certificate** (`VERIFIED BY IDEAL REVIEWER & DELIVERY REVIEW TEAM`)
+- **MCP Additions (`Standard Deployment MCPs` & `Custom Developed MCPs`):** 1-click `+ Add to Deployment` and `+ Scaffold & Bind Custom MCP` (`mcp_addition_bundle`)
 - work mode and approval posture, written as one plain-language sentence
 - since and last-activity timestamps
-- retained outputs: a count and a proof status, or **unknown** when Core has not reported a summary yet (this is never shown as zero, because zero and unknown mean different things)
 
 Advanced mode adds origin, scope, and provider-origin detail (for example, whether a member's model came from the manifest, a routing profile, or a fallback).
 

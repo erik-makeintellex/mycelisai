@@ -4,7 +4,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Download, Eye, EyeOff, FileCode2, FileText, FolderOpen, Package, Play, RefreshCw, Sliders, Sparkles } from "lucide-react";
 import { useCortexStore } from "@/store/useCortexStore";
 import {
+    buildDeliverableFollowUpPrompt,
     buildDeliverableItems,
+    inferDeliverablePackageFolder,
     isPlayableHtmlDeliverable,
     triggerBundleExport,
     triggerDownload,
@@ -20,6 +22,7 @@ export default function DurableFilesOperatorView() {
     const missionChat = useCortexStore((s) => s.missionChat) ?? [];
     const assistantName = useCortexStore((s) => s.assistantName) || "Soma";
     const toggleAdvancedMode = useCortexStore((s) => s.toggleAdvancedMode);
+    const enqueueChatPrompt = useCortexStore((s) => s.enqueueChatPrompt);
 
     const [previewId, setPreviewId] = useState<string | null>(null);
     const [playModeId, setPlayModeId] = useState<string | null>(null);
@@ -62,33 +65,16 @@ export default function DurableFilesOperatorView() {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                         {items.length > 0 && (
-                            <button
-                                type="button"
-                                data-testid="export-deliverable-bundle"
-                                onClick={() => {
-                                    triggerBundleExport(items);
-                                    setOpenedNotice(`Exported bundle (${items.length} deliverables)`);
-                                }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
-                            >
+                            <button type="button" data-testid="export-deliverable-bundle" onClick={() => { triggerBundleExport(items); setOpenedNotice(`Exported bundle (${items.length} deliverables)`); }} className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-primary/35 bg-cortex-primary/10 px-3 py-2 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/20 transition-colors">
                                 <Package className="w-3.5 h-3.5" />
                                 Export Bundle
                             </button>
                         )}
-                        <button
-                            type="button"
-                            onClick={() => fetchArtifacts({ limit: 50 })}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-mono text-cortex-text-muted hover:text-cortex-text-main transition-colors"
-                        >
+                        <button type="button" onClick={() => fetchArtifacts({ limit: 50 })} className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-mono text-cortex-text-muted hover:text-cortex-text-main transition-colors">
                             <RefreshCw className={`w-3.5 h-3.5 ${isFetchingArtifacts ? "animate-spin" : ""}`} />
                             Refresh
                         </button>
-                        <button
-                            type="button"
-                            onClick={toggleAdvancedMode}
-                            data-testid="resources-switch-advanced"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-mono text-cortex-text-muted hover:border-cortex-primary/40 hover:text-cortex-primary transition-colors"
-                        >
+                        <button type="button" onClick={toggleAdvancedMode} data-testid="resources-switch-advanced" className="inline-flex items-center gap-1.5 rounded-lg border border-cortex-border bg-cortex-surface px-3 py-2 text-xs font-mono text-cortex-text-muted hover:border-cortex-primary/40 hover:text-cortex-primary transition-colors">
                             <Sliders className="w-3.5 h-3.5" />
                             Connected Tools &amp; AI Engines
                         </button>
@@ -133,6 +119,7 @@ export default function DurableFilesOperatorView() {
                             const isPlayable = isPlayableHtmlDeliverable(item);
                             const isPlaying = playModeId === item.id && isPlayable;
                             const isRefining = refineId === item.id;
+                            const pkgFolder = inferDeliverablePackageFolder(item.filePath);
                             const Icon = item.contentType.includes("code") || item.filePath?.match(/\.(ts|tsx|py|go|json|yaml|md|html)$/i) ? FileCode2 : FileText;
                             return (
                                 <div key={item.id} data-testid={`durable-file-card-${item.id}`} className="rounded-xl border border-cortex-border bg-cortex-surface p-4 space-y-3">
@@ -147,6 +134,11 @@ export default function DurableFilesOperatorView() {
                                                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cortex-primary/10 text-cortex-primary border border-cortex-primary/25">
                                                         Produced by {item.producer}
                                                     </span>
+                                                    {pkgFolder && (
+                                                        <span data-testid={`deliverable-package-folder-${item.id}`} className="px-2 py-0.5 rounded text-[10px] font-mono bg-cortex-bg text-cortex-text-muted border border-cortex-border">
+                                                            {pkgFolder}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 {item.filePath && <p className="text-xs font-mono text-cortex-text-muted mt-0.5 truncate">{item.filePath}</p>}
                                             </div>
@@ -154,58 +146,27 @@ export default function DurableFilesOperatorView() {
 
                                         <div className="flex flex-wrap items-center gap-2">
                                             {isPlayable && (
-                                                <button
-                                                    type="button"
-                                                    data-testid={`play-deliverable-${item.id}`}
-                                                    onClick={() => {
-                                                        const nextPlay = playModeId === item.id ? null : item.id;
-                                                        setPlayModeId(nextPlay);
-                                                        if (nextPlay) setPreviewId(item.id);
-                                                    }}
-                                                    className="inline-flex items-center gap-1 rounded-md border border-cortex-success/35 bg-cortex-success/10 px-2.5 py-1.5 text-xs font-mono text-cortex-success hover:bg-cortex-success/20 transition-colors"
-                                                >
+                                                <button type="button" data-testid={`play-deliverable-${item.id}`} onClick={() => { const nextPlay = playModeId === item.id ? null : item.id; setPlayModeId(nextPlay); if (nextPlay) setPreviewId(item.id); }} className="inline-flex items-center gap-1 rounded-md border border-cortex-success/35 bg-cortex-success/10 px-2.5 py-1.5 text-xs font-mono text-cortex-success hover:bg-cortex-success/20 transition-colors">
                                                     <Play className="w-3.5 h-3.5" />
                                                     Play / Live Preview
                                                 </button>
                                             )}
-                                            <button
-                                                type="button"
-                                                data-testid={`refine-deliverable-${item.id}`}
-                                                onClick={() => {
-                                                    setRefineId(isRefining ? null : item.id);
-                                                    setRefinePrompt("");
-                                                }}
-                                                className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/30 bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/10 transition-colors"
-                                            >
+                                            <button type="button" data-testid={`refine-deliverable-${item.id}`} onClick={() => { setRefineId(isRefining ? null : item.id); setRefinePrompt(""); }} className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/30 bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/10 transition-colors">
                                                 <Sparkles className="w-3.5 h-3.5" />
                                                 Ask {assistantName} to Refine
                                             </button>
-                                            <button
-                                                type="button"
-                                                data-testid={`preview-deliverable-${item.id}`}
-                                                onClick={() => setPreviewId(isPreviewOpen ? null : item.id)}
-                                                className="inline-flex items-center gap-1 rounded-md border border-cortex-border bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-text-main hover:border-cortex-primary/40 transition-colors"
-                                            >
+                                            <button type="button" data-testid={`queue-followup-deliverable-${item.id}`} onClick={() => { enqueueChatPrompt?.(buildDeliverableFollowUpPrompt(item)); setOpenedNotice(`Stacked follow-up in ${assistantName}'s queue for ${item.title}`); }} className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/35 bg-cortex-primary/10 px-2.5 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/20 transition-colors">
+                                                + Queue Follow-Up
+                                            </button>
+                                            <button type="button" data-testid={`preview-deliverable-${item.id}`} onClick={() => setPreviewId(isPreviewOpen ? null : item.id)} className="inline-flex items-center gap-1 rounded-md border border-cortex-border bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-text-main hover:border-cortex-primary/40 transition-colors">
                                                 {isPreviewOpen ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                                                 Preview
                                             </button>
-                                            <button
-                                                type="button"
-                                                data-testid={`open-deliverable-${item.id}`}
-                                                onClick={() => {
-                                                    setPreviewId(item.id);
-                                                    setOpenedNotice(item.filePath || item.title);
-                                                }}
-                                                className="inline-flex items-center gap-1 rounded-md border border-cortex-border bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-text-main hover:border-cortex-primary/40 transition-colors"
-                                            >
+                                            <button type="button" data-testid={`open-deliverable-${item.id}`} onClick={() => { setPreviewId(item.id); setOpenedNotice(item.filePath || item.title); }} className="inline-flex items-center gap-1 rounded-md border border-cortex-border bg-cortex-bg px-2.5 py-1.5 text-xs font-mono text-cortex-text-main hover:border-cortex-primary/40 transition-colors">
                                                 <FolderOpen className="w-3.5 h-3.5" />
                                                 Open
                                             </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => triggerDownload(item)}
-                                                className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/30 bg-cortex-primary/10 px-2.5 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/20 transition-colors"
-                                            >
+                                            <button type="button" onClick={() => triggerDownload(item)} className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/30 bg-cortex-primary/10 px-2.5 py-1.5 text-xs font-mono text-cortex-primary hover:bg-cortex-primary/20 transition-colors">
                                                 <Download className="w-3.5 h-3.5" />
                                                 Download
                                             </button>

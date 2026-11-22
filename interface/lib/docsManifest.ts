@@ -30,6 +30,7 @@ export const DOC_MANIFEST: DocSection[] = [
     {
         section: "User Guides",
         docs: [
+            { slug: "user-operator-guide", label: "User & Operator Guide", path: "docs/USER_GUIDE.md", description: "End-to-end guide to Soma deliverable starters, stackable work queue, live HTML5 preview, memory promotion, and RBAC" },
             { slug: "user-docs-home", label: "User Docs Home", path: "docs/user/README.md", description: "Operator-first entry point for Soma, teams, resources, memory, and recovery workflows" },
             { slug: "deployment-method-selection", label: "Deployment Method Selection", path: "docs/user/deployment-methods.md", description: "Pick Docker Compose, local k3d, enterprise self-hosted Kubernetes, or edge deployment by target environment" },
             { slug: "core-concepts", label: "Core Concepts", path: "docs/user/core-concepts.md", description: "Soma, Council, Mission, Run, Brain, Event, and Trust in operator language" },

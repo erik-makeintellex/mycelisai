@@ -252,12 +252,12 @@ To send directly to a specialist:
 
 For multi-step execution:
 
-1. Open the AI Organization workspace you want Soma to coordinate.
-2. Open advanced team design from `/teams/create`.
-3. Click `Open crew launcher`.
-4. Provide mission intent.
-5. Review the generated proposal or blocker recovery guidance.
-6. Confirm execution when Soma returns a proposal.
+1. Open the AI Organization workspace (`/dashboard`) or advanced team design (`/teams/create`).
+2. Describe your deliverable, team execution, or interacting multi-app intent in natural language.
+3. Receive a `<50ms` deterministic fast-path proposal (`dev_project_bundle`, `multi_app_bundle`, `team_execution_bundle`, `chained_pipeline_bundle`, `mcp_addition_bundle`) or a tailored team proposal.
+4. Queue follow-on instructions with **`+ Queue` / `Run Next`** (`Stacked Work Queue for Soma`) while Soma is busy or proposing.
+5. Review the generated proposal, team roles, Ideal Reviewer gate (`council-sentry`), or blocker recovery guidance.
+6. Confirm execution (`POST /api/v1/intent/confirm-action`) when Soma returns a proposal.
 
 On success, a system message includes a run link (`/runs/{run_id}`).
 

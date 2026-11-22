@@ -200,7 +200,7 @@ uv run inv lifecycle.memory-restart
 uv run inv team.architecture-sync
 uv run inv quality.max-lines --limit 300
 uv run inv release.status
-uv run inv release.stage --tag=v0.8.3 --dry-run
+uv run inv release.stage --tag=v1.2.0 --dry-run
 uv run inv release.prune-branches --dry-run
 ```
 
@@ -281,7 +281,7 @@ Refresh WSL from git; do not copy source trees across the host boundary.
 
 Use [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md) for first-time setup, deployment selection, ports, health checks, cognitive engine setup, and troubleshooting. Use [Operations](docs/architecture/OPERATIONS.md) for task ownership, lifecycle, Compose, Kubernetes, CI, and release-lane sequencing.
 
-Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1` through `v1.1.0`) via `uv run inv release.status`, `uv run inv release.stage`, and `uv run inv release.prune-branches`, with `0` legacy line-limit caps remaining across the repository.
+Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1` through `v1.2.0`) via `uv run inv release.status`, `uv run inv release.stage`, and `uv run inv release.prune-branches`, with `0` legacy line-limit caps remaining across the repository.
 
 ## Licensing And Releases
 

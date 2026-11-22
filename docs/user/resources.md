@@ -7,17 +7,16 @@
 
 ## Overview
 
-In default Operator Mode (`mycelis-advanced-mode` off), `/resources` opens **Durable Files & Deliverables** (`DurableFilesOperatorView`):
-- Inspect retained workspace deliverables and multi-file bundles (`marketing_launch_bundle`, `interactive_game_bundle`, `customer_onboarding_bundle`, `kpi_dashboard_bundle`, `product_wireframe_bundle`, `codex_task_bundle`) with `Preview`, `Open`, `Download`, **`Ask Soma to Refine`**, and **`Export Bundle`** actions.
-- For playable HTML deliverables (`.html` / `text/html`, such as the Sliding-Tile Puzzle Game or Executive KPI Dashboard), click **`Play / Live Preview`** to mount an interactive sandboxed `<iframe sandbox="allow-scripts">` directly inside `/resources`.
+In both default Operator Mode (`mycelis-advanced-mode` off) and Advanced Mode, `/resources` opens on the **`Deliverables`** tab (**Durable Files & Deliverables**, `DurableFilesOperatorView`) as its first tab:
+- Inspect retained workspace deliverables and multi-file bundles (`marketing_launch_bundle`, `interactive_game_bundle`, `customer_onboarding_bundle`, `kpi_dashboard_bundle`, `product_wireframe_bundle`, `codex_task_bundle`, `dev_project_bundle`, `multi_app_bundle`, `team_execution_bundle`, `chained_pipeline_bundle`, `mcp_addition_bundle`) with package folder badges, `Preview`, `Open`, `Download`, **`Ask Soma to Refine`**, **`+ Queue Follow-Up`**, and **`Export Bundle`** actions, plus the **Review Team Audit Certificate** (`VERIFIED BY IDEAL REVIEWER & DELIVERY REVIEW TEAM`).
+- For playable HTML deliverables (`.html` / `text/html`, such as the Sliding-Tile Puzzle Game, Executive KPI Dashboard, or interacting multi-app frontends), click **`Play / Live Preview`** to mount an interactive sandboxed `<iframe sandbox="allow-scripts">` directly inside `/resources`.
 
-Open `/resources` after turning on Advanced mode.
-
-Current tabs:
+Turning on Advanced mode adds the remaining operator support tabs alongside `Deliverables`:
 
 | Tab | Purpose |
 |-----|---------|
-| Connected Tools | Installed MCP servers and tool capability visibility |
+| Deliverables | Durable Files & Deliverables (`DurableFilesOperatorView`) with package folder badges, live HTML5 preview, and `+ Queue Follow-Up` |
+| Connected Tools | Installed MCP servers, `Standard Deployment MCPs` vs. `Custom Developed MCPs` filter tabs, and tool capability visibility |
 | Exchange | Inspect managed channels, research/result threads, trust labels, and review posture |
 | Knowledge | Load governed private/user records, customer context, approved company knowledge, Soma operating context, and reflection/synthesis observations into separate governed context lanes |
 | Workspace Files | Filesystem MCP-backed browsing and file operations inside workspace boundary |
@@ -50,7 +49,7 @@ Resources is the primary place to inspect or change MCP servers, web search
 readiness, and recent tool activity.
 
 Current baseline posture:
-- curated library installs are the default path
+- curated library installs are the default path, and `MCPLibraryBrowser` includes `All MCPs`, `Standard Deployment MCPs` (`STANDARD`), and `Custom Developed MCPs` (`CUSTOM DEVELOPED` plus `+ Develop Custom MCP in Soma`) filter tabs
 - `filesystem` and `fetch` are common curated entries, not assumed bootstrap defaults in the supported runtime lanes
 - `memory` remains curated install and should not be treated as equivalent to Mycelis-governed memory/context lanes
 - `artifact-renderer` remains planned

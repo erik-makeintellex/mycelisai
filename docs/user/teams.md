@@ -9,6 +9,7 @@
 
 - [Overview](#overview)
 - [Default Launch Shape](#default-launch-shape)
+- [Universal Ideal Delivery Reviewer & Interacting Multi-App Teams](#universal-ideal-delivery-reviewer--interacting-multi-app-teams)
 - [Choosing The Right Workflow](#choosing-the-right-workflow)
 - [What A Good Team Looks Like](#what-a-good-team-looks-like)
 - [When Soma Should Split Work](#when-soma-should-split-work)
@@ -41,6 +42,11 @@ If the work truly needs more coverage, Soma can add up to two more targeted role
 - Domain Specialist: covers one distinct capability such as media direction, security, data analysis, or integration.
 
 Soma should not launch a broad standing pool just because the request sounds ambitious. If more than 5 people seem useful, Soma should split the work into smaller coordinated teams and explain the lanes.
+
+## Universal Ideal Delivery Reviewer & Interacting Multi-App Teams
+
+- **In-Team Ideal Delivery Reviewer & Companion Review Team:** Every team automatically includes an in-team Ideal Delivery Reviewer (`council-sentry`, `IDEAL REVIEWER · DELIVERY GATE`) to enforce quality, security, and write-isolation gates before output sign-off. Complex project and deliverable builds also spawn a dedicated companion `<team_id>-review-team` listening on `swarm.team.<team_id>.signal.result` to emit the **Review Team Audit Certificate** (`VERIFIED BY IDEAL REVIEWER & DELIVERY REVIEW TEAM`).
+- **Interacting Multi-Application Teams (`multi_app_bundle`):** When you ask Soma for two or more interacting applications (or click `Have Another Team Build Interacting App ->` on `/deployments`), Soma automatically coordinates `<primary>-app-team`, `<companion>-app-team`, and `<primary>-integration-review-team` over NATS (`swarm.team.<primary>-app-team.signal.result` and `swarm.team.<companion>-app-team.signal.result`) and generates both interactive applications plus a shared `integration-contract.json` and `proof.md`.
 
 ## Choosing The Right Workflow
 
