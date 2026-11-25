@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import DeploymentsPage from "@/components/deployments/DeploymentsPage";
+import { buildTeamActionPrefillPrompt } from "@/components/dashboard/missionControlChatUi";
 import { useCortexStore } from "@/store/useCortexStore";
 import { mockFetch } from "../setup";
 import type { DeploymentRecord } from "@/components/deployments/deploymentTypes";
@@ -183,5 +184,17 @@ describe("DeploymentsPage", () => {
         // "View config" opens the inline ConfigViewer panel rather than
         // navigating; ConfigViewer.test.tsx covers what it fetches and renders.
         expect(await screen.findByTestId("deployments-view-config")).toBeTruthy();
+    });
+
+    it("renders Start a New Team in Soma link and builds start_team prefill prompt", async () => {
+        mockFetch.mockResolvedValue(deploymentsResponse(allDeployments));
+        render(<DeploymentsPage />);
+        await screen.findByTestId("deployments-list");
+
+        const startLink = await screen.findByTestId("deployments-start-new-team");
+        expect(startLink.getAttribute("href")).toBe("/dashboard?team_action=start_team");
+        expect(buildTeamActionPrefillPrompt(new URLSearchParams("team_action=start_team"))).toContain(
+            "Put a team together to research current market priorities",
+        );
     });
 });

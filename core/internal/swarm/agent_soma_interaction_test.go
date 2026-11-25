@@ -141,3 +141,45 @@ func TestProcessMessageStructured_RecoversFromInitialCantDeliverRefusal(t *testi
 		t.Fatalf("res.Text = %q", res.Text)
 	}
 }
+
+type failingSomaProvider struct{}
+
+func (failingSomaProvider) Infer(context.Context, string, cognitive.InferOptions) (*cognitive.InferResponse, error) {
+	return nil, context.DeadlineExceeded
+}
+
+func (failingSomaProvider) Probe(context.Context) (bool, error) {
+	return false, context.DeadlineExceeded
+}
+
+func TestProcessMessageStructured_BrainFreezeSetsProviderOfflineAvailability(t *testing.T) {
+	router := &cognitive.Router{
+		Config: &cognitive.BrainConfig{
+			Profiles: map[string]string{"chat": "ollama"},
+			Providers: map[string]cognitive.ProviderConfig{
+				"ollama": {Type: "openai_compatible", Enabled: true, ModelID: "qwen2.5-coder:7b-instruct"},
+			},
+		},
+		Adapters: map[string]cognitive.LLMProvider{
+			"ollama": failingSomaProvider{},
+		},
+	}
+	agent := NewAgent(context.Background(), protocol.AgentManifest{
+		ID:   "admin",
+		Role: "admin",
+	}, "admin-core", nil, router, nil)
+
+	res := agent.processMessageStructured("[DIRECT ANSWER ROUTE]\n\nOriginal request:\nHello", nil)
+	if res.Availability == nil {
+		t.Fatal("expected availability struct on brain freeze")
+	}
+	if res.Availability.Available {
+		t.Fatal("expected res.Availability.Available = false on brain freeze")
+	}
+	if res.Availability.Code != cognitive.ExecutionProviderOffline {
+		t.Fatalf("code = %q, want %q", res.Availability.Code, cognitive.ExecutionProviderOffline)
+	}
+	if !res.Availability.SetupRequired {
+		t.Fatal("expected SetupRequired = true on brain freeze")
+	}
+}

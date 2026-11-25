@@ -19,7 +19,7 @@
 
 ## Overview
 
-`/deployments` lists every standing team, mission team, group, and planned department in one place, and serves as both the live status view and the actionable team & delivery hub. Pick a filter chip to narrow by kind or state, then select a row to open its detail pane, inspect outputs inline, add MCP capabilities, or dispatch follow-on work through Soma.
+`/deployments` lists every standing team, mission team, group, and planned department in one place, and serves as both the live status view and the actionable team & delivery hub. Click **`+ Start a New Team in Soma`** (`deployments-start-new-team`) in the header to launch a new team directly in Soma with a prefilled goal prompt, or pick a filter chip to narrow by kind or state, then select a row to open its detail pane, inspect outputs inline, add MCP capabilities, or dispatch follow-on work through Soma.
 
 `/teams` now redirects here. Deployments is in the main navigation rail for every user, not just Advanced mode.
 

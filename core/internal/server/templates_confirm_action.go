@@ -79,19 +79,25 @@ func (s *AdminServer) HandleConfirmAction(w http.ResponseWriter, r *http.Request
 		"run_status":      runs.StatusCompleted,
 	}
 	if packageSummary != nil {
-		data["message"] = fmt.Sprintf("Codex task bundle created under %s with proof at %s.", packageSummary.BasePath, packageSummary.ProofPath)
+		dp := deliveryPackageFromPackageSummary(packageSummary)
+		data["message"] = dp.Summary
 		data["package"] = packageSummary
 		data["artifacts"] = packageSummary.Artifacts
-		data["delivery_package"] = deliveryPackageFromPackageSummary(packageSummary)
+		data["delivery_package"] = dp
 		data["output_refs"] = packageSummary.OutputRefs
 		data["execution_summary"] = executionSummaryFromPackageSummary(packageSummary)
+		s.logConfirmedRunConversationTurns(r.Context(), runID, proofID, scope, dp.Summary)
 	} else if nonPackageSummary := buildTeamWorkConfirmExecutionSummary(scope.PlannedToolCalls, "", "", runID, proofID); nonPackageSummary != nil {
+		data["message"] = nonPackageSummary.Summary
 		data["artifacts"] = nonPackageSummary.ArtifactRefs
 		data["output_refs"] = nonPackageSummary.OutputRefs
 		if len(nonPackageSummary.TeamOutputRefs) > 0 {
 			data["team_output_refs"] = nonPackageSummary.TeamOutputRefs
 		}
 		data["execution_summary"] = nonPackageSummary
+		s.logConfirmedRunConversationTurns(r.Context(), runID, proofID, scope, nonPackageSummary.Summary)
+	} else {
+		s.logConfirmedRunConversationTurns(r.Context(), runID, proofID, scope, "Approved execution completed.")
 	}
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(data))
 }

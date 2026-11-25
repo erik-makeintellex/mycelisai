@@ -30,9 +30,14 @@ func directSearchQuery(text string) (string, bool) {
 	if query, ok := quotedSearchQuery(trimmed); ok {
 		return query, true
 	}
-	explicit := []string{"web_search(", "search the web", "web search", "look up", "lookup", "find current", "find recent"}
-	freshness := []string{"latest", "today", "recent", "news", "real-time", "up to date"}
-	if requestContainsAny(lower, explicit) || requestContainsAny(lower, freshness) {
+	explicit := []string{"web_search(", "search the web", "web search", "look up", "lookup", "find current", "find recent", "search online", "search the internet"}
+	if requestContainsAny(lower, explicit) {
+		return trimmed, true
+	}
+	freshnessCues := []string{"latest", "today", "recent", "real-time", "up to date"}
+	webTopicCues := []string{"news", "internet", "online", "article", "articles", "market", "industry", "release", "releases", "product", "products"}
+	internalWorkspaceCues := []string{"mycelis", "soma", "team", "teams", "deliverable", "deliverables", "artifact", "artifacts", "proposal", "proposals", "workspace", "testing", "cluster", "our "}
+	if requestContainsAny(lower, freshnessCues) && requestContainsAny(lower, webTopicCues) && !requestContainsAny(lower, internalWorkspaceCues) {
 		return trimmed, true
 	}
 	return "", false
@@ -62,7 +67,7 @@ func quotedSearchQuery(text string) (string, bool) {
 
 func (s *AdminServer) buildSearchCapabilityAnswer() string {
 	status := s.searchCapabilityStatus()
-	lines := []string{"Current Mycelis search capability:"}
+	lines := []string{"## Mycelis Search Capability", ""}
 	provider := strings.TrimSpace(status.Provider)
 	if provider == "" {
 		provider = "disabled"
@@ -73,28 +78,28 @@ func (s *AdminServer) buildSearchCapabilityAnswer() string {
 	} else if !status.Configured {
 		availability = "selected but not fully configured"
 	}
-	lines = append(lines, fmt.Sprintf("- Provider: %s (%s).", provider, availability))
+	lines = append(lines, fmt.Sprintf("- **Provider:** `%s` (%s).", provider, availability))
 	if status.SupportsLocalSources {
-		lines = append(lines, "- Local shared-source search is available through Soma's web_search tool.")
+		lines = append(lines, "- **Local Shared-Source Search:** Available through Soma's `web_search` tool.")
 	}
 	if status.SupportsPublicWeb {
-		lines = append(lines, "- Public web search is available when the selected provider is configured.")
+		lines = append(lines, "- **Public Web Search:** Available when the selected provider is configured.")
 	}
 	if status.DirectSomaInteraction {
-		lines = append(lines, fmt.Sprintf("- Soma direct interaction: ask Soma to use %s for governed search requests.", status.SomaToolName))
+		lines = append(lines, fmt.Sprintf("- **Soma Direct Interaction:** Ask Soma to use `%s` for governed search requests.", status.SomaToolName))
 	}
 	if !status.RequiresHostedAPIToken {
-		lines = append(lines, "- Hosted Brave tokens are not required for the Mycelis-owned path; use local_sources or self-hosted SearXNG.")
+		lines = append(lines, "- **Token Posture:** Hosted Brave tokens are not required for the Mycelis-owned path; use `local_sources` or self-hosted `searxng`.")
 	} else {
-		lines = append(lines, "- Brave still requires the curated brave-search MCP server and BRAVE_API_KEY.")
+		lines = append(lines, "- **Token Posture:** Brave requires the curated `brave-search` MCP server and `BRAVE_API_KEY`.")
 	}
 	if status.Blocker != nil {
-		lines = append(lines, fmt.Sprintf("- Current blocker: %s", status.Blocker.Message))
+		lines = append(lines, fmt.Sprintf("- **Current Blocker:** %s", status.Blocker.Message))
 		if strings.TrimSpace(status.Blocker.NextAction) != "" {
-			lines = append(lines, fmt.Sprintf("- Next action: %s", status.Blocker.NextAction))
+			lines = append(lines, fmt.Sprintf("- **Next Action:** %s", status.Blocker.NextAction))
 		}
 	} else if len(status.NextActions) > 0 {
-		lines = append(lines, fmt.Sprintf("- Next action: %s", status.NextActions[0]))
+		lines = append(lines, fmt.Sprintf("- **Next Action:** %s", status.NextActions[0]))
 	}
 	return strings.Join(lines, "\n")
 }
@@ -123,37 +128,51 @@ func (s *AdminServer) respondDirectSearchAnswer(w http.ResponseWriter, r *http.R
 
 func buildDirectSearchAnswer(resp searchcap.Response, err error) string {
 	if err != nil {
-		return fmt.Sprintf("I tried to use web_search, but search failed before results were available: %v", err)
+		return fmt.Sprintf("I tried to use `web_search`, but search failed before results were available: %v", err)
 	}
 	if resp.Blocker != nil {
 		lines := []string{
-			"I tried to use web_search, but search is blocked right now.",
-			fmt.Sprintf("- Blocker: %s", resp.Blocker.Message),
+			"### Web Search Blocked",
+			"",
+			"I tried to use `web_search`, but search is blocked right now.",
+			"",
+			fmt.Sprintf("- **Blocker:** %s", resp.Blocker.Message),
 		}
 		if strings.TrimSpace(resp.Blocker.NextAction) != "" {
-			lines = append(lines, fmt.Sprintf("- Next action: %s", resp.Blocker.NextAction))
+			lines = append(lines, fmt.Sprintf("- **Next Action:** %s", resp.Blocker.NextAction))
 		}
 		return strings.Join(lines, "\n")
 	}
 	if len(resp.Results) == 0 {
-		return fmt.Sprintf("I used web_search for %q, but no results were returned by %s.", resp.Query, resp.Provider)
+		return fmt.Sprintf("I used `web_search` for **%q**, but no results were returned by `%s`.", resp.Query, resp.Provider)
 	}
-	lines := []string{fmt.Sprintf("I used web_search through %s for %q. Current results:", resp.Provider, resp.Query)}
+	lines := []string{
+		"## Web Search Results",
+		"",
+		fmt.Sprintf("I used `web_search` through **`%s`** for **%q**. Current results:", resp.Provider, resp.Query),
+		"",
+	}
 	for i, result := range resp.Results {
 		title := strings.TrimSpace(result.Title)
 		if title == "" {
 			title = "Untitled result"
 		}
-		line := fmt.Sprintf("%d. %s", i+1, title)
-		if strings.TrimSpace(result.URL) != "" {
-			line += fmt.Sprintf(" - %s", result.URL)
+		url := strings.TrimSpace(result.URL)
+		var itemLines []string
+		if url != "" {
+			itemLines = append(itemLines, fmt.Sprintf("%d. **[%s](%s)**", i+1, title, url))
+			itemLines = append(itemLines, fmt.Sprintf("   - **Source:** [%s](%s)", url, url))
+		} else {
+			itemLines = append(itemLines, fmt.Sprintf("%d. **%s**", i+1, title))
 		}
-		if strings.TrimSpace(result.Snippet) != "" {
-			line += fmt.Sprintf("\n   %s", strings.TrimSpace(result.Snippet))
+		if snippet := strings.TrimSpace(result.Snippet); snippet != "" {
+			cleanSnippet := strings.Join(strings.Fields(snippet), " ")
+			itemLines = append(itemLines, fmt.Sprintf("   - **Summary:** %s", cleanSnippet))
 		}
-		lines = append(lines, line)
+		lines = append(lines, strings.Join(itemLines, "\n"))
+		lines = append(lines, "")
 	}
-	return strings.Join(lines, "\n")
+	return strings.TrimSpace(strings.Join(lines, "\n"))
 }
 
 func (s *AdminServer) respondSearchChatPayload(w http.ResponseWriter, r *http.Request, summary, text string, tools []string, resultStatus string) {

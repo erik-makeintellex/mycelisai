@@ -121,13 +121,13 @@ Brings service tiers up or into hibernation on demand across Docker Compose (`co
 - **Wake**: `uv run inv service.wake --service=postgres|nats|searxng|core|interface --target=compose|k8s`
 - **Hibernate**: `uv run inv service.hibernate --tier=capabilities|core --target=compose|k8s` (refuses to hibernate `data`)
 - **Status**: `uv run inv service.status --target=compose|k8s`
-- **Prune Cache**: `uv run inv service.prune-cache` (cleans project/user external library caches, Docker BuildKit cache, and dangling images while preserving active containers and volumes)
+- **Prune Cache**: `uv run inv service.prune-cache` (cleans project/user external library caches, Docker BuildKit cache, dangling images, and enforces the max-2 image version retention policy across `mycelis/core`, `mycelis/interface`, and `mycelis-home-*` while preserving active containers and volumes)
 
 ### `core.py` (Compilation)
 Handles Go compilation and Docker image building.
 - **Compile**: `uv run inv core.compile` (repo-local binary only).
 - **Package**: `uv run inv core.package` (versioned cross-target binary archive under `dist/`, plus manifest/checksum sidecars).
-- **Build**: `uv run inv core.build` (Returns immutable image tag; no `latest` aliasing).
+- **Build**: `uv run inv core.build` (Returns immutable image tag, no `latest` aliasing, and automatically prunes older image versions so at most 2 versions per Mycelis image repository remain stored locally).
 
 ### `auth.py` (Local Operator Auth)
 Keeps local API-key development access aligned.

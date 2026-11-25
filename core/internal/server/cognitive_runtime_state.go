@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -58,7 +59,7 @@ func joinHumanList(items []string) string {
 
 func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName string) string {
 	var lines []string
-	lines = append(lines, "Current Mycelis runtime state:")
+	lines = append(lines, "## Current Mycelis Runtime State", "")
 
 	runtimeStatus := []string{"frontend route available"}
 	if s.NC != nil {
@@ -73,7 +74,7 @@ func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName s
 	} else if summary := strings.TrimSpace(availability.Summary); summary != "" {
 		runtimeStatus = append(runtimeStatus, summary)
 	}
-	lines = append(lines, "- Runtime: "+joinHumanList(runtimeStatus)+".")
+	lines = append(lines, "- **Runtime:** "+joinHumanList(runtimeStatus)+".")
 
 	organizations := s.organizationStore().List()
 	if len(organizations) > 0 {
@@ -85,7 +86,7 @@ func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName s
 		}
 		sort.Strings(orgNames)
 		if len(orgNames) > 0 {
-			lines = append(lines, fmt.Sprintf("- Organizations loaded: %s.", joinHumanList(truncateList(orgNames, 4))))
+			lines = append(lines, fmt.Sprintf("- **Organizations loaded:** %s.", joinHumanList(truncateList(orgNames, 4))))
 		}
 	}
 
@@ -102,10 +103,10 @@ func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName s
 		}
 		sort.Strings(teamSummaries)
 		if len(teamSummaries) > 0 {
-			lines = append(lines, fmt.Sprintf("- Active teams: %s.", joinHumanList(truncateList(teamSummaries, 6))))
+			lines = append(lines, fmt.Sprintf("- **Active teams:** %s.", joinHumanList(truncateList(teamSummaries, 6))))
 		}
 	} else {
-		lines = append(lines, "- Active teams: Soma runtime is not currently exposing a team roster.")
+		lines = append(lines, "- **Active teams:** Soma runtime is not currently exposing a team roster.")
 	}
 
 	home, hasOrganization := OrganizationHomePayload{}, false
@@ -118,16 +119,36 @@ func (s *AdminServer) buildRuntimeStateAnswer(organizationID, teamID, teamName s
 			orgLabel = strings.TrimSpace(home.ID)
 		}
 		if orgLabel != "" {
-			lines = append(lines, fmt.Sprintf("- Current organization focus: %s.", orgLabel))
+			lines = append(lines, fmt.Sprintf("- **Current organization focus:** %s.", orgLabel))
 		}
 	}
 
 	currentTeamLabel := resolveChatWorkspaceTeamLabel(teamID, teamName, home, manifests)
 	if currentTeamLabel != "" {
-		lines = append(lines, fmt.Sprintf("- Current team focus: %s.", currentTeamLabel))
+		lines = append(lines, fmt.Sprintf("- **Current team focus:** %s.", currentTeamLabel))
 	}
 
-	lines = append(lines, "If you want, I can also list the team leads, group outputs, or the organization-specific setup next.")
+	if s.Artifacts != nil {
+		if recent, err := s.Artifacts.ListRecent(context.Background(), 5); err == nil && len(recent) > 0 {
+			deliverableTitles := make([]string, 0, len(recent))
+			for _, art := range recent {
+				title := normalizeChatWorkspaceName(art.Title)
+				if title == "" {
+					title = strings.TrimSpace(art.FilePath)
+				}
+				if title != "" {
+					deliverableTitles = append(deliverableTitles, title)
+				}
+			}
+			if len(deliverableTitles) > 0 {
+				lines = append(lines, fmt.Sprintf("- **Recent verified deliverables:** %s.", joinHumanList(truncateList(deliverableTitles, 4))))
+			}
+		} else {
+			lines = append(lines, "- **Recent verified deliverables:** None stored yet in the current session (ready to build or queue work).")
+		}
+	}
+
+	lines = append(lines, "", "If you want, I can also list the team leads, group outputs, or the organization-specific setup next.")
 	return strings.Join(lines, "\n")
 }
 

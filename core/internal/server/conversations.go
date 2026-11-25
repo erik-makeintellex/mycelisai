@@ -1,11 +1,14 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
+	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/pkg/protocol"
 )
 
@@ -31,11 +34,119 @@ func (s *AdminServer) HandleGetRunConversation(w http.ResponseWriter, r *http.Re
 		respondAPIError(w, "Failed to fetch conversation", http.StatusInternalServerError)
 		return
 	}
+	if len(turns) == 0 && s.Events != nil {
+		turns = s.synthesizeRunConversationFromEvents(r.Context(), runID, agentFilter)
+	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]interface{}{
 		"run_id": runID,
 		"turns":  turns,
 	}))
+}
+
+func (s *AdminServer) logConfirmedRunConversationTurns(ctx context.Context, runID, proofID string, scope *protocol.ScopeValidation, finalSummary string) {
+	if s.Conversations == nil || strings.TrimSpace(runID) == "" || scope == nil {
+		return
+	}
+	teamID, teamName := plannedTeamIdentity(scope.PlannedToolCalls)
+	if teamID == "" {
+		teamID = "admin-core"
+	}
+	turnIdx := 0
+	_, _ = s.Conversations.LogTurn(ctx, protocol.ConversationTurnData{
+		RunID: runID, SessionID: runID, TenantID: "default", AgentID: "soma", TeamID: teamID,
+		TurnIndex: turnIdx, Role: "system",
+		Content: fmt.Sprintf("Approved proposal (proof %s) started execution across %d planned step(s).", proofID, len(scope.PlannedToolCalls)),
+	})
+	for _, call := range scope.PlannedToolCalls {
+		toolName := strings.TrimSpace(call.Name)
+		if toolName == "" {
+			continue
+		}
+		turnIdx++
+		callTeamID := firstNonEmptyString(call.Arguments["team_id"], teamID)
+		summary := fmt.Sprintf("Executing %s", toolName)
+		resultMsg := fmt.Sprintf("%s completed", toolName)
+		switch toolName {
+		case "create_team":
+			cName := firstNonEmptyString(call.Arguments["name"], callTeamID, teamName)
+			summary = fmt.Sprintf("Spawning team %s (%s)", cName, callTeamID)
+			resultMsg = fmt.Sprintf("Team %s (%s) active and listening on swarm.team.%s.internal.command", cName, callTeamID, callTeamID)
+		case "write_file":
+			p := firstNonEmptyString(call.Arguments["path"], call.Arguments["file_path"])
+			t := firstNonEmptyString(call.Arguments["title"], p)
+			summary = fmt.Sprintf("Writing deliverable %s (%s)", t, p)
+			resultMsg = fmt.Sprintf("Verified workspace artifact written to %s", p)
+		}
+		_, _ = s.Conversations.LogTurn(ctx, protocol.ConversationTurnData{
+			RunID: runID, SessionID: runID, TenantID: "default", AgentID: "soma", TeamID: callTeamID,
+			TurnIndex: turnIdx, Role: "tool_call", ToolName: toolName, ToolArgs: call.Arguments, Content: summary,
+		})
+		turnIdx++
+		_, _ = s.Conversations.LogTurn(ctx, protocol.ConversationTurnData{
+			RunID: runID, SessionID: runID, TenantID: "default", AgentID: "soma", TeamID: callTeamID,
+			TurnIndex: turnIdx, Role: "tool_result", ToolName: toolName, Content: resultMsg,
+		})
+	}
+	if strings.TrimSpace(finalSummary) != "" {
+		turnIdx++
+		_, _ = s.Conversations.LogTurn(ctx, protocol.ConversationTurnData{
+			RunID: runID, SessionID: runID, TenantID: "default", AgentID: "soma", TeamID: teamID,
+			TurnIndex: turnIdx, Role: "assistant", Content: finalSummary,
+		})
+	}
+}
+
+func (s *AdminServer) synthesizeRunConversationFromEvents(ctx context.Context, runID, agentFilter string) []conversations.ConversationTurn {
+	timeline, err := s.Events.GetRunTimeline(ctx, runID)
+	if err != nil || len(timeline) == 0 {
+		return []conversations.ConversationTurn{}
+	}
+	turns := make([]conversations.ConversationTurn, 0, len(timeline))
+	for idx, ev := range timeline {
+		agentID := firstNonEmptyString(ev.SourceAgent, "soma")
+		if agentFilter != "" && !strings.EqualFold(agentID, agentFilter) {
+			continue
+		}
+		teamID := firstNonEmptyString(ev.SourceTeam, "governance")
+		role := "assistant"
+		toolName := ""
+		content := fmt.Sprintf("Event `%s` recorded.", ev.EventType)
+		switch string(ev.EventType) {
+		case string(protocol.EventToolCompleted), "signal.published":
+			role = "tool_result"
+			tName := firstNonEmptyString(ev.Payload["team_name"], ev.Payload["team_id"], teamID)
+			toolName = "create_team"
+			content = fmt.Sprintf("Team **%s** (`%s`) activated and published readiness on `%s`.", tName, firstNonEmptyString(ev.Payload["team_id"], teamID), firstNonEmptyString(ev.Payload["speaks_on"], "swarm.team."+teamID+".signal.result"))
+		case string(protocol.EventArtifactCreated):
+			role = "tool_result"
+			toolName = "write_file"
+			basePath := firstNonEmptyString(ev.Payload["base_path"], "workspace")
+			pkgKind := firstNonEmptyString(ev.Payload["package_kind"], "deliverable_package")
+			content = fmt.Sprintf("Verified deliverable package (`%s`) written under `%s` with SHA-256 proof at `%s`.", pkgKind, basePath, firstNonEmptyString(ev.Payload["proof_path"], basePath+"/proof.md"))
+		case string(protocol.EventMissionCompleted):
+			role = "assistant"
+			content = fmt.Sprintf("Run `%s` completed with execution state **%s**.", runID, firstNonEmptyString(ev.Payload["execution_state"], "verified"))
+		case string(protocol.EventMissionFailed):
+			role = "system"
+			content = fmt.Sprintf("Run `%s` failed: %s", runID, firstNonEmptyString(ev.Payload["reason"], "execution error"))
+		}
+		turns = append(turns, conversations.ConversationTurn{
+			ID:        ev.ID,
+			RunID:     runID,
+			SessionID: runID,
+			TenantID:  firstNonEmptyString(ev.TenantID, "default"),
+			AgentID:   agentID,
+			TeamID:    teamID,
+			TurnIndex: idx,
+			Role:      role,
+			ToolName:  toolName,
+			ToolArgs:  ev.Payload,
+			Content:   content,
+			CreatedAt: ev.EmittedAt,
+		})
+	}
+	return turns
 }
 
 // GET /api/v1/conversations/{session_id}

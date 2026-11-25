@@ -153,6 +153,8 @@ def deploy(c, values_file="", verify_package=False, release_label="", package_ou
 
     tag = core_build.body(c)
     backend = _k8s_backend()
+    if not with_interface and backend == "rancher-desktop":
+        with_interface = os.getenv("MYCELIS_K8S_WITH_INTERFACE", "").strip().lower() not in {"0", "false", "no"}
     _helm_deploy_release(
         c,
         tag=tag,

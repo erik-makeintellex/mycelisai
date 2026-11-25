@@ -5,6 +5,7 @@ import { dispatchSignalToNodes } from '@/store/cortexStoreUtils';
 import { normalizeIncomingSignal } from '@/lib/signalNormalize';
 
 let eventSourceRef: EventSource | null = null;
+let reconnectTimerRef: ReturnType<typeof setTimeout> | null = null;
 
 export function createCortexStreamSlice(
     set: CortexSet,
@@ -12,6 +13,10 @@ export function createCortexStreamSlice(
 ): CortexSlice<'initializeStream' | 'disconnectStream'> {
     return {
         initializeStream: (force = false) => {
+            if (reconnectTimerRef) {
+                clearTimeout(reconnectTimerRef);
+                reconnectTimerRef = null;
+            }
             if (eventSourceRef) {
                 if (!force) return;
                 eventSourceRef.close();
@@ -22,6 +27,10 @@ export function createCortexStreamSlice(
             const source = new EventSource('/api/v1/stream');
 
             source.onopen = () => {
+                if (reconnectTimerRef) {
+                    clearTimeout(reconnectTimerRef);
+                    reconnectTimerRef = null;
+                }
                 set({ isStreamConnected: true, streamConnectionState: 'online' });
             };
 
@@ -79,12 +88,22 @@ export function createCortexStreamSlice(
                 set({ isStreamConnected: false, streamConnectionState: 'offline' });
                 eventSourceRef = null;
                 source.close();
+                if (!reconnectTimerRef) {
+                    reconnectTimerRef = setTimeout(() => {
+                        reconnectTimerRef = null;
+                        get().initializeStream(true);
+                    }, 3000);
+                }
             };
 
             eventSourceRef = source;
         },
 
         disconnectStream: () => {
+            if (reconnectTimerRef) {
+                clearTimeout(reconnectTimerRef);
+                reconnectTimerRef = null;
+            }
             if (eventSourceRef) {
                 eventSourceRef.close();
                 eventSourceRef = null;

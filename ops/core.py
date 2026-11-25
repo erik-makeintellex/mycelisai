@@ -6,7 +6,7 @@ from pathlib import Path
 
 from invoke import task, Collection
 from .config import CORE_DIR, ROOT_DIR, ensure_managed_cache_dirs, is_windows, managed_cache_env
-from .k8s_rancher import _ensure_rancher_desktop_path
+from .k8s_rancher import _ensure_rancher_desktop_path, prune_old_mycelis_images
 from .packaging import relative_to_root, write_checksum_file, write_json
 
 
@@ -211,6 +211,8 @@ def build(c):
     _ensure_rancher_desktop_path()
     # Assumes Dockerfile is in core/Dockerfile and context is root
     c.run(f"docker build -t mycelis/core:{tag} -f core/Dockerfile .")
+    if type(c).__name__ == "Context":
+        prune_old_mycelis_images(tag, max_versions=2)
 
     return tag
 

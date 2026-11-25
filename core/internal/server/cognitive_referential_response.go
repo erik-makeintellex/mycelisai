@@ -57,8 +57,53 @@ func sharedIntentTokenCount(a, b map[string]bool) int {
 	return count
 }
 
+func applyRetryResolution(messages []chatRequestMessage) ([]chatRequestMessage, string) {
+	latest := latestUserMessageContent(messages)
+	retriedText, isRetried := resolveRetryLatestUserText(messages)
+	if !isRetried {
+		return messages, latest
+	}
+	if idx := latestUserMessageIndex(messages); idx >= 0 {
+		messages[idx].Content = retriedText
+	}
+	return messages, retriedText
+}
+
 func normalizeIntentText(text string) string {
 	return strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(text)), " "))
+}
+
+func isRetryTurn(text string) bool {
+	lower := strings.TrimRight(normalizeIntentText(text), "?.! ")
+	switch lower {
+	case "try again", "retry", "try that again", "retry that", "please try again", "run it again", "try once more",
+		"show me list again", "show me the list again", "show list again", "show the list again",
+		"show me results again", "show me the results again", "show results again",
+		"format that as a list", "format as a list", "repeat that", "show that again":
+		return true
+	}
+	if strings.HasPrefix(lower, "show me ") && strings.HasSuffix(lower, " again") {
+		return true
+	}
+	return false
+}
+
+func resolveRetryLatestUserText(messages []chatRequestMessage) (string, bool) {
+	latest := latestUserMessageContent(messages)
+	if !isRetryTurn(latest) {
+		return latest, false
+	}
+	for i := len(messages) - 2; i >= 0; i-- {
+		if !strings.EqualFold(strings.TrimSpace(messages[i].Role), "user") {
+			continue
+		}
+		candidate := stripRouteAndContext(messages[i].Content)
+		if candidate == "" || isRetryTurn(candidate) || strings.HasPrefix(candidate, "[WORKSPACE CONTEXT]") || strings.HasPrefix(candidate, "[REFERENTIAL REVIEW]") {
+			continue
+		}
+		return candidate, true
+	}
+	return latest, false
 }
 
 func truncateText(text string, limit int) string {

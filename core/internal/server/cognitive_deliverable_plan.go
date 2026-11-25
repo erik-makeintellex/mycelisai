@@ -63,13 +63,16 @@ func isGeneralWebAppProjectBundleRequest(lower string) bool {
 	if namedFilePattern.MatchString(lower) {
 		return false
 	}
+	if requestContainsAny(lower, []string{"mcp", "mcps", "target mcp", "web search", "private service", "api token"}) {
+		return false
+	}
+	if hasTeamCreationIntent(lower) && !isExplicitWebAppOrArtifactTarget(lower) {
+		return false
+	}
 	if isSimpleCasualBuildRequest(lower) {
 		return true
 	}
 	if !hasDeliverableCreationIntent(lower) && !hasTeamCreationIntent(lower) {
-		return false
-	}
-	if requestContainsAny(lower, []string{"mcp", "mcps", "target mcp", "web search", "private service", "api token"}) {
 		return false
 	}
 	return requestContainsAny(lower, []string{
@@ -77,6 +80,16 @@ func isGeneralWebAppProjectBundleRequest(lower string) bool {
 		"stopwatch", "todo", "to-do", "tracker", "board", "kanban", "utility", "converter",
 		"form", "simulator", "visualizer", "frontend", "ui", "interface", "portal", "prototype",
 		"game", "script", "checklist", "runbook", "roadmap", "guide", "report", "notes", "markdown", "document",
+	})
+}
+
+func isGeneralTeamTaskDeliverableRequest(lower string) bool {
+	if !hasTeamCreationIntent(lower) || namedFilePattern.MatchString(lower) {
+		return false
+	}
+	return !requestContainsAny(lower, []string{
+		"mcp", "mcps", "target mcp", "web search", "github", "fetch", "browser",
+		"private service", "api token", "api key", "customer data", "deployment context",
 	})
 }
 
@@ -114,6 +127,8 @@ func inferUserDeliverableBundlePlanFromRequest(text string) ([]protocol.PlannedT
 	case isGeneralWebAppProjectBundleRequest(lower):
 		slug := extractDevProjectSlug(trimmed)
 		return buildDeliverableBundleCalls("deliverables/projects/"+slug, "dev_project_bundle", slug, generalDevProjectBundleSpecs(trimmed, slug)), true
+	case isGeneralTeamTaskDeliverableRequest(lower):
+		return teamExecutionBundleCalls(trimmed), true
 	default:
 		return nil, false
 	}
@@ -256,18 +271,9 @@ func missionBlueprintBundleSpecs(goal string) []deliverableBundleFileSpec {
 
 func chainedPipelineBundleSpecs(goal string) []deliverableBundleFileSpec {
 	return []deliverableBundleFileSpec{
-		{
-			name: "channel_chain_topology.yaml", title: "Inter-Team & MCP Channel Chain Topology (YAML)", contentType: "text/yaml",
-			content: "pipeline_id: chained-team-pipeline\ngoal: " + strconvQuoteSafe(goal) + "\nupstream_team: mcp-upstream-discovery-team\n  mcp_channel: swarm.mcp.outputs.registered\n  speaks_on: swarm.team.mcp-upstream-discovery-team.signal.result\ndownstream_team: chained-downstream-delivery-team\n  listens_on: swarm.team.mcp-upstream-discovery-team.signal.result\n  speaks_on: swarm.team.chained-downstream-delivery-team.signal.result\n",
-		},
-		{
-			name: "upstream_mcp_channel_output.json", title: "Registered MCP Channel Output Snapshot (JSON)", contentType: "application/json",
-			content: "{\n  \"source_team\": \"mcp-upstream-discovery-team\",\n  \"mcp_channel\": \"swarm.mcp.outputs.registered\",\n  \"published_subject\": \"swarm.team.mcp-upstream-discovery-team.signal.result\",\n  \"status\": \"verified\",\n  \"findings\": [\"Registered MCP tool outputs normalized for downstream consumption\"]\n}\n",
-		},
-		{
-			name: "downstream_chained_deliverable.md", title: "Downstream Chained Team Deliverable", contentType: "text/markdown",
-			content: "# Downstream Chained Team Deliverable\n\n## Goal\n" + goal + "\n\n## Channel Handoff Lineage\n- **Upstream Producer:** `MCP & Upstream Discovery Team` (`mcp-upstream-discovery-team`) speaking on `swarm.team.mcp-upstream-discovery-team.signal.result`.\n- **Downstream Consumer:** `Chained Downstream Delivery Team` (`chained-downstream-delivery-team`) listening on `swarm.team.mcp-upstream-discovery-team.signal.result` and publishing to `swarm.team.chained-downstream-delivery-team.signal.result`.\n",
-		},
+		{name: "channel_chain_topology.yaml", title: "Inter-Team & MCP Channel Chain Topology (YAML)", contentType: "text/yaml", content: "pipeline_id: chained-team-pipeline\ngoal: " + strconvQuoteSafe(goal) + "\nupstream_team: mcp-upstream-discovery-team\n  mcp_channel: swarm.mcp.outputs.registered\n  speaks_on: swarm.team.mcp-upstream-discovery-team.signal.result\ndownstream_team: chained-downstream-delivery-team\n  listens_on: swarm.team.mcp-upstream-discovery-team.signal.result\n  speaks_on: swarm.team.chained-downstream-delivery-team.signal.result\n"},
+		{name: "upstream_mcp_channel_output.json", title: "Registered MCP Channel Output Snapshot (JSON)", contentType: "application/json", content: "{\n  \"source_team\": \"mcp-upstream-discovery-team\",\n  \"mcp_channel\": \"swarm.mcp.outputs.registered\",\n  \"published_subject\": \"swarm.team.mcp-upstream-discovery-team.signal.result\",\n  \"status\": \"verified\",\n  \"findings\": [\"Registered MCP tool outputs normalized for downstream consumption\"]\n}\n"},
+		{name: "downstream_chained_deliverable.md", title: "Downstream Chained Team Deliverable", contentType: "text/markdown", content: "# Downstream Chained Team Deliverable\n\n## Goal\n" + goal + "\n\n## Channel Handoff Lineage\n- **Upstream Producer:** `MCP & Upstream Discovery Team` (`mcp-upstream-discovery-team`) speaking on `swarm.team.mcp-upstream-discovery-team.signal.result`.\n- **Downstream Consumer:** `Chained Downstream Delivery Team` (`chained-downstream-delivery-team`) listening on `swarm.team.mcp-upstream-discovery-team.signal.result` and publishing to `swarm.team.chained-downstream-delivery-team.signal.result`.\n"},
 	}
 }
 
@@ -276,23 +282,17 @@ func strconvQuoteSafe(s string) string {
 }
 
 func inferFallbackDeliverableWritePlan(latestRequest, agentReply string) (protocol.PlannedToolCall, bool) {
-	trimmedReq := strings.TrimSpace(latestRequest)
-	lower := strings.ToLower(trimmedReq)
-	if lower == "" || !hasDeliverableCreationIntent(lower) {
+	trimmedReq, reply := strings.TrimSpace(latestRequest), strings.TrimSpace(agentReply)
+	if !hasDeliverableCreationIntent(strings.ToLower(trimmedReq)) {
 		return protocol.PlannedToolCall{}, false
 	}
-	reply := strings.TrimSpace(agentReply)
-	isRawJSON := strings.HasPrefix(reply, "{") || strings.HasPrefix(reply, "[")
 	content := "# Deliverable Draft\n\n## Request Summary\n" + trimmedReq + "\n\n## Key Notes\n- Generated as a governed workspace draft for operator review.\n"
-	if reply != "" && !isRawJSON {
+	if reply != "" && !strings.HasPrefix(reply, "{") && !strings.HasPrefix(reply, "[") {
 		if strings.HasPrefix(reply, "#") {
 			content = reply + "\n"
 		} else {
 			content = "# Deliverable Draft\n\n" + reply + "\n"
 		}
 	}
-	return protocol.PlannedToolCall{
-		Name:      "write_file",
-		Arguments: map[string]any{"path": "deliverables/soma-draft.md", "content": content, "artifact_role": "Deliverable Draft", "content_type": "text/markdown"},
-	}, true
+	return protocol.PlannedToolCall{Name: "write_file", Arguments: map[string]any{"path": "deliverables/soma-draft.md", "content": content, "artifact_role": "Deliverable Draft", "content_type": "text/markdown"}}, true
 }

@@ -43,8 +43,19 @@ func (a *Agent) processMessageStructured(input string, priorHistory []cognitive.
 	if err != nil {
 		log.Printf("Agent [%s] brain freeze: %v", a.Manifest.ID, err)
 		availability := a.brain.ExecutionAvailability(profile, a.Manifest.Provider)
-		if availability.Summary == "" {
-			availability.Summary = "Soma does not have an available cognitive engine right now."
+		availability.Available = false
+		if availability.Code == "" || availability.Code == cognitive.ExecutionAvailable {
+			availability.Code = cognitive.ExecutionProviderOffline
+		}
+		if availability.Summary == "" || availability.Summary == "Soma has an available cognitive engine." {
+			availability.Summary = "Soma's configured AI Engine (Ollama / local provider) is unreachable right now."
+		}
+		if availability.RecommendedAction == "" {
+			availability.RecommendedAction = "Verify that your local AI Engine (e.g. `ollama serve` on port 11434) is running and reachable, or configure an alternative AI Engine in Settings."
+		}
+		availability.SetupRequired = true
+		if availability.SetupPath == "" {
+			availability.SetupPath = cognitive.DefaultExecutionSetupPath
 		}
 		return ProcessResult{Availability: &availability}
 	}
@@ -106,7 +117,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 	var sys string
 	if isDirect {
 		sys = "You are Soma, the central orchestrator and executive coordinator of the Mycelis AI Organization platform.\n" +
-			"Answer the user's request directly, helpfully, and concisely in plain readable text.\n" +
+			"Answer the user's request directly, helpfully, and concisely in well-formatted GitHub-Flavored Markdown (use clear `##` section headings, bulleted or numbered lists with **bold** lead-ins, `[Title](url)` links, and markdown tables or fenced code blocks where appropriate).\n" +
 			"Use the live runtime context below when answering questions about Mycelis, active teams, services, or current work.\n" +
 			"If asked for the secret codeword, reply with \"BLUEBERRY\".\n" +
 			"Do not output tool_call JSON in this response."
@@ -118,6 +129,7 @@ func (a *Agent) buildInferRequest(input string, priorHistory []cognitive.ChatMes
 		if sys == "" {
 			sys = fmt.Sprintf("You are a %s in the %s team.", a.Manifest.Role, a.TeamID)
 		}
+		sys += "\nWhen replying to the user with final results, format your response in clean GitHub-Flavored Markdown (bulleted/numbered lists with **bold** labels, `##` headings, and `[Title](url)` links)."
 		if a.internalTools != nil {
 			sys += a.internalTools.BuildContext(a.Manifest.ID, a.TeamID, a.Manifest.Role, a.TeamInputs, a.TeamDeliveries, cleanInput)
 		}

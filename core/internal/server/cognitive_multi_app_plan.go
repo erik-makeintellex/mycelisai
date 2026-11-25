@@ -31,11 +31,23 @@ func isInteractingMultiAppRequest(text string) bool {
 		requestContainsAny(lower, []string{"another", "second", "companion", "two", "both"})
 }
 
+func isExplicitWebAppOrArtifactTarget(lower string) bool {
+	return requestContainsAny(lower, []string{
+		"app", "application", "website", "web app", "landing page", "calculator", "timer",
+		"stopwatch", "todo", "to-do", "tracker", "board", "kanban", "widget", "converter",
+		"form", "simulator", "visualizer", "frontend", "portal", "prototype",
+		"game", "script", "checklist", "runbook", "roadmap", "markdown", "document",
+	})
+}
+
 func isSimpleCasualBuildRequest(lower string) bool {
 	if lower == "" || namedFilePattern.MatchString(lower) {
 		return false
 	}
 	if requestContainsAny(lower, []string{"mcp", "mcps", "target mcp", "web search", "private service", "api token"}) {
+		return false
+	}
+	if hasTeamCreationIntent(lower) && !isExplicitWebAppOrArtifactTarget(lower) {
 		return false
 	}
 	casualVerbs := []string{

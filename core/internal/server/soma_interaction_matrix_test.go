@@ -180,6 +180,7 @@ func TestSomaInteractionMatrix_Category3_DocumentsScriptsChecklistsAndRunbooks(t
 func TestSomaInteractionMatrix_Category4_TeamsMultiAppAndMCPAdditions(t *testing.T) {
 	prompts := []string{
 		"create a team to build an inventory service",
+		"put a team together to try and find out what's going on with market competitors and produce a research report",
 		"Build a storefront app and have a team work on another application for fulfillment that interacts with the initial ask",
 		"Add Standard Deployment MCP Filesystem (mcp_id: filesystem, mcp_group: standard, mcp_title: Filesystem) to team Alpha (team_id: alpha)",
 		"Plan for team Alpha (team_id: alpha) and execute next steps",
@@ -191,6 +192,11 @@ func TestSomaInteractionMatrix_Category4_TeamsMultiAppAndMCPAdditions(t *testing
 			if env.Mode != protocol.ModeProposal || payload.Proposal == nil {
 				t.Fatalf("expected proposal mode for %q, got %q", prompt, env.Mode)
 			}
+			for _, res := range payload.Proposal.AffectedResources {
+				if strings.Contains(res, "starter-web-app") {
+					t.Fatalf("team prompt %q must not fall back to starter-web-app, got affected resources: %v", prompt, payload.Proposal.AffectedResources)
+				}
+			}
 		})
 	}
 }
@@ -199,6 +205,7 @@ func TestSomaInteractionMatrix_Category5_RuntimePlaybookSearchAndPoisonedHistory
 	directPrompts := []string{
 		"state?",
 		"what's the current state of mycelis?",
+		"what's been delivered through testing lately?",
 		"what teams currently exist?",
 		"are you able to make web requests?",
 		"consult the architect and sentry on security boundaries",

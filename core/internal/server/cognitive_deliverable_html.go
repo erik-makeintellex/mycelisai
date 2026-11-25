@@ -133,6 +133,12 @@ func extractDevProjectSlug(goal string) string {
 			return keyword + "-app"
 		}
 	}
+	if derived := strings.TrimSuffix(deriveDynamicTeamTopicSlug(goal), "-team"); derived != "" {
+		if !strings.HasSuffix(derived, "-app") && !strings.HasSuffix(derived, "-project") {
+			return derived + "-app"
+		}
+		return derived
+	}
 	return "starter-web-app"
 }
 

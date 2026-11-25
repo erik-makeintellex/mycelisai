@@ -5,6 +5,7 @@ from invoke import Collection, task
 
 from . import cache as cache_tasks, compose as compose_tasks
 from .config import API_HOST, API_PORT, INTERFACE_HOST, INTERFACE_PORT, NAMESPACE
+from .k8s_rancher import prune_old_mycelis_images
 
 
 VALID_TARGETS = {"compose", "k8s"}
@@ -232,6 +233,8 @@ def prune_cache(c, user=True, docker=True):
     print("=== Mycelis Service Manager: PRUNE CACHE ===")
     cache_tasks.clean.body(c, project=True, user=bool(user))
     if docker:
+        if type(c).__name__ == "Context":
+            prune_old_mycelis_images(max_versions=2)
         compose_tasks._docker_run(["builder", "prune", "-af"], check=False)
         compose_tasks._docker_run(["image", "prune", "-f"], check=False)
         print("Docker BuildKit cache and dangling builder images pruned; active containers and volumes preserved.")

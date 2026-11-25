@@ -1,0 +1,78 @@
+{{- if and .Values.searxng .Values.searxng.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-searxng-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}-searxng
+data:
+  settings.yml: |
+    use_default_settings: true
+    server:
+      bind_address: "0.0.0.0"
+      secret_key: "mycelis-k8s-searxng-search-secret"
+      limiter: false
+      image_proxy: false
+    search:
+      formats:
+        - html
+        - json
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}-searxng
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}-searxng
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}-searxng
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}-searxng
+    spec:
+      containers:
+        - name: searxng
+          image: "{{ default "searxng/searxng:latest" .Values.searxng.image }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: SEARXNG_BASE_URL
+              value: "http://{{ .Chart.Name }}-searxng:8080/"
+            - name: SEARXNG_SECRET
+              value: "mycelis-k8s-searxng-search-secret"
+          volumeMounts:
+            - name: searxng-settings
+              mountPath: /etc/searxng/settings.yml
+              subPath: settings.yml
+              readOnly: true
+      volumes:
+        - name: searxng-settings
+          configMap:
+            name: {{ .Chart.Name }}-searxng-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}-searxng
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}-searxng
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Chart.Name }}-searxng
+{{- end }}

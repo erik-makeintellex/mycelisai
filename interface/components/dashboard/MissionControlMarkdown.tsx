@@ -39,18 +39,18 @@ export default function MissionControlMarkdown({ content }: { content: string })
                     );
                 },
                 h1: ({ children }) => (
-                    <h1 className="text-sm font-bold text-cortex-text-main mt-3 mb-1 first:mt-0">{children}</h1>
+                    <h1 className="text-sm font-bold text-cortex-text-main mt-3 mb-1.5 first:mt-0 pb-1 border-b border-cortex-border/50">{children}</h1>
                 ),
                 h2: ({ children }) => (
-                    <h2 className="text-xs font-bold text-cortex-text-main mt-2.5 mb-1 first:mt-0">{children}</h2>
+                    <h2 className="text-xs font-bold text-cortex-text-main mt-3 mb-1.5 first:mt-0 uppercase tracking-wide text-cortex-primary">{children}</h2>
                 ),
                 h3: ({ children }) => (
-                    <h3 className="text-xs font-bold text-cortex-text-muted mt-2 mb-0.5 first:mt-0">{children}</h3>
+                    <h3 className="text-xs font-semibold text-cortex-text-main mt-2 mb-1 first:mt-0">{children}</h3>
                 ),
-                p: ({ children }) => <p className="mb-1.5 last:mb-0">{children}</p>,
-                ul: ({ children }) => <ul className="list-disc list-inside space-y-0.5 mb-1.5 ml-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside space-y-0.5 mb-1.5 ml-1">{children}</ol>,
-                li: ({ children }) => <li className="text-cortex-text-main">{children}</li>,
+                p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
+                ul: ({ children }) => <ul className="list-disc list-outside space-y-1.5 mb-2.5 pl-4 marker:text-cortex-primary">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-outside space-y-2.5 mb-2.5 pl-5 marker:font-mono marker:font-bold marker:text-cortex-primary">{children}</ol>,
+                li: ({ children }) => <li className="text-cortex-text-main pl-1 leading-relaxed">{children}</li>,
                 table: ({ children }) => (
                     <div className="overflow-x-auto my-2 border border-cortex-border rounded-lg">
                         <table className="w-full text-[10px] font-mono">{children}</table>

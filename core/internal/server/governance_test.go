@@ -38,8 +38,16 @@ func TestHandleGetPolicy_NilGuard(t *testing.T) {
 
 func TestHandleUpdatePolicy(t *testing.T) {
 	// SavePolicyToFile writes to "config/policy.yaml" (relative).
-	// Use t.Chdir so the file write succeeds without polluting the repo.
-	t.Chdir(t.TempDir())
+	// Use os.Chdir with manual restore before t.TempDir cleanup so Windows does not lock the temp cwd.
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	tmpDir := t.TempDir()
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("chdir tmp: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origDir) })
 	os.MkdirAll("config", 0755)
 
 	s := newTestServer(withGuard(defaultTestPolicyConfig()))

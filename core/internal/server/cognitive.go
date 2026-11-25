@@ -227,6 +227,15 @@ func isRuntimeStateQuestion(text string) bool {
 		"list teams",
 		"test connectivity",
 		"connectivity status",
+		"what has been delivered",
+		"what is been delivered",
+		"delivered lately",
+		"delivered recently",
+		"recent deliveries",
+		"recent deliverables",
+		"what have we delivered",
+		"what did we deliver",
+		"testing lately",
 	}
 	for _, phrase := range phrases {
 		if strings.Contains(normalized, phrase) {
@@ -248,7 +257,7 @@ func normalizeChatRequestMessages(messages []chatRequestMessage) ([]chatRequestM
 	copy(normalized, messages)
 	if len(mutTools) == 0 {
 		normalized[idx].Content = directAnswerRoutePrefix + "\n" +
-			"Answer the latest request directly in readable text. Do not call mutating tools, do not emit tool_call JSON, and do not route work unless the user explicitly asked to change something.\n\n" +
+			"Answer the latest request directly in well-formatted GitHub-Flavored Markdown (use bulleted or numbered lists, **bold** labels, and `##` headings when presenting multiple items or structured outputs). Do not call mutating tools, do not emit tool_call JSON, and do not route work unless the user explicitly asked to change something.\n\n" +
 			"Original request:\n" + trimmed
 		return normalized, nil
 	}

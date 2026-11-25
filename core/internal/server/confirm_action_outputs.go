@@ -32,6 +32,22 @@ func outputRefsFromPackageSummary(summary *packageOutputSummary) []protocol.Outp
 	return refs
 }
 
+func packageSummaryTitleAndMessage(summary *packageOutputSummary) (string, string) {
+	if summary == nil {
+		return "Deliverable package", ""
+	}
+	if summary.PackageKind == "" || summary.PackageKind == "codex_task_bundle" {
+		return firstNonEmptyString(summary.TeamName, "Codex task bundle"),
+			fmt.Sprintf("Codex task bundle created under %s with proof at %s.", summary.BasePath, summary.ProofPath)
+	}
+	kindLabel := strings.TrimSuffix(deliverablePackageProofTitle(summary.PackageKind), " Proof")
+	title := firstNonEmptyString(summary.TeamName, kindLabel, titleCaseTeamID(summary.PackageSlug), "Deliverable package")
+	if summary.TeamName != "" {
+		return title, fmt.Sprintf("Team %s activated and %s created under %s (proof verified at %s).", summary.TeamName, strings.ToLower(kindLabel), summary.BasePath, summary.ProofPath)
+	}
+	return title, fmt.Sprintf("%s created under %s with proof at %s.", kindLabel, summary.BasePath, summary.ProofPath)
+}
+
 func deliveryPackageFromPackageSummary(summary *packageOutputSummary) protocol.DeliveryPackageSummary {
 	if summary == nil {
 		return protocol.DeliveryPackageSummary{}
@@ -41,15 +57,12 @@ func deliveryPackageFromPackageSummary(summary *packageOutputSummary) protocol.D
 		refs = outputRefsFromPackageSummary(summary)
 	}
 	primaryRef, proofRef := outputRefPointers(refs)
-	title := "Codex task bundle"
-	if summary.TeamName != "" || summary.TeamID != "" {
-		title = firstNonEmptyString(summary.TeamName, summary.PackageKind, "Codex task bundle")
-	}
+	title, summaryMsg := packageSummaryTitleAndMessage(summary)
 	return protocol.DeliveryPackageSummary{
 		PackageID: summary.PackageID, RunID: summary.RunID, TeamID: summary.TeamID, TeamName: summary.TeamName, Title: title,
-		Summary:     fmt.Sprintf("Codex task bundle created under %s with proof at %s.", summary.BasePath, summary.ProofPath),
+		Summary:     summaryMsg,
 		PackageKind: summary.PackageKind, Status: "verified", PrimaryOutputRef: primaryRef, Items: refs,
-		NextActions: []string{"Open the implementation task.", "Run the validation checklist.", "Review package proof before promotion."},
+		NextActions: []string{"Inspect the primary deliverable.", "Review supporting files and channel outputs.", "Verify the SHA-256 package proof."},
 		ProofRef:    proofRef, InspectRefs: refs,
 	}
 }
@@ -59,7 +72,7 @@ func executionSummaryFromPackageSummary(summary *packageOutputSummary) protocol.
 		return protocol.ExecutionSummary{}
 	}
 	dp := deliveryPackageFromPackageSummary(summary)
-	return protocol.ExecutionSummary{Title: "Codex task bundle", Summary: dp.Summary, Status: "verified", RunID: summary.RunID, ProofID: summary.ProofID, OutputRefs: dp.Items, DeliveryPackage: &dp}
+	return protocol.ExecutionSummary{Title: dp.Title, Summary: dp.Summary, Status: "verified", RunID: summary.RunID, ProofID: summary.ProofID, OutputRefs: dp.Items, DeliveryPackage: &dp}
 }
 
 func confirmActionOutputsFromPlannedCalls(planned []protocol.PlannedToolCall, runID, proofID string) ([]protocol.OutputRef, []protocol.ExecutionOutput, []protocol.ChatArtifactRef) {

@@ -13,6 +13,7 @@ from .k8s_rancher import (
     _ensure_rancher_desktop_path,
     _rancher_desktop_candidate_dirs,
     _rancher_desktop_context_available,
+    ensure_host_ollama_running,
     prune_old_mycelis_images,
     rancher_target_context,
     rancher_target_url,
@@ -129,6 +130,9 @@ def _helm_deploy_release(
 
     print("   Loading Image into Cluster...")
     if backend == "rancher-desktop":
+        if type(c).__name__ == "Context":
+            status_msg = "Online" if ensure_host_ollama_running() else "NOT listening (start Ollama if needed)"
+            print(f"   Windows Host AI (Ollama :11434): {status_msg}")
         target_ctx = rancher_target_context()
         target_url = rancher_target_url()
         c.run(f"kubectl config use-context {target_ctx}", hide=True, warn=True)
@@ -187,6 +191,9 @@ def _helm_deploy_release(
             "--set dataVolume.storageClassName=local-path "
             "--set nats.jetstream.fileStore.pvc.storageClassName=local-path "
             "--set postgresql.primary.persistence.storageClass=local-path "
+            "--set searxng.enabled=true "
+            "--set-string search.provider=searxng "
+            "--set-string search.searxngEndpoint=http://mycelis-core-searxng:8080 "
         )
         if not k8s_text_endpoint:
             k8s_text_endpoint = "http://host.rancher-desktop.internal:11434/v1"
@@ -287,3 +294,6 @@ def _check_cluster_status(c, backend_fn) -> None:
 
     print("\nPersistence (PVC) Status:")
     c.run(f"kubectl get pvc -n {NAMESPACE}")
+    if backend == "rancher-desktop" and type(c).__name__ == "Context":
+        ollama_up = _port_open(11434) or ensure_host_ollama_running()
+        print(f"\nWindows Host AI (Ollama :11434): {'Online' if ollama_up else 'OFFLINE (run: ollama serve)'}")

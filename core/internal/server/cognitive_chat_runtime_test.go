@@ -52,13 +52,13 @@ func TestHandleChat_ReturnsDeterministicRuntimeStateSummaryWithoutNATS(t *testin
 	if payload.AskClass != protocol.AskClassDirectAnswer {
 		t.Fatalf("ask class = %q, want %q", payload.AskClass, protocol.AskClassDirectAnswer)
 	}
-	if !strings.Contains(payload.Text, "Current Mycelis runtime state:") {
+	if !strings.Contains(payload.Text, "Current Mycelis Runtime State") {
 		t.Fatalf("text = %q, want runtime state summary", payload.Text)
 	}
-	if !strings.Contains(payload.Text, "Current organization focus: Acme Org.") {
+	if !strings.Contains(payload.Text, "**Current organization focus:** Acme Org.") {
 		t.Fatalf("text = %q, want organization focus", payload.Text)
 	}
-	if !strings.Contains(payload.Text, "Current team focus: Marketing.") {
+	if !strings.Contains(payload.Text, "**Current team focus:** Marketing.") {
 		t.Fatalf("text = %q, want team focus", payload.Text)
 	}
 }
@@ -107,7 +107,7 @@ func TestHandleChat_ReturnsDeterministicTeamRosterSummary(t *testing.T) {
 	if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
-	if !strings.Contains(payload.Text, "Active teams:") {
+	if !strings.Contains(payload.Text, "**Active teams:**") {
 		t.Fatalf("text = %q, want team roster summary", payload.Text)
 	}
 	if !strings.Contains(payload.Text, "Alpha Team (2 members)") {

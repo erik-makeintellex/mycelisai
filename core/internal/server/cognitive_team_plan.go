@@ -67,7 +67,11 @@ func extractTargetTeamFromRequest(text string) (string, string) {
 	}
 	slug := sanitizeCodexBundleSlug(teamID)
 	if slug == "" || slug == "codex-task-package" {
-		slug = "mission-delivery-team"
+		if derived := deriveDynamicTeamTopicSlug(trimmed); derived != "" {
+			slug = derived
+		} else {
+			slug = "mission-delivery-team"
+		}
 	}
 	if teamName == "" {
 		teamName = titleCaseTeamID(slug)
@@ -261,10 +265,7 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 		}, true
 	}
 
-	teamID, teamName := "mission-delivery-team", "Mission Delivery Team"
-	if isTeamExecutionBundleRequest(lower) {
-		teamID, teamName = extractTargetTeamFromRequest(cleanRequest)
-	}
+	teamID, teamName := extractTargetTeamFromRequest(cleanRequest)
 	return protocol.PlannedToolCall{
 		Name: "create_team",
 		Arguments: map[string]any{

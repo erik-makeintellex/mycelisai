@@ -7,6 +7,44 @@ import (
 	"github.com/mycelis/core/pkg/protocol"
 )
 
+func deriveDynamicTeamTopicSlug(text string) string {
+	lower := strings.ToLower(strings.TrimSpace(text))
+	for _, p := range []string{
+		"put a team together to ", "put together a team to ", "create a team to ", "build a team to ",
+		"launch a team to ", "start a team to ", "assemble a team to ", "spawn a team to ",
+		"have a team ", "put a team together for ", "create a team for ", "start a team for ",
+	} {
+		if idx := strings.Index(lower, p); idx >= 0 {
+			lower = strings.TrimSpace(lower[idx+len(p):])
+			break
+		}
+	}
+	stop := map[string]bool{
+		"try": true, "and": true, "find": true, "out": true, "what": true, "whats": true, "the": true,
+		"going": true, "for": true, "with": true, "that": true, "this": true, "from": true, "into": true,
+		"build": true, "make": true, "create": true, "work": true, "team": true, "some": true, "our": true,
+		"about": true, "quick": true, "simple": true, "new": true, "can": true, "you": true, "please": true,
+		"produce": true, "write": true, "generate": true, "draft": true,
+	}
+	var kept []string
+	for _, w := range strings.Fields(nonSlugCharacterPattern.ReplaceAllString(lower, " ")) {
+		if len(w) >= 3 && !stop[w] {
+			kept = append(kept, w)
+			if len(kept) == 3 {
+				break
+			}
+		}
+	}
+	if len(kept) == 0 {
+		return ""
+	}
+	slug := strings.Join(kept, "-")
+	if !strings.HasSuffix(slug, "-team") {
+		slug += "-team"
+	}
+	return sanitizeCodexBundleSlug(slug)
+}
+
 func ensureTeamMembersMapHasReviewer(raw any) map[string]any {
 	resolved := map[string]any{}
 	hasReviewer := false

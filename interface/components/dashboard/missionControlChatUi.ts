@@ -51,6 +51,10 @@ export function buildTeamActionPrefillPrompt(searchParams: URLSearchParams): str
         const teamName = searchParams.get("team_name")?.trim() || teamId;
         return `Have a team work on another application that interacts with ${teamName} (team_id: ${teamId}) and connect their live outputs.`;
     }
+    if (teamAction === "start_team") {
+        const goal = searchParams.get("goal")?.trim() || "research current market priorities and produce a team execution plan, action matrix, and handoff package";
+        return `Put a team together to ${goal}.`;
+    }
     if (teamAction === "plan_execute" || (teamAction && searchParams.get("team_id")?.trim())) {
         const teamId = searchParams.get("team_id")?.trim() || "mission-delivery-team";
         const teamName = searchParams.get("team_name")?.trim() || teamId;

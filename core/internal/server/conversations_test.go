@@ -7,6 +7,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/mycelis/core/internal/conversations"
+	"github.com/mycelis/core/internal/events"
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 )
@@ -182,6 +183,45 @@ func TestHandleGetSessionConversation_NilConversations(t *testing.T) {
 	rr := doRequest(t, mux, "GET", "/api/v1/conversations/sess-001", "")
 
 	assertStatus(t, rr, http.StatusServiceUnavailable)
+}
+
+func TestHandleGetRunConversation_SynthesizesFromEventsWhenTurnsEmpty(t *testing.T) {
+	convOpt, convMock := withConversations(t)
+	evDB, evMock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock: %v", err)
+	}
+	t.Cleanup(func() { evDB.Close() })
+	s := newTestServer(convOpt)
+	s.Events = events.NewStore(evDB, nil)
+	now := time.Now()
+
+	convMock.ExpectQuery("SELECT .+ FROM conversation_turns WHERE run_id = \\$1 ORDER BY").
+		WithArgs("run-events-1").
+		WillReturnRows(sqlmock.NewRows(convTurnColumns()))
+
+	evRows := sqlmock.NewRows([]string{
+		"id", "run_id", "tenant_id", "event_type", "severity",
+		"source_agent", "source_team", "payload", "audit_event_id", "emitted_at",
+	}).
+		AddRow("ev-1", "run-events-1", "default", "tool.completed", "info", "soma", "market-research-team", `{"team_id":"market-research-team","team_name":"Market Research Team"}`, "", now).
+		AddRow("ev-2", "run-events-1", "default", "artifact.created", "info", "admin", "governance", `{"package_kind":"team_execution_bundle","base_path":"deliverables/teams/market-research-team"}`, "", now).
+		AddRow("ev-3", "run-events-1", "default", "mission.completed", "info", "admin", "governance", `{"execution_state":"verified"}`, "", now)
+	evMock.ExpectQuery("SELECT .+ FROM mission_events WHERE run_id = \\$1 ORDER BY").
+		WithArgs("run-events-1").
+		WillReturnRows(evRows)
+
+	mux := setupMux(t, "GET /api/v1/runs/{id}/conversation", s.HandleGetRunConversation)
+	rr := doRequest(t, mux, "GET", "/api/v1/runs/run-events-1/conversation", "")
+	assertStatus(t, rr, http.StatusOK)
+
+	var resp map[string]interface{}
+	assertJSON(t, rr, &resp)
+	data, _ := resp["data"].(map[string]interface{})
+	turns, _ := data["turns"].([]interface{})
+	if len(turns) != 3 {
+		t.Fatalf("expected 3 synthesized turns from mission_events, got %d (%+v)", len(turns), turns)
+	}
 }
 
 // ════════════════════════════════════════════════════════════════════

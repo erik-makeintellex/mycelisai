@@ -126,9 +126,15 @@ func buildProposalDisplayContract(planned []protocol.PlannedToolCall, latestRequ
 				return display
 			}
 			if len(planned) > 1 {
-				if firstStringArgument(planned[1].Arguments, "package_kind") == "mcp_addition_bundle" {
+				pkgKind := firstStringArgument(planned[1].Arguments, "package_kind")
+				if pkgKind == "mcp_addition_bundle" {
 					display.OperatorSummary = fmt.Sprintf("Bind MCP addition to %q and generate %d integration files.", teamName, len(planned)-1)
 					display.ExpectedResult = fmt.Sprintf("%q will receive the MCP capability binding, manifest, and scaffold files.", teamName)
+					return display
+				}
+				if pkgKind == "team_execution_bundle" {
+					display.OperatorSummary = fmt.Sprintf("Set up %q and generate its execution plan, action matrix, and handoff package (%d files).", teamName, len(planned)-1)
+					display.ExpectedResult = fmt.Sprintf("%q will be active in Teams (/deployments) and deliver its execution plan and next steps in your workspace.", teamName)
 					return display
 				}
 				display.OperatorSummary = fmt.Sprintf("Set up %q and build %d project files.", teamName, len(planned)-1)

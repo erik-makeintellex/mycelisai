@@ -4,6 +4,8 @@ import ops.config
 from ops.k8s_rancher import (
     DEFAULT_RANCHER_CONTEXT,
     DEFAULT_RANCHER_SERVER_URL,
+    MAX_RETAINED_IMAGE_VERSIONS,
+    prune_old_mycelis_images,
     rancher_target_context,
     rancher_target_url,
 )
@@ -127,4 +129,38 @@ def test_k8s_up_defaults_to_with_interface_on_rancher_desktop(monkeypatch):
     assert recorded["with_interface"] is True
 
 
+def test_prune_old_mycelis_images_retains_at_most_two_versions_per_repo(monkeypatch):
+    import subprocess
+    import ops.k8s_rancher as kr
 
+    assert MAX_RETAINED_IMAGE_VERSIONS == 2
+    sample_output = "\n".join(
+        [
+            "mycelis/core\tv1.2.1-newest",
+            "mycelis/core\tv1.2.0-prev",
+            "mycelis/core\tv1.1.9-old1",
+            "mycelis/core\tv1.1.8-old2",
+            "mycelis/interface\tv1.2.1-newest",
+            "mycelis/interface\tv1.2.0-prev",
+            "mycelis/interface\tv1.1.9-old1",
+            "postgres\t15-alpine",
+        ]
+    )
+    commands: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        commands.append(list(cmd))
+        if cmd[:2] == ["docker", "images"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout=sample_output, stderr="")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(kr.subprocess, "run", fake_run)
+    removed = prune_old_mycelis_images("v1.2.1-newest")
+
+    assert removed == [
+        "mycelis/core:v1.1.9-old1",
+        "mycelis/core:v1.1.8-old2",
+        "mycelis/interface:v1.1.9-old1",
+    ]
+    assert any(cmd[:3] == ["docker", "rmi", "-f"] for cmd in commands)
+    assert any(cmd[:3] == ["docker", "image", "prune"] for cmd in commands)

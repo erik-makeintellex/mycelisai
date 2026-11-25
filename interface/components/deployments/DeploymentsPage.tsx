@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import LoadFailureState from "@/components/shared/LoadFailureState";
 import { useCortexStore } from "@/store/useCortexStore";
 import { DeploymentDetailPane } from "./DeploymentDetailPane";
@@ -46,11 +47,20 @@ export default function DeploymentsPage() {
 
   return (
     <div className="flex min-h-0 flex-col gap-3 p-4">
-      <header>
-        <h1 className="text-xl font-semibold text-cortex-text-main">Deployments</h1>
-        <p className="mt-1 text-sm text-cortex-text-muted">
-          What is running, where, with which models and tools, and what it has produced.
-        </p>
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-cortex-text-main">Deployments</h1>
+          <p className="mt-1 text-sm text-cortex-text-muted">
+            What is running, where, with which models and tools, and what it has produced.
+          </p>
+        </div>
+        <Link
+          href="/dashboard?team_action=start_team"
+          data-testid="deployments-start-new-team"
+          className="inline-flex items-center justify-center rounded-xl border border-cortex-primary/50 bg-cortex-primary/15 px-3.5 py-2 text-sm font-semibold text-cortex-primary hover:bg-cortex-primary/25"
+        >
+          + Start a New Team in Soma
+        </Link>
       </header>
       <SourceNotices sources={sources} />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">

@@ -59,7 +59,8 @@ func (s *AdminServer) HandleChat(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	latestUserText := latestUserMessageContent(req.Messages)
+	var latestUserText string
+	req.Messages, latestUserText = applyRetryResolution(req.Messages)
 	if isRuntimeStateQuestion(latestUserText) {
 		s.respondRuntimeStateSummary(w, r, req.OrganizationID, req.TeamID, req.TeamName)
 		return

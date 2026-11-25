@@ -145,32 +145,127 @@ def _rancher_desktop_context_available() -> bool:
     return False
 
 
-def prune_old_mycelis_images(active_tag: str) -> list[str]:
-    """Remove superseded mycelis/core and mycelis/interface image tags and dangling layers."""
-    if not active_tag or active_tag == "dev":
+def ensure_host_ollama_running(port: int = 11434, timeout_seconds: int = 6) -> bool:
+    """Ensure local Ollama daemon is listening on port 11434 on Windows host when installed."""
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+            return True
+    except OSError:
+        pass
+
+    home = Path.home()
+    local_app_data = Path(os.environ.get("LOCALAPPDATA", str(home / "AppData" / "Local")))
+    candidates = [
+        local_app_data / "Programs" / "Ollama" / "ollama.exe",
+        Path(r"C:\Program Files\Ollama\ollama.exe"),
+    ]
+    ollama_bin = next((c for c in candidates if _safe_is_file(c)), None)
+    if not ollama_bin:
+        return False
+
+    try:
+        subprocess.run(
+            ["setx", "OLLAMA_HOST", f"0.0.0.0:{port}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        task_name = "MycelisHostOllamaDaemon"
+        cmd_line = f"{ollama_bin} serve"
+        subprocess.run(
+            ["schtasks", "/Create", "/TN", task_name, "/TR", cmd_line, "/SC", "ONCE", "/ST", "00:00", "/F"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        subprocess.run(
+            ["schtasks", "/Run", "/TN", task_name],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        import time
+
+        deadline = time.time() + timeout_seconds
+        while time.time() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+                    return True
+            except OSError:
+                time.sleep(0.5)
+
+        env = os.environ.copy()
+        env.setdefault("OLLAMA_HOST", f"0.0.0.0:{port}")
+        creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(subprocess, "DETACHED_PROCESS", 0)
+        subprocess.Popen(
+            [str(ollama_bin), "serve"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=env,
+            creationflags=creationflags,
+        )
+        deadline = time.time() + timeout_seconds
+        while time.time() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+                    return True
+            except OSError:
+                time.sleep(0.5)
+    except Exception:
+        return False
+    return False
+
+
+MAX_RETAINED_IMAGE_VERSIONS = 2
+MANAGED_IMAGE_REPOS = (
+    "mycelis/core",
+    "mycelis/interface",
+    "mycelis-home-core",
+    "mycelis-home-interface",
+)
+
+
+def prune_old_mycelis_images(
+    active_tag: str = "",
+    max_versions: int = MAX_RETAINED_IMAGE_VERSIONS,
+) -> list[str]:
+    """Retain at most `max_versions` (default: 2) image tags per Mycelis repository and prune older + dangling images."""
+    if active_tag == "dev":
         return []
     _ensure_rancher_desktop_path()
-    keep = {
-        f"mycelis/core:{active_tag}",
-        f"mycelis/interface:{active_tag}",
-    }
+    keep_limit = max(1, int(max_versions))
     removed: list[str] = []
     try:
         listed = subprocess.run(
-            ["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"],
+            ["docker", "images", "--format", "{{.Repository}}\t{{.Tag}}"],
             capture_output=True,
             text=True,
             timeout=15,
             check=False,
         )
         if listed.returncode == 0:
-            stale = [
-                ref.strip()
-                for ref in listed.stdout.splitlines()
-                if ref.strip().startswith(("mycelis/core:", "mycelis/interface:", "mycelis-home-"))
-                and ref.strip() not in keep
-                and not ref.strip().endswith(":<none>")
-            ]
+            by_repo: dict[str, list[str]] = {repo: [] for repo in MANAGED_IMAGE_REPOS}
+            for raw_line in listed.stdout.splitlines():
+                parts = raw_line.strip().split("\t")
+                if len(parts) != 2:
+                    continue
+                repo, tag = parts[0].strip(), parts[1].strip()
+                if repo not in by_repo or not tag or tag == "<none>":
+                    continue
+                if tag not in by_repo[repo]:
+                    by_repo[repo].append(tag)
+            stale: list[str] = []
+            for repo, tags in by_repo.items():
+                ordered = list(tags)
+                if active_tag and active_tag in ordered:
+                    ordered.remove(active_tag)
+                    ordered.insert(0, active_tag)
+                for old_tag in ordered[keep_limit:]:
+                    stale.append(f"{repo}:{old_tag}")
             if stale:
                 subprocess.run(
                     ["docker", "rmi", "-f", *stale],

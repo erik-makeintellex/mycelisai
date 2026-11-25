@@ -133,7 +133,7 @@ uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterpr
 uv run inv k8s.reset
 ```
 
-Prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path; on Windows Stage 2, `k8s.*` auto-detects Windows Rancher Desktop (`rancher-desktop` context at `https://127.0.0.1:6443`, `LoadBalancer` on `localhost:8080`, `local-path` storage, and `http://host.rancher-desktop.internal:11434/v1` AI bridge).
+Prefer `k3d`; use `MYCELIS_K8S_BACKEND=kind` only for the explicit legacy path; on Windows Stage 2, `k8s.*` auto-detects Windows Rancher Desktop (`rancher-desktop` context at `https://127.0.0.1:6443`, `LoadBalancer` on `localhost:8080`, `local-path` storage, `http://host.rancher-desktop.internal:11434/v1` AI bridge, and automatic `prune_old_mycelis_images(max_versions=2)` container image cleanup so never more than 2 versions of `mycelis/core` or `mycelis/interface` accumulate locally).
 
 ### Cognitive Tasks (`ops/cognitive.py`)
 

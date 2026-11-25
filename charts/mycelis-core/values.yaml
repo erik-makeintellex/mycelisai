@@ -158,6 +158,10 @@ search:
   localApiEndpoint: ""
   maxResults: 8
 
+searxng:
+  enabled: false
+  image: searxng/searxng:latest
+
 # Environment variables (Extras)
 env:
   - name: DATA_DIR

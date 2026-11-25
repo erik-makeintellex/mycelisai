@@ -124,7 +124,7 @@ The team lead is the user-facing counterpart for that team, not a hidden extra m
 
 ## Team Creation
 
-Use the guided team-creation workflow when you want Soma to shape the team for you.
+Use the guided team-creation workflow or click **`+ Start a New Team in Soma`** on `/deployments` when you want Soma to shape and launch the team for you. When you ask Soma to put a team together for research, analysis, or delivery (for example, `"Put a team together to research market competitors"`), Soma derives a domain-specific team ID and name from your goal, spawns the team with an in-team Ideal Delivery Reviewer (`council-sentry`) and companion `<team_id>-review-team`, generates the team's execution plan, action matrix, and handoff deliverable package (`deliverables/teams/<team-slug>/`), and records full run conversation turns so clicking `Inspect Run` (`/runs/{id}`) shows the complete execution transcript.
 
 Tell Soma:
 - what outcome you need
