@@ -42,3 +42,4 @@ members = [
 [tool.pytest.ini_options]
 cache_dir = "workspace/tool-cache/pytest"
 pythonpath = ["."]
+norecursedirs = ["workspace", ".venv", "interface/node_modules", "dist", ".git", "core"]

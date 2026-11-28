@@ -120,7 +120,11 @@ def test_start_port_forward_uses_direct_detached_kubectl_on_windows(monkeypatch)
     assert captured["command"] == ["kubectl", "port-forward", "-n", lifecycle.NAMESPACE, "svc/mycelis-core-nats", "4222:4222"]
     assert captured["kwargs"]["stdout"] is lifecycle.subprocess.DEVNULL
     assert captured["kwargs"]["stderr"] is lifecycle.subprocess.DEVNULL
-    assert captured["kwargs"]["creationflags"] == lifecycle.subprocess.CREATE_NEW_PROCESS_GROUP | lifecycle.subprocess.DETACHED_PROCESS
+    expected_flags = (
+        getattr(lifecycle.subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+        | getattr(lifecycle.subprocess, "DETACHED_PROCESS", 0x00000008)
+    )
+    assert captured["kwargs"]["creationflags"] == expected_flags
 
 
 def test_health_raises_when_any_probe_fails(monkeypatch):

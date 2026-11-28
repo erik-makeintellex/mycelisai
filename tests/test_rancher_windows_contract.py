@@ -58,7 +58,7 @@ def test_rancher_target_defaults_and_env_overrides(monkeypatch):
 
 def test_agents_md_codifies_two_stage_windows_rancher_contract():
     agents_md = (ops.config.ROOT_DIR / "AGENTS.md").read_text(encoding="utf-8")
-    assert "Windows-Only Local Execution + Windows Rancher Desktop Deployment" in agents_md
+    assert "WSL-First Linux Local Execution + Rancher Desktop Deployment" in agents_md
     assert "Stage 1 Local Execution & Testing" in agents_md
     assert "Stage 2 Containerization & Cluster Deployment" in agents_md
 

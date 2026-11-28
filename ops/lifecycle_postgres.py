@@ -32,11 +32,15 @@ def _core_startup_log_path() -> Path:
 def _start_port_forward(svc: str, forward: str):
     """Start a kubectl port-forward in the background (detached)."""
     if _lc.is_windows():
+        creationflags = (
+            getattr(_lc.subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
+            | getattr(_lc.subprocess, "DETACHED_PROCESS", 0x00000008)
+        )
         _lc.subprocess.Popen(
             ["kubectl", "port-forward", "-n", _lc.NAMESPACE, svc, forward],
             stdout=_lc.subprocess.DEVNULL,
             stderr=_lc.subprocess.DEVNULL,
-            creationflags=_lc.subprocess.CREATE_NEW_PROCESS_GROUP | _lc.subprocess.DETACHED_PROCESS,
+            creationflags=creationflags,
         )
     else:
         _lc.subprocess.Popen(

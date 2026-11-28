@@ -86,6 +86,8 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
             self.returncode = returncode
             self.stderr = stderr
 
+    iface_root = interface.INTERFACE_DIR.as_posix()
+
     def fake_run(command, capture_output=True, text=True, timeout=0):
         commands.append(command)
         timeouts.append(timeout)
@@ -102,9 +104,9 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
                 stdout='"cmd.exe","201","Console","1","12,000 K"',
             )
         return Result(
-            stdout='[{"ProcessId":101,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js"},'
-            '{"ProcessId":103,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs"},'
-            '{"ProcessId":104,"Name":"node.exe","CommandLine":"D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js"},'
+            stdout=f'[{{"ProcessId":101,"Name":"node.exe","CommandLine":"{iface_root}/.next/dev/build/postcss.js"}},'
+            f'{{"ProcessId":103,"Name":"node.exe","CommandLine":"{iface_root}/scripts/playwright-webserver.mjs"}},'
+            f'{{"ProcessId":104,"Name":"node.exe","CommandLine":"{iface_root}/.next/standalone/server.js"}},'
             '{"ProcessId":102,"Name":"node.exe","CommandLine":"C:/other-app/node_modules/vite/bin/vite.js"},'
             '{"ProcessId":201,"Name":"cmd.exe","CommandLine":"C:/Windows/System32/cmd.exe /d /c echo unrelated"}]',
         )
@@ -118,17 +120,17 @@ def test_list_repo_local_interface_processes_windows_queries_tasklist_then_cim(m
         {
             "pid": 101,
             "name": "node.exe",
-            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/dev/build/postcss.js",
+            "command": f"{iface_root}/.next/dev/build/postcss.js",
         },
         {
             "pid": 103,
             "name": "node.exe",
-            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/scripts/playwright-webserver.mjs",
+            "command": f"{iface_root}/scripts/playwright-webserver.mjs",
         },
         {
             "pid": 104,
             "name": "node.exe",
-            "command": "D:/MakeIntellex/Projects/mycelisai/scratch/interface/.next/standalone/server.js",
+            "command": f"{iface_root}/.next/standalone/server.js",
         },
     ]
     assert commands == [

@@ -50,9 +50,9 @@ This repository is Go-first for product/runtime work and Python-first for manage
 
 - `.env` is the repo-local secret store across runtime paths. Use secret references in committed config and never store raw secrets in UI, logs, state files, or architecture docs.
 - `.env.compose` is for Compose topology and non-secret runtime shape; secret-like values from `.env` are authoritative over stale Compose values.
-- **Windows-Only Local Execution + Windows Rancher Desktop Deployment (No WSL Launches):**
-  - All development, git operations, and **Stage 1 Local Execution & Testing** (`go test`, `uv run pytest`, `vitest`, local binary/UI checks) run directly on Windows (`d:\MakeIntellex\Projects\mycelisai\scratch`) without launching standalone WSL distributions.
-  - **Stage 2 Containerization & Cluster Deployment** runs exclusively through Windows Rancher Desktop (`rancher-desktop` Moby Docker daemon + `kubectl` + `helm` targeting `https://127.0.0.1:6443`) after Stage 1 local execution tests pass.
+- **WSL-First Linux Local Execution + Rancher Desktop Deployment:**
+  - Active development, git operations, and **Stage 1 Local Execution & Testing** (`go test`, `uv run pytest`, `vitest`, `next build`, and local binary/UI checks) run on Linux-native WSL (`~/Projects/mycelisai`) using Linux-native `.venv`, `interface/node_modules`, and managed caches under `workspace/tool-cache/` (never mixing Windows and WSL caches or build artifacts).
+  - **Stage 2 Containerization & Cluster Deployment** runs through Rancher Desktop (`rancher-desktop` Moby Docker daemon + `kubectl` + `helm` targeting `https://127.0.0.1:6443` via WSL integration) after Stage 1 local execution tests pass.
 
 ## Feature Status Standard
 

@@ -222,7 +222,7 @@ Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PRO
 
 Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments are supported through the lane-specific guidance in local dev and operations docs. The deployed Core image resolves runtime config from `/core/config`.
 
-Supported user access lanes: Windows Rancher Desktop Kubernetes (`rancher-desktop`, primary Windows Stage 2 lane), Windows Docker Desktop Compose, Windows + WSL Docker Compose, and Kubernetes / Helm clustered deployment. For local proof, open `http://localhost:3000` from the Windows browser; for clustered proof, prove the real ingress/hostname/IP from the operator machine.
+Supported user access lanes: WSL-integrated Rancher Desktop Kubernetes (`rancher-desktop`, primary Stage 2 lane), Windows Docker Desktop Compose, Windows + WSL Docker Compose, and Kubernetes / Helm clustered deployment. For local proof, open `http://localhost:3000` from the Windows browser; for clustered proof, prove the real ingress/hostname/IP from the operator machine.
 
 Deployment target contract: Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources. Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy.
 
@@ -232,7 +232,7 @@ Kubernetes values contract: on Windows use Rancher Desktop (`rancher-desktop`), 
 
 Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block.
 
-Release proof contract: run Stage 1 local verification on Windows (`uv run inv ci.baseline`, `uv run inv logging.check-topics`, `uv run inv quality.max-lines --limit 300`, `uv run inv ci.release-preflight --lane=release`) followed by Stage 2 Windows Rancher Desktop deployment (`uv run inv k8s.up`, `uv run inv k8s.status`). Optional guarded WSL tasks (`uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`) remain available for explicit Linux-native parity checks.
+Release proof contract: run Stage 1 local verification on WSL Linux (`uv run inv ci.baseline`, `uv run inv logging.check-topics`, `uv run inv quality.max-lines --limit 300`, `uv run inv ci.release-preflight --lane=release`) followed by Stage 2 Rancher Desktop deployment (`uv run inv k8s.up`, `uv run inv k8s.status`). Guarded cross-host WSL helper tasks (`uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`) remain available when coordinating from a Windows shell.
 
 ## Playwright Contract
 
@@ -265,7 +265,7 @@ Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle 
 
 ## Cross-Platform Setup
 
-Windows is the primary source-edit, git, and Stage 1 local testing surface, with Stage 2 containerization and clustered Kubernetes deployment on Windows Rancher Desktop (`rancher-desktop`). Optional guarded WSL tasks (`uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate --lane=release`) remain available only for explicit Linux-native parity checks (always refresh WSL from git; do not copy source trees across the host boundary).
+WSL2 Linux (`~/Projects/mycelisai`) is the primary source-edit, git, and Stage 1 local testing surface, with Stage 2 containerization and clustered Kubernetes deployment via Rancher Desktop (`rancher-desktop` WSL integration). Keep Linux-native `.venv`, `interface/node_modules`, and `workspace/tool-cache/` isolated from any Windows checkout. Guarded cross-host WSL tasks (`uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate --lane=release`) remain available for Windows-initiated parity checks (always sync via git; never copy source trees across the host boundary).
 
 ## Development Workflow
 

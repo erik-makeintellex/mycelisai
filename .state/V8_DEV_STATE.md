@@ -34,11 +34,12 @@ Following the read-only project intake (`.agents/reviews/2026-11-27-intake.md`),
    - Removed hardcoded plaintext SearXNG secret and unpinned `:latest` tag from `charts/mycelis-core/templates/searxng-deployment.yaml` and `values.yaml` (switched to `secretKeyRef`, pinned `searxng/searxng:2025.5.1-a22437230`, added `securityContext`, `resources`, and readiness/liveness probes).
    - Hardened `charts/mycelis-core/templates/interface-deployment.yaml` with `serviceAccountName`, `podSecurityContext`, `securityContext`, `resources`, and probes (`tests/test_k8s_hardening_contract.py`).
 3. `COMPLETE` **Slice 3 — Governance, Docs & State Reconciliation:**
-   - Aligned `CLAUDE.md` and `README.md` with `AGENTS.md` (Windows-only Stage 1 local testing + Stage 2 Windows Rancher Desktop deployment, `v1.2.2` tag posture, and `tests/test_docs_links*.py`).
-   - Superseded stale `v0.8.3`/`v0.8.4` gap wording in this scoreboard.
+   - Reconciled `AGENTS.md`, `README.md`, `docs/TESTING.md`, `ops/README.md`, and `.state/V8_DEV_STATE.md` to the WSL-first Linux Stage 1 + Rancher Desktop Stage 2 posture (removing hardcoded Windows drive paths) and updated stale `v0.8.3`/`v0.8.4` gap wording in this scoreboard.
 4. `COMPLETE` **Slice 4 — Enterprise RS256/JWKS OIDC & SSE-Only Query Token Guard:**
    - Added `core/internal/server/auth_oidc_jwks.go` supporting `MYCELIS_OIDC_JWKS_URL` (5-minute cached JWKS fetch with key-rotation refresh) and air-gapped `MYCELIS_OIDC_JWKS_JSON` alongside HS256 in `auth_oidc.go`, wired `oidc.jwksUrl` / `MYCELIS_OIDC_JWKS_URL` in Helm (`values.yaml`, `deployment.yaml`, `tests/test_k8s_oidc_values.py`) and `ops/auth.py` (`auth.posture`).
    - Restricted `?token=` query auth in `core/internal/server/auth.go` to `GET /api/v1/stream` and `GET /api/v1/memory/stream` (`auth_oidc_jwks_test.go`).
+5. `COMPLETE` **Phase B WSL Portability & Full Gate Verification (2026-11-28):**
+   - Verified `dev` on Linux-native WSL (`~/Projects/mycelisai`) with fresh `.env`/`.env.compose`, cleared prior `mycelis` cluster release and PVCs on `mother-brain`, fixed 3 WSL pytest portability issues (`pyproject.toml` `norecursedirs`, `tests/test_interface_tasks.py` portable path fixture, `ops/lifecycle_postgres.py` + `tests/test_lifecycle_tasks.py` cross-platform Win32 flags), and passed all Go (`28/28`), Python (`pytest`), Vitest (`130/130`, `601/601`), TypeScript, Next.js build, Helm enterprise standards, and focused Chromium E2E checks.
 
 ## Reboot & Client-Update Checkpoint (2026-11-03)
 
@@ -100,7 +101,7 @@ Following the read-only project intake (`.agents/reviews/2026-11-27-intake.md`),
 ## Active Development Plan & Expected Deliveries (2026-11-25)
 
 - **Staging & Branch Baseline (`v1.2.2`):**
-  - `main` (staging & release-candidate branch) and `dev` (active development & integration branch) are aligned at **`v1.2.2`** (`VERSION = 1.2.2`) on Windows (`d:\MakeIntellex\Projects\mycelisai\scratch`).
+  - `main` (staging & release-candidate branch) is held at **`v1.2.2`** (`VERSION = 1.2.2`) while `dev` carries verified Slices 1–4 + WSL Phase B portability fixes ready for **`v1.2.3`** promotion.
   - **Live Runtime & Editor-Restart Context Checkpoint (2026-11-25):**
     - **Active Rancher Desktop Kubernetes Cluster (`rancher-desktop` @ `https://127.0.0.1:6443`):** Namespace `mycelis` running `mycelis-core`, `mycelis-core-interface` (`http://localhost:3000`), `mycelis-core-searxng` (`http://mycelis-core-searxng:8080`), `mycelis-core-nats-0`, and `mycelis-core-postgresql-0` (`REVISION: 7`).
     - **Windows Host AI Daemon (`0.0.0.0:11434`):** Managed via `ensure_host_ollama_running()` (`ops/k8s_rancher.py`) and Windows Task Scheduler task `MycelisHostOllamaDaemon` (`OLLAMA_HOST=0.0.0.0:11434`) so host Ollama stays online across shell/editor restarts.
