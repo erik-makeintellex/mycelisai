@@ -115,14 +115,14 @@ describe('MissionControlChat UI states', () => {
         expect(dots.length).toBe(3);
     });
 
-    it('disables input while loading', async () => {
+    it('keeps input unlocked for stackable work queueing while loading', async () => {
         useCortexStore.setState({ isMissionChatting: true });
 
         render(<MissionControlChat />);
         await settleMissionControlChat();
 
         const input = screen.getByRole('textbox');
-        expect(input.hasAttribute('disabled')).toBe(true);
+        expect(input.hasAttribute('disabled')).toBe(false);
     });
 
     it('shows prompt about asking Soma in normal mode', async () => {
@@ -137,8 +137,8 @@ describe('MissionControlChat UI states', () => {
         await settleMissionControlChat();
 
         expect(screen.getByText('Start with Soma')).toBeDefined();
-        fireEvent.click(screen.getByRole('button', { name: /Research something.*Search or review sources/i }));
-        expect(screen.getByDisplayValue('Research this, cite sources, and tell me what changed.')).toBeDefined();
+        fireEvent.click(screen.getByRole('button', { name: /Research something.*Look up options/i }));
+        expect(screen.getByDisplayValue('Research this topic and give me a simple summary of the best options.')).toBeDefined();
     });
 
     it('shows team-specific starter prompts in simple mode when a team is selected', async () => {
@@ -162,7 +162,7 @@ describe('MissionControlChat UI states', () => {
         render(<MissionControlChat simpleMode />);
         await settleMissionControlChat();
 
-        expect(screen.getByRole('button', { name: /Plan this team.*Marketing/i })).toBeDefined();
+        expect(screen.getByRole('button', { name: /Plan & Execute Next Steps.*Marketing/i })).toBeDefined();
         fireEvent.click(screen.getByRole('button', { name: /Review state.*current risk/i }));
         expect(screen.getByDisplayValue('Review the current state of Marketing')).toBeDefined();
     });

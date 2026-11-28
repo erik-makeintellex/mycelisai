@@ -100,11 +100,15 @@ spec:
                   name: {{ default (include "mycelis-core.coreAuthSecretName" .) .Values.coreAuth.existingSecret }}
                   key: mycelis-api-key
             {{- end }}
-            {{- if and .Values.oidc (or .Values.oidc.issuer .Values.oidc.existingSecret) }}
+            {{- if and .Values.oidc (or .Values.oidc.issuer .Values.oidc.existingSecret .Values.oidc.jwksUrl) }}
             - name: MYCELIS_OIDC_ISSUER
               value: {{ .Values.oidc.issuer | quote }}
             - name: MYCELIS_OIDC_AUDIENCE
               value: {{ default "" .Values.oidc.audience | quote }}
+            {{- if .Values.oidc.jwksUrl }}
+            - name: MYCELIS_OIDC_JWKS_URL
+              value: {{ .Values.oidc.jwksUrl | quote }}
+            {{- end }}
             - name: MYCELIS_OIDC_ROLE_CLAIM
               value: {{ default "role" .Values.oidc.roleClaim | quote }}
             - name: MYCELIS_OIDC_DEFAULT_ROLE

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/mycelis/core/internal/conversations"
 	"github.com/mycelis/core/pkg/protocol"
@@ -117,7 +118,7 @@ func (s *AdminServer) synthesizeRunConversationFromEvents(ctx context.Context, r
 			role = "tool_result"
 			tName := firstNonEmptyString(ev.Payload["team_name"], ev.Payload["team_id"], teamID)
 			toolName = "create_team"
-			content = fmt.Sprintf("Team **%s** (`%s`) activated and published readiness on `%s`.", tName, firstNonEmptyString(ev.Payload["team_id"], teamID), firstNonEmptyString(ev.Payload["speaks_on"], "swarm.team."+teamID+".signal.result"))
+			content = fmt.Sprintf("Team **%s** (`%s`) activated and published readiness on `%s`.", tName, firstNonEmptyString(ev.Payload["team_id"], teamID), firstNonEmptyString(ev.Payload["speaks_on"], fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)))
 		case string(protocol.EventArtifactCreated):
 			role = "tool_result"
 			toolName = "write_file"
@@ -180,6 +181,9 @@ func (s *AdminServer) HandleGetSessionConversation(w http.ResponseWriter, r *htt
 // Publishes a user interjection to the active agents in a run.
 // The message is buffered by agents and injected between ReAct iterations.
 func (s *AdminServer) HandleRunInterject(w http.ResponseWriter, r *http.Request) {
+	if !requireOperatorIfAuthenticated(w, r, "runs:write") {
+		return
+	}
 	runID := r.PathValue("id")
 	if runID == "" {
 		respondAPIError(w, "Missing run ID", http.StatusBadRequest)
@@ -234,19 +238,23 @@ func (s *AdminServer) HandleRunInterject(w http.ResponseWriter, r *http.Request)
 
 	// Also log the interjection as a conversation turn if store is available
 	if s.Conversations != nil {
-		go func() {
-			agentID := req.AgentID
-			if agentID == "" {
-				agentID = "operator"
+		baseCtx := context.WithoutCancel(r.Context())
+		go func(ctx context.Context, targetAgent, msg string) {
+			logCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			if targetAgent == "" {
+				targetAgent = "operator"
 			}
-			s.Conversations.LogTurn(r.Context(), protocol.ConversationTurnData{ //nolint:errcheck
+			if _, err := s.Conversations.LogTurn(logCtx, protocol.ConversationTurnData{
 				RunID:    runID,
 				TenantID: "default",
-				AgentID:  agentID,
+				AgentID:  targetAgent,
 				Role:     "interjection",
-				Content:  req.Message,
-			})
-		}()
+				Content:  msg,
+			}); err != nil {
+				log.Printf("[interject] failed to log interjection turn for run %s: %v", runID, err)
+			}
+		}(baseCtx, req.AgentID, req.Message)
 	}
 
 	respondAPIJSON(w, http.StatusOK, protocol.NewAPISuccess(map[string]interface{}{

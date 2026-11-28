@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -270,10 +271,11 @@ func missionBlueprintBundleSpecs(goal string) []deliverableBundleFileSpec {
 }
 
 func chainedPipelineBundleSpecs(goal string) []deliverableBundleFileSpec {
+	upSub, downSub := fmt.Sprintf(protocol.TopicTeamSignalResult, "mcp-upstream-discovery-team"), fmt.Sprintf(protocol.TopicTeamSignalResult, "chained-downstream-delivery-team")
 	return []deliverableBundleFileSpec{
-		{name: "channel_chain_topology.yaml", title: "Inter-Team & MCP Channel Chain Topology (YAML)", contentType: "text/yaml", content: "pipeline_id: chained-team-pipeline\ngoal: " + strconvQuoteSafe(goal) + "\nupstream_team: mcp-upstream-discovery-team\n  mcp_channel: swarm.mcp.outputs.registered\n  speaks_on: swarm.team.mcp-upstream-discovery-team.signal.result\ndownstream_team: chained-downstream-delivery-team\n  listens_on: swarm.team.mcp-upstream-discovery-team.signal.result\n  speaks_on: swarm.team.chained-downstream-delivery-team.signal.result\n"},
-		{name: "upstream_mcp_channel_output.json", title: "Registered MCP Channel Output Snapshot (JSON)", contentType: "application/json", content: "{\n  \"source_team\": \"mcp-upstream-discovery-team\",\n  \"mcp_channel\": \"swarm.mcp.outputs.registered\",\n  \"published_subject\": \"swarm.team.mcp-upstream-discovery-team.signal.result\",\n  \"status\": \"verified\",\n  \"findings\": [\"Registered MCP tool outputs normalized for downstream consumption\"]\n}\n"},
-		{name: "downstream_chained_deliverable.md", title: "Downstream Chained Team Deliverable", contentType: "text/markdown", content: "# Downstream Chained Team Deliverable\n\n## Goal\n" + goal + "\n\n## Channel Handoff Lineage\n- **Upstream Producer:** `MCP & Upstream Discovery Team` (`mcp-upstream-discovery-team`) speaking on `swarm.team.mcp-upstream-discovery-team.signal.result`.\n- **Downstream Consumer:** `Chained Downstream Delivery Team` (`chained-downstream-delivery-team`) listening on `swarm.team.mcp-upstream-discovery-team.signal.result` and publishing to `swarm.team.chained-downstream-delivery-team.signal.result`.\n"},
+		{name: "channel_chain_topology.yaml", title: "Inter-Team & MCP Channel Chain Topology (YAML)", contentType: "text/yaml", content: "pipeline_id: chained-team-pipeline\ngoal: " + strconvQuoteSafe(goal) + "\nupstream_team: mcp-upstream-discovery-team\n  mcp_channel: " + protocol.TopicMCPOutputsRegistered + "\n  speaks_on: " + upSub + "\ndownstream_team: chained-downstream-delivery-team\n  listens_on: " + upSub + "\n  speaks_on: " + downSub + "\n"},
+		{name: "upstream_mcp_channel_output.json", title: "Registered MCP Channel Output Snapshot (JSON)", contentType: "application/json", content: "{\n  \"source_team\": \"mcp-upstream-discovery-team\",\n  \"mcp_channel\": " + strconvQuoteSafe(protocol.TopicMCPOutputsRegistered) + ",\n  \"published_subject\": " + strconvQuoteSafe(upSub) + ",\n  \"status\": \"verified\",\n  \"findings\": [\"Registered MCP tool outputs normalized for downstream consumption\"]\n}\n"},
+		{name: "downstream_chained_deliverable.md", title: "Downstream Chained Team Deliverable", contentType: "text/markdown", content: "# Downstream Chained Team Deliverable\n\n## Goal\n" + goal + "\n\n## Channel Handoff Lineage\n- **Upstream Producer:** `MCP & Upstream Discovery Team` (`mcp-upstream-discovery-team`) speaking on `" + upSub + "`.\n- **Downstream Consumer:** `Chained Downstream Delivery Team` (`chained-downstream-delivery-team`) listening on `" + upSub + "` and publishing to `" + downSub + "`.\n"},
 	}
 }
 

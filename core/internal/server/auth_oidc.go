@@ -14,6 +14,8 @@ type oidcAdapterConfig struct {
 	Issuer      string
 	Audience    string
 	HS256Secret string
+	JWKSURL     string
+	JWKSJSON    string
 	RoleClaim   string
 	DefaultRole string
 }
@@ -31,13 +33,17 @@ func loadOIDCAdapterConfigFromEnv() oidcAdapterConfig {
 		Issuer:      strings.TrimSpace(os.Getenv("MYCELIS_OIDC_ISSUER")),
 		Audience:    strings.TrimSpace(os.Getenv("MYCELIS_OIDC_AUDIENCE")),
 		HS256Secret: strings.TrimSpace(os.Getenv("MYCELIS_OIDC_HS256_SECRET")),
+		JWKSURL:     strings.TrimSpace(os.Getenv("MYCELIS_OIDC_JWKS_URL")),
+		JWKSJSON:    strings.TrimSpace(os.Getenv("MYCELIS_OIDC_JWKS_JSON")),
 		RoleClaim:   roleClaim,
 		DefaultRole: defaultRole,
 	}
 }
 
 func (c oidcAdapterConfig) Enabled() bool {
-	return strings.TrimSpace(c.HS256Secret) != ""
+	return strings.TrimSpace(c.HS256Secret) != "" ||
+		strings.TrimSpace(c.JWKSURL) != "" ||
+		strings.TrimSpace(c.JWKSJSON) != ""
 }
 
 // NormalizeRole maps raw role or group identifiers onto Mycelis canonical roles.
@@ -87,8 +93,9 @@ func (c oidcAdapterConfig) verifyBearerToken(rawToken string) *RequestIdentity {
 	}
 	var header struct {
 		Alg string `json:"alg"`
+		Kid string `json:"kid"`
 	}
-	if err := json.Unmarshal(headerBytes, &header); err != nil || header.Alg != "HS256" {
+	if err := json.Unmarshal(headerBytes, &header); err != nil {
 		return nil
 	}
 
@@ -96,9 +103,22 @@ func (c oidcAdapterConfig) verifyBearerToken(rawToken string) *RequestIdentity {
 	if err != nil {
 		return nil
 	}
-	mac := hmac.New(sha256.New, []byte(c.HS256Secret))
-	_, _ = mac.Write([]byte(parts[0] + "." + parts[1]))
-	if !hmac.Equal(sigBytes, mac.Sum(nil)) {
+	signingInput := parts[0] + "." + parts[1]
+	switch header.Alg {
+	case "HS256":
+		if strings.TrimSpace(c.HS256Secret) == "" {
+			return nil
+		}
+		mac := hmac.New(sha256.New, []byte(c.HS256Secret))
+		_, _ = mac.Write([]byte(signingInput))
+		if !hmac.Equal(sigBytes, mac.Sum(nil)) {
+			return nil
+		}
+	case "RS256":
+		if !c.verifyRS256Signature(header.Kid, signingInput, sigBytes) {
+			return nil
+		}
+	default:
 		return nil
 	}
 

@@ -17,6 +17,8 @@ BREAK_GLASS_USER_ID_NAME = "MYCELIS_BREAK_GLASS_USER_ID"
 OIDC_ISSUER_NAME = "MYCELIS_OIDC_ISSUER"
 OIDC_AUDIENCE_NAME = "MYCELIS_OIDC_AUDIENCE"
 OIDC_HS256_SECRET_NAME = "MYCELIS_OIDC_HS256_SECRET"
+OIDC_JWKS_URL_NAME = "MYCELIS_OIDC_JWKS_URL"
+OIDC_JWKS_JSON_NAME = "MYCELIS_OIDC_JWKS_JSON"
 OIDC_ROLE_CLAIM_NAME = "MYCELIS_OIDC_ROLE_CLAIM"
 OIDC_DEFAULT_ROLE_NAME = "MYCELIS_OIDC_DEFAULT_ROLE"
 
@@ -107,6 +109,8 @@ def _inspect_auth_posture(path: Path) -> dict[str, str]:
         OIDC_ISSUER_NAME: _read_env_value(path, OIDC_ISSUER_NAME),
         OIDC_AUDIENCE_NAME: _read_env_value(path, OIDC_AUDIENCE_NAME),
         OIDC_HS256_SECRET_NAME: _read_env_value(path, OIDC_HS256_SECRET_NAME),
+        OIDC_JWKS_URL_NAME: _read_env_value(path, OIDC_JWKS_URL_NAME),
+        OIDC_JWKS_JSON_NAME: _read_env_value(path, OIDC_JWKS_JSON_NAME),
         OIDC_ROLE_CLAIM_NAME: _read_env_value(path, OIDC_ROLE_CLAIM_NAME),
         OIDC_DEFAULT_ROLE_NAME: _read_env_value(path, OIDC_DEFAULT_ROLE_NAME),
     }
@@ -137,14 +141,24 @@ def _auth_posture_warnings(posture: dict[str, str]) -> list[str]:
         and posture[LOCAL_ADMIN_USER_ID_NAME].strip() == posture[BREAK_GLASS_USER_ID_NAME].strip()
     ):
         warnings.append("break-glass principal duplicates the primary local admin identity")
-    if posture.get(OIDC_ISSUER_NAME, "").strip() and not posture.get(OIDC_HS256_SECRET_NAME, "").strip():
-        warnings.append("partial OIDC config: MYCELIS_OIDC_ISSUER is set without MYCELIS_OIDC_HS256_SECRET")
+    has_oidc_verifier = any(
+        posture.get(name, "").strip()
+        for name in (OIDC_HS256_SECRET_NAME, OIDC_JWKS_URL_NAME, OIDC_JWKS_JSON_NAME)
+    )
+    if posture.get(OIDC_ISSUER_NAME, "").strip() and not has_oidc_verifier:
+        warnings.append(
+            "partial OIDC config: MYCELIS_OIDC_ISSUER is set without "
+            "MYCELIS_OIDC_HS256_SECRET, MYCELIS_OIDC_JWKS_URL, or MYCELIS_OIDC_JWKS_JSON"
+        )
     return warnings
 
 
 def _print_auth_posture(path: Path, label: str) -> None:
     posture = _inspect_auth_posture(path)
-    oidc_enabled = bool(posture.get(OIDC_HS256_SECRET_NAME, "").strip())
+    oidc_enabled = any(
+        posture.get(name, "").strip()
+        for name in (OIDC_HS256_SECRET_NAME, OIDC_JWKS_URL_NAME, OIDC_JWKS_JSON_NAME)
+    )
     print(f"{label}: {path}")
     print(f"  primary_key: {_mask_secret(posture[KEY_NAME]) if posture[KEY_NAME] else '(missing)'}")
     print(f"  break_glass_key: {_mask_secret(posture[BREAK_GLASS_KEY_NAME]) if posture[BREAK_GLASS_KEY_NAME] else '(missing)'}")

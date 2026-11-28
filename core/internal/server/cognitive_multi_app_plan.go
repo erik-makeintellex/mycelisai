@@ -100,8 +100,8 @@ func inferInteractingMultiAppTeamCalls(latestRequest string) []protocol.PlannedT
 	primaryTitle := titleCaseTeamID(primarySlug)
 	companionTitle := titleCaseTeamID(companionSlug)
 
-	primaryOut := "swarm.team." + primaryTeamID + ".signal.result"
-	companionOut := "swarm.team." + companionTeamID + ".signal.result"
+	primaryOut := fmt.Sprintf(protocol.TopicTeamSignalResult, primaryTeamID)
+	companionOut := fmt.Sprintf(protocol.TopicTeamSignalResult, companionTeamID)
 
 	return []protocol.PlannedToolCall{
 		{
@@ -110,8 +110,8 @@ func inferInteractingMultiAppTeamCalls(latestRequest string) []protocol.PlannedT
 				"team_id":     primaryTeamID,
 				"name":        primaryTitle + " Team",
 				"description": fmt.Sprintf("Builds the primary application (%s) and publishes state/API events on %s for companion apps.", primaryTitle, primaryOut),
-				"inputs":      []string{"swarm.team." + primaryTeamID + ".internal.command", companionOut, "swarm.global.broadcast"},
-				"deliveries":  []string{primaryOut, "swarm.team." + primaryTeamID + ".signal.status"},
+				"inputs":      []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, primaryTeamID), companionOut, protocol.TopicGlobalBroadcast},
+				"deliveries":  []string{primaryOut, fmt.Sprintf(protocol.TopicTeamSignalStatus, primaryTeamID)},
 				"members": map[string]any{
 					"architect":         "council-architect",
 					"developer":         "prime-development-agent",
@@ -127,8 +127,8 @@ func inferInteractingMultiAppTeamCalls(latestRequest string) []protocol.PlannedT
 				"team_id":     companionTeamID,
 				"name":        companionTitle + " Team",
 				"description": fmt.Sprintf("Builds the companion application (%s) that interacts with %s via %s.", companionTitle, primaryTitle, primaryOut),
-				"inputs":      []string{primaryOut, "swarm.team." + companionTeamID + ".internal.command"},
-				"deliveries":  []string{companionOut, "swarm.team." + companionTeamID + ".signal.status"},
+				"inputs":      []string{primaryOut, fmt.Sprintf(protocol.TopicTeamInternalCommand, companionTeamID)},
+				"deliveries":  []string{companionOut, fmt.Sprintf(protocol.TopicTeamSignalStatus, companionTeamID)},
 				"members": map[string]any{
 					"integrator":        "prime-development-agent",
 					"ui-developer":      "agui-design-architect-agent",
@@ -143,8 +143,8 @@ func inferInteractingMultiAppTeamCalls(latestRequest string) []protocol.PlannedT
 				"team_id":     reviewTeamID,
 				"name":        primaryTitle + " & " + companionTitle + " — Integration Review Team",
 				"description": fmt.Sprintf("Dedicated cross-application review team verifying the API contract and live interaction between %s and %s.", primaryTitle, companionTitle),
-				"inputs":      []string{primaryOut, companionOut, "swarm.team." + reviewTeamID + ".internal.command"},
-				"deliveries":  []string{"swarm.team." + reviewTeamID + ".signal.result", "swarm.team." + reviewTeamID + ".signal.status"},
+				"inputs":      []string{primaryOut, companionOut, fmt.Sprintf(protocol.TopicTeamInternalCommand, reviewTeamID)},
+				"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, reviewTeamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, reviewTeamID)},
 				"members": map[string]any{
 					"lead-reviewer":        "council-sentry",
 					"architecture-auditor": "council-architect",
@@ -162,6 +162,8 @@ func interactingMultiAppBundleSpecs(goal string) ([]deliverableBundleFileSpec, s
 	companionTitle := titleCaseTeamID(companionSlug)
 	primaryTeamID := primarySlug + "-team"
 	companionTeamID := companionSlug + "-team"
+	primaryResult := fmt.Sprintf(protocol.TopicTeamSignalResult, primaryTeamID)
+	companionResult := fmt.Sprintf(protocol.TopicTeamSignalResult, companionTeamID)
 	suiteSlug := strings.TrimSuffix(primarySlug, "-app") + "-and-" + companionSlug
 
 	return []deliverableBundleFileSpec{
@@ -180,14 +182,14 @@ func interactingMultiAppBundleSpecs(goal string) ([]deliverableBundleFileSpec, s
 				"  \"primary_app\": {\n" +
 				"    \"app_id\": " + strconvQuoteSafe(primarySlug) + ",\n" +
 				"    \"owner_team\": " + strconvQuoteSafe(primaryTeamID) + ",\n" +
-				"    \"publishes_on\": " + strconvQuoteSafe("swarm.team."+primaryTeamID+".signal.result") + ",\n" +
-				"    \"listens_on\": " + strconvQuoteSafe("swarm.team."+companionTeamID+".signal.result") + "\n" +
+				"    \"publishes_on\": " + strconvQuoteSafe(primaryResult) + ",\n" +
+				"    \"listens_on\": " + strconvQuoteSafe(companionResult) + "\n" +
 				"  },\n" +
 				"  \"companion_app\": {\n" +
 				"    \"app_id\": " + strconvQuoteSafe(companionSlug) + ",\n" +
 				"    \"owner_team\": " + strconvQuoteSafe(companionTeamID) + ",\n" +
-				"    \"listens_on\": " + strconvQuoteSafe("swarm.team."+primaryTeamID+".signal.result") + ",\n" +
-				"    \"publishes_on\": " + strconvQuoteSafe("swarm.team."+companionTeamID+".signal.result") + "\n" +
+				"    \"listens_on\": " + strconvQuoteSafe(primaryResult) + ",\n" +
+				"    \"publishes_on\": " + strconvQuoteSafe(companionResult) + "\n" +
 				"  },\n" +
 				"  \"review_gate_team\": " + strconvQuoteSafe(primarySlug+"-integration-review-team") + ",\n" +
 				"  \"shared_events\": [\"item.created\", \"state.synced\", \"ack.received\"]\n" +
@@ -199,7 +201,7 @@ func interactingMultiAppBundleSpecs(goal string) ([]deliverableBundleFileSpec, s
 			contentType: "text/markdown",
 			content: "# " + primaryTitle + " ↔ " + companionTitle + " Integration Guide\n\n## Goal\n" + goal + "\n\n" +
 				"## Coordinated Teams\n" +
-				"1. **" + primaryTitle + " Team (`" + primaryTeamID + "`):** Owns the primary application and emits live events on `swarm.team." + primaryTeamID + ".signal.result`.\n" +
+				"1. **" + primaryTitle + " Team (`" + primaryTeamID + "`):** Owns the primary application and emits live events on `" + primaryResult + "`.\n" +
 				"2. **" + companionTitle + " Team (`" + companionTeamID + "`):** Owns the interacting companion application, subscribes to `" + primaryTeamID + "` output events, and sends acknowledgments back.\n" +
 				"3. **Integration Review Team (`" + primarySlug + "-integration-review-team`):** Certifies contract compatibility and SHA-256 `OutputProofEnvelope` delivery.\n",
 		},

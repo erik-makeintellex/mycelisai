@@ -179,12 +179,13 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 			return
 		}
 
-		// Extract token: Authorization header first, query param fallback
+		// Extract token: Authorization header first; query param fallback is restricted
+		// to GET SSE stream endpoints where browser EventSource cannot attach headers.
 		token := ""
 		if auth := r.Header.Get("Authorization"); strings.HasPrefix(auth, "Bearer ") {
 			token = strings.TrimPrefix(auth, "Bearer ")
 		}
-		if token == "" {
+		if token == "" && r.Method == http.MethodGet && (r.URL.Path == "/api/v1/stream" || r.URL.Path == "/api/v1/memory/stream") {
 			token = r.URL.Query().Get("token")
 		}
 
@@ -200,6 +201,11 @@ func AuthMiddleware(apiKey string, next http.Handler) http.Handler {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(map[string]string{"error": "invalid authentication token"})
+			return
+		}
+
+		if isMutatingAPIRequest(r) && !HasMinimumRole(identity, "operator") {
+			respondAPIError(w, "Insufficient role: operator required for mutating requests", http.StatusForbidden)
 			return
 		}
 

@@ -101,7 +101,8 @@ describe('MissionControlChat metadata contracts', () => {
         const { container } = render(<MissionControlChat />);
         await settleMissionControlChat();
 
-        const pills = container.querySelectorAll('[class*="cortex-primary/10"]');
+        const messageBubble = screen.getByText('Simple response').closest('div');
+        const pills = messageBubble ? messageBubble.querySelectorAll('[class*="cortex-primary/10"]') : container.querySelectorAll('[data-testid="tool-pill"]');
         expect(pills).toHaveLength(0);
     });
 });

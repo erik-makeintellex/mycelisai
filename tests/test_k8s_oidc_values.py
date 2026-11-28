@@ -32,6 +32,7 @@ def test_values_yaml_defines_oidc_block():
     assert oidc == {
         "issuer": "",
         "audience": "",
+        "jwksUrl": "",
         "roleClaim": "role",
         "defaultRole": "viewer",
         "existingSecret": "",
@@ -57,11 +58,12 @@ def test_deployment_template_wires_oidc_env_vars_and_secret_ref():
     deployment_path = CHART_DIR / "templates" / "deployment.yaml"
     deployment_text = deployment_path.read_text(encoding="utf-8")
 
-    assert "{{- if and .Values.oidc (or .Values.oidc.issuer .Values.oidc.existingSecret) }}" in deployment_text
+    assert "{{- if and .Values.oidc (or .Values.oidc.issuer .Values.oidc.existingSecret .Values.oidc.jwksUrl) }}" in deployment_text
     assert "- name: MYCELIS_OIDC_ISSUER" in deployment_text
     assert "value: {{ .Values.oidc.issuer | quote }}" in deployment_text
     assert "- name: MYCELIS_OIDC_AUDIENCE" in deployment_text
     assert 'value: {{ default "" .Values.oidc.audience | quote }}' in deployment_text
+    assert "- name: MYCELIS_OIDC_JWKS_URL" in deployment_text
     assert "- name: MYCELIS_OIDC_ROLE_CLAIM" in deployment_text
     assert 'value: {{ default "role" .Values.oidc.roleClaim | quote }}' in deployment_text
     assert "- name: MYCELIS_OIDC_DEFAULT_ROLE" in deployment_text

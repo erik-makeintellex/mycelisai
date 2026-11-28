@@ -112,6 +112,7 @@ describe('MissionControlChat package outputs', () => {
             ],
         });
 
+        useCortexStore.setState({ advancedMode: true });
         render(<MissionControlChat />);
         await settleMissionControlChat();
 
@@ -130,6 +131,7 @@ describe('MissionControlChat package outputs', () => {
 
     it('shows a degraded status with a recovery hint when the backend reports an unverified proof', async () => {
         useCortexStore.setState({
+            advancedMode: true,
             missionChat: [
                 {
                     role: 'council',

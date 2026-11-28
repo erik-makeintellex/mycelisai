@@ -126,7 +126,7 @@ describe("DeploymentsPage", () => {
         fireEvent.click(screen.getByText("Mission Bravo"));
 
         const detail = await screen.findByTestId("deployments-detail");
-        expect(within(detail).getByText("Mission Bravo")).toBeDefined();
+        expect(within(detail).getAllByText("Mission Bravo").length).toBeGreaterThan(0);
     });
 
     it("shows 'unknown' retained outputs when outputs_summary is absent", async () => {

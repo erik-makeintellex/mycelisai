@@ -27,6 +27,7 @@ export default function DurableFilesOperatorView() {
     const [previewId, setPreviewId] = useState<string | null>(null);
     const [playModeId, setPlayModeId] = useState<string | null>(null);
     const [openedNotice, setOpenedNotice] = useState<string | null>(null);
+    const [refineError, setRefineError] = useState<string | null>(null);
     const [refineId, setRefineId] = useState<string | null>(null);
     const [refinePrompt, setRefinePrompt] = useState<string>("");
     const [producerFilter, setProducerFilter] = useState<string>("all");
@@ -88,6 +89,19 @@ export default function DurableFilesOperatorView() {
                     >
                         <span>Workspace path ready: {openedNotice}</span>
                         <button type="button" onClick={() => setOpenedNotice(null)} className="text-cortex-text-muted hover:text-cortex-text-main">
+                            Dismiss
+                        </button>
+                    </div>
+                )}
+
+                {refineError && (
+                    <div
+                        role="alert"
+                        data-testid="durable-files-refine-error"
+                        className="rounded-lg border border-cortex-danger/40 bg-cortex-danger/10 px-4 py-2.5 text-xs font-mono text-cortex-danger flex items-center justify-between"
+                    >
+                        <span>{refineError}</span>
+                        <button type="button" onClick={() => setRefineError(null)} className="text-cortex-text-muted hover:text-cortex-text-main">
                             Dismiss
                         </button>
                     </div>
@@ -187,19 +201,24 @@ export default function DurableFilesOperatorView() {
                                                 type="button"
                                                 data-testid={`refine-submit-${item.id}`}
                                                 onClick={async () => {
+                                                    setRefineError(null);
                                                     try {
-                                                        await fetch(`/api/v1/artifacts/${encodeURIComponent(item.id)}/refine`, {
+                                                        const res = await fetch(`/api/v1/artifacts/${encodeURIComponent(item.id)}/refine`, {
                                                             method: "POST",
                                                             headers: { "Content-Type": "application/json" },
                                                             body: JSON.stringify({ prompt: refinePrompt }),
                                                         });
+                                                        if (!res.ok) {
+                                                            setRefineError(`Refinement failed (${res.status}) for ${item.title}. Please retry.`);
+                                                            return;
+                                                        }
                                                         fetchArtifacts?.({ limit: 50 });
+                                                        setOpenedNotice(`Refinement request sent to ${assistantName} for ${item.title}: "${refinePrompt}"`);
+                                                        setRefineId(null);
+                                                        setRefinePrompt("");
                                                     } catch {
-                                                        // Fallback to optimistic refinement notice
+                                                        setRefineError(`Unable to reach ${assistantName} to refine ${item.title}. Please retry.`);
                                                     }
-                                                    setOpenedNotice(`Refinement request sent to ${assistantName} for ${item.title}: "${refinePrompt}"`);
-                                                    setRefineId(null);
-                                                    setRefinePrompt("");
                                                 }}
                                                 className="inline-flex items-center gap-1 rounded-md border border-cortex-primary/40 bg-cortex-primary/15 px-3 py-1.5 text-xs font-mono font-semibold text-cortex-primary hover:bg-cortex-primary/25 transition-colors"
                                             >

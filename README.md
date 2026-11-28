@@ -200,7 +200,7 @@ uv run inv lifecycle.memory-restart
 uv run inv team.architecture-sync
 uv run inv quality.max-lines --limit 300
 uv run inv release.status
-uv run inv release.stage --tag=v1.2.0 --dry-run
+uv run inv release.stage --tag=v1.2.2 --dry-run
 uv run inv release.prune-branches --dry-run
 ```
 
@@ -222,17 +222,17 @@ Env override contract: `MYCELIS_PROVIDER_<PROVIDER_ID>_*`, `MYCELIS_PROFILE_<PRO
 
 Deployment guidance by host architecture: Windows x86_64, Linux x86_64, Linux arm64, and Mixed-architecture deployments are supported through the lane-specific guidance in local dev and operations docs. The deployed Core image resolves runtime config from `/core/config`.
 
-Supported user access lanes: Windows Docker Desktop Compose, Windows + WSL Docker Compose, and Kubernetes / Helm clustered deployment. For local proof, open `http://localhost:3000` from the Windows browser; for clustered proof, prove the real ingress/hostname/IP from the operator machine.
+Supported user access lanes: Windows Rancher Desktop Kubernetes (`rancher-desktop`, primary Windows Stage 2 lane), Windows Docker Desktop Compose, Windows + WSL Docker Compose, and Kubernetes / Helm clustered deployment. For local proof, open `http://localhost:3000` from the Windows browser; for clustered proof, prove the real ingress/hostname/IP from the operator machine.
 
 Deployment target contract: Kubernetes / Helm: target self-hosted and enterprise deployment contract using standard Kubernetes resources. Docker Compose: rapid local development, demo, and same-machine proof runtime; it is not the target clustered deployment contract. Run `uv run inv k8s.standards --helm --values-file=charts/mycelis-core/values-enterprise.yaml` and cover Deployment, Service, ServiceAccount, Secret, ConfigMap, PVC, Ingress, NetworkPolicy.
 
-AI endpoint contract: use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost`; for Compose point it at a host-reachable endpoint such as `http://host.docker.internal:11434`; WSL proof may auto-start a WSL-host relay for the AI endpoint when needed.
+AI endpoint contract: use a reachable host/IP like `http://192.168.x.x:11434/v1`, not `localhost` (or `http://host.rancher-desktop.internal:11434/v1` on Rancher Desktop); for Compose point it at a host-reachable endpoint such as `http://host.docker.internal:11434`; optional WSL proof may auto-start a WSL-host relay for the AI endpoint when needed.
 
-Kubernetes values contract: prefer `k3d` as the local Kubernetes backend when it is available; set `MYCELIS_K8S_BACKEND=kind` only as fallback. `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.
+Kubernetes values contract: on Windows use Rancher Desktop (`rancher-desktop`), and on Linux prefer `k3d` as the local Kubernetes backend when it is available; set `MYCELIS_K8S_BACKEND=kind` only as fallback. `MYCELIS_K8S_VALUES_FILE` may select `charts/mycelis-core/values-k3d.yaml`, `charts/mycelis-core/values-enterprise.yaml`, or `charts/mycelis-core/values-enterprise-windows-ai.yaml`.
 
 Runtime packaging contract: the supported Core container image includes Node/npm/npx for curated stdio MCP servers, and manual `filesystem` library install must be able to launch and bind to the configured `/data/workspace` output block.
 
-Release proof contract: run `uv run inv ci.release-preflight --lane=release`, then use guarded WSL tasks `uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, and `uv run inv wsl.cycle` when deployment-mimic proof matters.
+Release proof contract: run Stage 1 local verification on Windows (`uv run inv ci.baseline`, `uv run inv logging.check-topics`, `uv run inv quality.max-lines --limit 300`, `uv run inv ci.release-preflight --lane=release`) followed by Stage 2 Windows Rancher Desktop deployment (`uv run inv k8s.up`, `uv run inv k8s.status`). Optional guarded WSL tasks (`uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate`, `uv run inv wsl.cycle`) remain available for explicit Linux-native parity checks.
 
 ## Playwright Contract
 
@@ -265,23 +265,13 @@ Bootstrap reminder: normal startup fails closed unless a valid bootstrap bundle 
 
 ## Cross-Platform Setup
 
-Windows is the source-edit and git surface. WSL is the release-proof environment for install, build, tests, Compose, and live GUI validation.
-
-Use the guarded WSL handoff lane when release-style proof matters:
-
-```bash
-uv run inv wsl.status
-uv run inv wsl.refresh
-uv run inv wsl.validate --lane=release
-```
-
-Refresh WSL from git; do not copy source trees across the host boundary.
+Windows is the primary source-edit, git, and Stage 1 local testing surface, with Stage 2 containerization and clustered Kubernetes deployment on Windows Rancher Desktop (`rancher-desktop`). Optional guarded WSL tasks (`uv run inv wsl.status`, `uv run inv wsl.refresh`, `uv run inv wsl.validate --lane=release`) remain available only for explicit Linux-native parity checks (always refresh WSL from git; do not copy source trees across the host boundary).
 
 ## Development Workflow
 
 Use [Local Development Workflow](docs/LOCAL_DEV_WORKFLOW.md) for first-time setup, deployment selection, ports, health checks, cognitive engine setup, and troubleshooting. Use [Operations](docs/architecture/OPERATIONS.md) for task ownership, lifecycle, Compose, Kubernetes, CI, and release-lane sequencing.
 
-Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1` through `v1.2.0`) via `uv run inv release.status`, `uv run inv release.stage`, and `uv run inv release.prune-branches`, with `0` legacy line-limit caps remaining across the repository.
+Branching and staging: `dev` is the active development and integration branch; `main` is the clean staging and release-candidate branch marked with annotated git tags (`v0.8.0-rc1` through `v1.2.2`) via `uv run inv release.status`, `uv run inv release.stage`, and `uv run inv release.prune-branches`, with `0` legacy line-limit caps remaining across the repository.
 
 ## Licensing And Releases
 

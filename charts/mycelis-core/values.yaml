@@ -35,6 +35,13 @@ interface:
   service:
     type: LoadBalancer
     port: 3000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
 
 ingress:
   enabled: false
@@ -73,6 +80,7 @@ coreAuth:
 oidc:
   issuer: ""
   audience: ""
+  jwksUrl: ""
   roleClaim: "role"
   defaultRole: "viewer"
   existingSecret: ""
@@ -160,7 +168,17 @@ search:
 
 searxng:
   enabled: false
-  image: searxng/searxng:latest
+  image: searxng/searxng:2025.5.1-a22437230
+  existingSecret: ""
+  secretKey: "searxng-secret"
+  secret: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
 
 # Environment variables (Extras)
 env:

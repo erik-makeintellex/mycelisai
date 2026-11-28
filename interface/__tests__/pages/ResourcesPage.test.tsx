@@ -159,7 +159,7 @@ describe('Resources Page (V8.1 advanced support & Operator vs Builder View)', ()
         expect(screen.getByText(/Ready for distribution/i)).toBeDefined();
 
         const advancedBtn = screen.getByTestId('resources-switch-advanced');
-        expect(advancedBtn.textContent).toContain('Switch to Advanced Mode to configure AI Engines & Connected MCP Tools');
+        expect(advancedBtn.textContent).toContain('Connected Tools & AI Engines');
         fireEvent.click(advancedBtn);
         expect(mockToggleAdvancedMode).toHaveBeenCalledTimes(1);
     });

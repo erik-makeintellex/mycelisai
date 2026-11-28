@@ -89,7 +89,7 @@ func buildCompanionReviewTeamCall(primaryCall protocol.PlannedToolCall) protocol
 	primaryTeamName := firstNonEmptyString(primaryCall.Arguments["name"], titleCaseTeamID(primaryTeamID))
 	reviewTeamID := primaryTeamID + "-review-team"
 	reviewTeamName := primaryTeamName + " — Delivery Review Team"
-	primaryResultSubject := "swarm.team." + primaryTeamID + ".signal.result"
+	primaryResultSubject := fmt.Sprintf(protocol.TopicTeamSignalResult, primaryTeamID)
 
 	return protocol.PlannedToolCall{
 		Name: "create_team",
@@ -97,8 +97,8 @@ func buildCompanionReviewTeamCall(primaryCall protocol.PlannedToolCall) protocol
 			"team_id":     reviewTeamID,
 			"name":        reviewTeamName,
 			"description": fmt.Sprintf("Dedicated review gate team for %s. Listens on %s, audits OutputProofEnvelope SHA-256 readback, and certifies expected team delivery.", primaryTeamName, primaryResultSubject),
-			"inputs":      []string{primaryResultSubject, "swarm.team." + reviewTeamID + ".internal.command"},
-			"deliveries":  []string{"swarm.team." + reviewTeamID + ".signal.result", "swarm.team." + reviewTeamID + ".signal.status"},
+			"inputs":      []string{primaryResultSubject, fmt.Sprintf(protocol.TopicTeamInternalCommand, reviewTeamID)},
+			"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, reviewTeamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, reviewTeamID)},
 			"members": map[string]any{
 				"lead-reviewer":        "council-sentry",
 				"architecture-auditor": "council-architect",
@@ -112,9 +112,9 @@ func buildCompanionReviewTeamCall(primaryCall protocol.PlannedToolCall) protocol
 func teamExecutionBundleCalls(text string) []protocol.PlannedToolCall {
 	teamID, teamName := extractTargetTeamFromRequest(text)
 	reviewTeamID := teamID + "-review-team"
-	cmdSub := "swarm.team." + teamID + ".internal.command"
-	resSub := "swarm.team." + teamID + ".signal.result"
-	revSub := "swarm.team." + reviewTeamID + ".signal.result"
+	cmdSub := fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID)
+	resSub := fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)
+	revSub := fmt.Sprintf(protocol.TopicTeamSignalResult, reviewTeamID)
 	specs := []deliverableBundleFileSpec{
 		{
 			name: "team_execution_plan.md", title: teamName + " — Team Execution Plan", contentType: "text/markdown",

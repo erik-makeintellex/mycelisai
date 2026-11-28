@@ -1,7 +1,7 @@
 # Mycelis V8 - Development State
 > Navigation: [Project README](../README.md) | [Docs Home](../docs/README.md)
 
-> Updated: 2026-11-25
+> Updated: 2026-11-27
 > Canonical state file for active V8 grading and delivery tracking
 > References: `README.md`, `architecture/v8-2.md`, `docs/architecture-library/ARCHITECTURE_LIBRARY_INDEX.md`, `docs/architecture-library/TARGET_DELIVERABLE_V7.md`, `docs/architecture-library/mycelis_soma_updated_prd_v8_3_current_state_convergence.md` (`MYC-RC-000` candidate), `docs/architecture-library/MYC_RC_003_PROOF_ENVELOPE_DELIVERY_PLAN.md`, `docs/architecture-library/MYC_RC_004_DELIVERY_EXPERIENCE_PLAN.md`, `docs/architecture-library/V8_RUNTIME_CONTRACTS.md`, `docs/architecture-library/V8_CONFIG_AND_BOOTSTRAP_MODEL.md`, `docs/architecture-library/V8_1_LIVING_ORGANIZATION_ARCHITECTURE.md`, `.state/V7_DEV_STATE.md` (legacy migration input)
 
@@ -19,6 +19,26 @@ Use this file to track:
 - immediate next actions
 
 Use `.state/V7_DEV_STATE.md` only as a migration input and historical checkpoint source while V7 planning artifacts are being migrated.
+
+## Intake Hardening & Gate Restoration (2026-11-27 — Slices 1–4)
+
+Following the read-only project intake (`.agents/reviews/2026-11-27-intake.md`), all 4 approved hardening slices were executed on `fix/intake-hardening-v1.2.3`:
+
+1. `COMPLETE` **Slice 1 — Baseline Gate & Runtime Correctness:**
+   - Added `protocol.TopicMCPOutputsRegistered` (`core/pkg/protocol/topics.go`) and replaced all `56` hardcoded `swarm.*` topic literals across `cognitive_team_plan.go`, `cognitive_multi_app_plan.go`, `cognitive_mcp_additions_plan.go`, `cognitive_team_plan_reviewer.go`, `cognitive_deliverable_plan.go`, and `conversations.go` (`logging.check-topics` -> `PASSED`).
+   - Fixed silent HTTP `200` on DB persistence errors in `HandleMemoryPromote` and `HandleMemoryResolveConflict` (`core/internal/server/memory_arbitration.go` now returns HTTP `500`).
+   - Fixed `r.Context()` cancellation leak in `HandleRunInterject` goroutine (`core/internal/server/conversations.go` now uses `context.WithoutCancel` + 5s timeout).
+   - Fixed optimistic `/refine` error swallowing in `interface/components/resources/DurableFilesOperatorView.tsx` (checks `res.ok`, renders `durable-files-refine-error` alert, keeps input open on failure; updated `DurableFilesOperatorView.test.tsx`).
+2. `COMPLETE` **Slice 2 — Mutating Route RBAC & Helm Secret/Pod Hardening:**
+   - Added centralized `isMutatingAPIRequest` + `requireOperatorIfAuthenticated` in `core/internal/server/auth_rbac.go` and wired mutating-route `viewer` rejection (`403 Forbidden`) into `AuthMiddleware` (`auth.go`) plus explicit checks in `memory_arbitration.go` and `conversations.go` (`auth_rbac_hardening_test.go`).
+   - Removed hardcoded plaintext SearXNG secret and unpinned `:latest` tag from `charts/mycelis-core/templates/searxng-deployment.yaml` and `values.yaml` (switched to `secretKeyRef`, pinned `searxng/searxng:2025.5.1-a22437230`, added `securityContext`, `resources`, and readiness/liveness probes).
+   - Hardened `charts/mycelis-core/templates/interface-deployment.yaml` with `serviceAccountName`, `podSecurityContext`, `securityContext`, `resources`, and probes (`tests/test_k8s_hardening_contract.py`).
+3. `COMPLETE` **Slice 3 — Governance, Docs & State Reconciliation:**
+   - Aligned `CLAUDE.md` and `README.md` with `AGENTS.md` (Windows-only Stage 1 local testing + Stage 2 Windows Rancher Desktop deployment, `v1.2.2` tag posture, and `tests/test_docs_links*.py`).
+   - Superseded stale `v0.8.3`/`v0.8.4` gap wording in this scoreboard.
+4. `COMPLETE` **Slice 4 — Enterprise RS256/JWKS OIDC & SSE-Only Query Token Guard:**
+   - Added `core/internal/server/auth_oidc_jwks.go` supporting `MYCELIS_OIDC_JWKS_URL` (5-minute cached JWKS fetch with key-rotation refresh) and air-gapped `MYCELIS_OIDC_JWKS_JSON` alongside HS256 in `auth_oidc.go`, wired `oidc.jwksUrl` / `MYCELIS_OIDC_JWKS_URL` in Helm (`values.yaml`, `deployment.yaml`, `tests/test_k8s_oidc_values.py`) and `ops/auth.py` (`auth.posture`).
+   - Restricted `?token=` query auth in `core/internal/server/auth.go` to `GET /api/v1/stream` and `GET /api/v1/memory/stream` (`auth_oidc_jwks_test.go`).
 
 ## Reboot & Client-Update Checkpoint (2026-11-03)
 

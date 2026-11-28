@@ -59,6 +59,9 @@ func (s *AdminServer) HandleMemoryPromote(w http.ResponseWriter, r *http.Request
 		http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
 		return
 	}
+	if !requireOperatorIfAuthenticated(w, r, "memory:write") {
+		return
+	}
 
 	var req struct {
 		ID                 string `json:"id"`
@@ -102,7 +105,12 @@ func (s *AdminServer) HandleMemoryPromote(w http.ResponseWriter, r *http.Request
 	}
 
 	if s.Mem != nil {
-		if updated, err := s.Mem.UpdateVectorGovernance(r.Context(), id, updates); err == nil && updated != nil && len(updated.Metadata) > 0 {
+		updated, err := s.Mem.UpdateVectorGovernance(r.Context(), id, updates)
+		if err != nil {
+			http.Error(w, `{"error":"failed to persist memory promotion"}`, http.StatusInternalServerError)
+			return
+		}
+		if updated != nil && len(updated.Metadata) > 0 {
 			updates = updated.Metadata
 		}
 	}
@@ -121,6 +129,9 @@ func (s *AdminServer) HandleMemoryPromote(w http.ResponseWriter, r *http.Request
 func (s *AdminServer) HandleMemoryResolveConflict(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+		return
+	}
+	if !requireOperatorIfAuthenticated(w, r, "memory:write") {
 		return
 	}
 
@@ -163,7 +174,12 @@ func (s *AdminServer) HandleMemoryResolveConflict(w http.ResponseWriter, r *http
 	}
 
 	if s.Mem != nil {
-		if updated, err := s.Mem.UpdateVectorGovernance(r.Context(), id, updates); err == nil && updated != nil && len(updated.Metadata) > 0 {
+		updated, err := s.Mem.UpdateVectorGovernance(r.Context(), id, updates)
+		if err != nil {
+			http.Error(w, `{"error":"failed to persist memory promotion"}`, http.StatusInternalServerError)
+			return
+		}
+		if updated != nil && len(updated.Metadata) > 0 {
 			updates = updated.Metadata
 		}
 	}

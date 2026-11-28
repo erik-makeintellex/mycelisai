@@ -45,6 +45,9 @@ const (
 	TopicSensorDataWeather = "swarm.data.weather.>"
 	TopicSensorDataMCP     = "swarm.data.mcp.>"
 
+	// Registered MCP normalized output stream
+	TopicMCPOutputsRegistered = "swarm.mcp.outputs.registered"
+
 	// V7 Event Spine (Team A) — mission run lifecycle signals.
 	// CTS signals carry mission_event_id to link back to the persistent audit record.
 	// Persistent audit records live in mission_events table (DB-first rule).

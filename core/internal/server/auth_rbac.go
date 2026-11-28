@@ -111,3 +111,36 @@ func hasRestrictedSettingsMutation(input map[string]any) bool {
 	}
 	return false
 }
+
+// isMutatingAPIRequest returns true for state-changing HTTP methods on governed API/admin routes,
+// excluding explicitly read-only POST query endpoints.
+func isMutatingAPIRequest(r *http.Request) bool {
+	if r == nil || r.URL == nil {
+		return false
+	}
+	switch r.Method {
+	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+	default:
+		return false
+	}
+	path := r.URL.Path
+	if !strings.HasPrefix(path, "/api/v1/") && !strings.HasPrefix(path, "/admin/") {
+		return false
+	}
+	switch path {
+	case "/api/v1/search":
+		return false
+	default:
+		return true
+	}
+}
+
+// requireOperatorIfAuthenticated enforces operator-or-higher RBAC when an authenticated identity
+// is present in context, preserving direct unauthenticated unit-test invocation of handlers.
+func requireOperatorIfAuthenticated(w http.ResponseWriter, r *http.Request, requiredScope string) bool {
+	if IdentityFromContext(r.Context()) == nil {
+		return true
+	}
+	_, ok := RequireMinimumRole(w, r, "operator", requiredScope)
+	return ok
+}

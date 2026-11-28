@@ -1,4 +1,17 @@
 {{- if and .Values.searxng .Values.searxng.enabled }}
+{{- if and .Values.searxng.secret (not .Values.searxng.existingSecret) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Chart.Name }}-searxng-secret
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Chart.Name }}-searxng
+type: Opaque
+stringData:
+  {{ default "searxng-secret" .Values.searxng.secretKey }}: {{ .Values.searxng.secret | quote }}
+---
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,7 +24,6 @@ data:
     use_default_settings: true
     server:
       bind_address: "0.0.0.0"
-      secret_key: "mycelis-k8s-searxng-search-secret"
       limiter: false
       image_proxy: false
     search:
@@ -36,10 +48,17 @@ spec:
       labels:
         app: {{ .Chart.Name }}-searxng
     spec:
+      {{- if or .Values.serviceAccount.create .Values.serviceAccount.name }}
+      serviceAccountName: {{ include "mycelis-core.serviceAccountName" . }}
+      {{- end }}
       containers:
         - name: searxng
-          image: "{{ default "searxng/searxng:latest" .Values.searxng.image }}"
+          image: "{{ default "searxng/searxng:2025.5.1-a22437230" .Values.searxng.image }}"
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - name: http
               containerPort: 8080
@@ -48,7 +67,27 @@ spec:
             - name: SEARXNG_BASE_URL
               value: "http://{{ .Chart.Name }}-searxng:8080/"
             - name: SEARXNG_SECRET
-              value: "mycelis-k8s-searxng-search-secret"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-searxng-secret" .Chart.Name) .Values.searxng.existingSecret }}
+                  key: {{ default "searxng-secret" .Values.searxng.secretKey }}
+                  optional: true
+          {{- if .Values.searxng.resources }}
+          resources:
+            {{- toYaml .Values.searxng.resources | nindent 12 }}
+          {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 15
           volumeMounts:
             - name: searxng-settings
               mountPath: /etc/searxng/settings.yml

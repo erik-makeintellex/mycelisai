@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/mycelis/core/pkg/protocol"
@@ -165,15 +166,18 @@ func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []pro
 		return inferInteractingMultiAppTeamCalls(latestRequest)
 	}
 	if isChainedTeamPipelineRequest(latestRequest) {
+		upstreamID := "mcp-upstream-discovery-team"
+		downstreamID := "chained-downstream-delivery-team"
+		upstreamResult := fmt.Sprintf(protocol.TopicTeamSignalResult, upstreamID)
 		return []protocol.PlannedToolCall{
 			{
 				Name: "create_team",
 				Arguments: map[string]any{
-					"team_id":     "mcp-upstream-discovery-team",
+					"team_id":     upstreamID,
 					"name":        "MCP & Upstream Discovery Team",
 					"description": "Collects registered MCP tool outputs and publishes normalized findings on its result channel.",
-					"inputs":      []string{"swarm.team.mcp-upstream-discovery-team.internal.command", "swarm.mcp.outputs.registered", "swarm.global.broadcast"},
-					"deliveries":  []string{"swarm.team.mcp-upstream-discovery-team.signal.result", "swarm.team.mcp-upstream-discovery-team.signal.status"},
+					"inputs":      []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, upstreamID), protocol.TopicMCPOutputsRegistered, protocol.TopicGlobalBroadcast},
+					"deliveries":  []string{upstreamResult, fmt.Sprintf(protocol.TopicTeamSignalStatus, upstreamID)},
 					"members": map[string]any{
 						"mcp-collector":     "council-architect",
 						"signal-normalizer": "council-sentry",
@@ -184,11 +188,11 @@ func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []pro
 			{
 				Name: "create_team",
 				Arguments: map[string]any{
-					"team_id":     "chained-downstream-delivery-team",
+					"team_id":     downstreamID,
 					"name":        "Chained Downstream Delivery Team",
-					"description": "Listens on swarm.team.mcp-upstream-discovery-team.signal.result and synthesizes downstream deliverables.",
-					"inputs":      []string{"swarm.team.mcp-upstream-discovery-team.signal.result", "swarm.team.chained-downstream-delivery-team.internal.command"},
-					"deliveries":  []string{"swarm.team.chained-downstream-delivery-team.signal.result", "swarm.team.chained-downstream-delivery-team.signal.status"},
+					"description": fmt.Sprintf("Listens on %s and synthesizes downstream deliverables.", upstreamResult),
+					"inputs":      []string{upstreamResult, fmt.Sprintf(protocol.TopicTeamInternalCommand, downstreamID)},
+					"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, downstreamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, downstreamID)},
 					"members": map[string]any{
 						"lead-integrator":   "prime-development-agent",
 						"output-verifier":   "agui-design-architect-agent",
@@ -205,10 +209,10 @@ func inferCreateTeamPlanCallsFromRequest(latestRequest, agentReply string) []pro
 	}
 	teamID := firstNonEmptyString(call.Arguments["team_id"], "mission-delivery-team")
 	if call.Arguments["inputs"] == nil {
-		call.Arguments["inputs"] = []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"}
+		call.Arguments["inputs"] = []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), protocol.TopicGlobalBroadcast}
 	}
 	if call.Arguments["deliveries"] == nil {
-		call.Arguments["deliveries"] = []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"}
+		call.Arguments["deliveries"] = []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)}
 	}
 	call.Arguments["members"] = ensureTeamMembersMapHasReviewer(call.Arguments["members"])
 	if isComplexProjectReviewTeamNeeded(latestRequest, call) {
@@ -231,8 +235,8 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 				"team_id":     teamID,
 				"name":        name,
 				"description": firstNonEmptyString(rawMap["instructions"], rawMap["description"], cleanRequest),
-				"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"},
-				"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
+				"inputs":      []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), protocol.TopicGlobalBroadcast},
+				"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)},
 				"members":     ensureTeamMembersMapHasReviewer(rawMap["members"]),
 				"tools":       rawMap["tools"],
 			},
@@ -245,14 +249,15 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 
 	lower := strings.ToLower(cleanRequest)
 	if isTetrisGameBundleRequest(lower) || strings.Contains(lower, "tetris") || strings.Contains(lower, "street fighter") {
+		tetrisID := "tetris-street-fighter"
 		return protocol.PlannedToolCall{
 			Name: "create_team",
 			Arguments: map[string]any{
-				"team_id":     "tetris-street-fighter",
+				"team_id":     tetrisID,
 				"name":        "Street Fighter II Tetris Team",
 				"description": "Arcade game design, architecture, development,character theme, and delivery review team",
-				"inputs":      []string{"swarm.team.tetris-street-fighter.internal.command", "swarm.global.broadcast"},
-				"deliveries":  []string{"swarm.team.tetris-street-fighter.signal.result", "swarm.team.tetris-street-fighter.signal.status"},
+				"inputs":      []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, tetrisID), protocol.TopicGlobalBroadcast},
+				"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, tetrisID), fmt.Sprintf(protocol.TopicTeamSignalStatus, tetrisID)},
 				"members": map[string]any{
 					"designer":          "agui-design-architect-agent",
 					"architect":         "council-architect",
@@ -272,8 +277,8 @@ func inferCreateTeamPlanFromRequest(latestRequest, agentReply string) (protocol.
 			"team_id":     teamID,
 			"name":        teamName,
 			"description": cleanRequest,
-			"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.global.broadcast"},
-			"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
+			"inputs":      []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), protocol.TopicGlobalBroadcast},
+			"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)},
 			"members": map[string]any{
 				"architect":         "council-architect",
 				"developer":         "prime-development-agent",

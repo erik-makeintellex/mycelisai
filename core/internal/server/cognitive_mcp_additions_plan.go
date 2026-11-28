@@ -93,8 +93,8 @@ func inferDeploymentMCPAdditionTeamCalls(latestRequest string) []protocol.Planne
 				"team_id":     teamID,
 				"name":        teamName,
 				"description": fmt.Sprintf("Binds %s (%s / %s) to %s with Ideal Delivery Reviewer verification.", mcpTitle, mcpID, groupLabel, teamName),
-				"inputs":      []string{"swarm.team." + teamID + ".internal.command", "swarm.mcp.outputs.registered", "swarm.global.broadcast"},
-				"deliveries":  []string{"swarm.team." + teamID + ".signal.result", "swarm.team." + teamID + ".signal.status"},
+				"inputs":      []string{fmt.Sprintf(protocol.TopicTeamInternalCommand, teamID), protocol.TopicMCPOutputsRegistered, protocol.TopicGlobalBroadcast},
+				"deliveries":  []string{fmt.Sprintf(protocol.TopicTeamSignalResult, teamID), fmt.Sprintf(protocol.TopicTeamSignalStatus, teamID)},
 				"members": map[string]any{
 					"architect":         "council-architect",
 					"developer":         "prime-development-agent",
@@ -127,8 +127,8 @@ func deploymentMCPAdditionBundleSpecs(latestRequest string) ([]deliverableBundle
 				"  title: " + strconvQuoteSafe(mcpTitle) + "\n" +
 				"  grouping: " + strconvQuoteSafe(mcpGroup) + "\n" +
 				"  category_label: " + strconvQuoteSafe(groupLabel) + "\n" +
-				"  signal_input: \"swarm.mcp.outputs.registered\"\n" +
-				"  team_result_channel: " + strconvQuoteSafe("swarm.team."+teamID+".signal.result") + "\n" +
+				"  signal_input: " + strconvQuoteSafe(protocol.TopicMCPOutputsRegistered) + "\n" +
+				"  team_result_channel: " + strconvQuoteSafe(fmt.Sprintf(protocol.TopicTeamSignalResult, teamID)) + "\n" +
 				"  reviewer_gate: \"council-sentry\"\n",
 		},
 		{
@@ -142,7 +142,7 @@ func deploymentMCPAdditionBundleSpecs(latestRequest string) ([]deliverableBundle
 				"- **Grouping:** `" + groupLabel + "` (`" + mcpGroup + "`)\n\n" +
 				"## Governed Execution & Verification\n" +
 				"- Bound to team member toolset as `mcp_" + strings.ReplaceAll(mcpID, "-", "_") + "`.\n" +
-				"- Normalized outputs route through `swarm.team." + teamID + ".signal.result` and are audited by `council-sentry`.\n",
+				"- Normalized outputs route through `" + fmt.Sprintf(protocol.TopicTeamSignalResult, teamID) + "` and are audited by `council-sentry`.\n",
 		},
 	}
 
