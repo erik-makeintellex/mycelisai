@@ -100,8 +100,8 @@ Following the read-only project intake (`.agents/reviews/2026-11-27-intake.md`),
 
 ## Active Development Plan & Expected Deliveries (2026-11-25)
 
-- **Staging & Branch Baseline (`v1.2.2`):**
-  - `main` (staging & release-candidate branch) is held at **`v1.2.2`** (`VERSION = 1.2.2`) while `dev` carries verified Slices 1–4 + WSL Phase B portability fixes ready for **`v1.2.3`** promotion.
+- **Staging & Branch Baseline (`v1.2.3`):**
+  - `main` (staging & release-candidate branch) and `dev` (active development & integration branch) are aligned at **`v1.2.3`** (`VERSION = 1.2.3`), carrying verified intake hardening Slices 1–4, WSL portability fixes, native Ubuntu 26.04 Playwright `1.65.1`, and WSL-first documentation reconciliation.
   - **Live Runtime & Editor-Restart Context Checkpoint (2026-11-25):**
     - **Active Rancher Desktop Kubernetes Cluster (`rancher-desktop` @ `https://127.0.0.1:6443`):** Namespace `mycelis` running `mycelis-core`, `mycelis-core-interface` (`http://localhost:3000`), `mycelis-core-searxng` (`http://mycelis-core-searxng:8080`), `mycelis-core-nats-0`, and `mycelis-core-postgresql-0` (`REVISION: 7`).
     - **Windows Host AI Daemon (`0.0.0.0:11434`):** Managed via `ensure_host_ollama_running()` (`ops/k8s_rancher.py`) and Windows Task Scheduler task `MycelisHostOllamaDaemon` (`OLLAMA_HOST=0.0.0.0:11434`) so host Ollama stays online across shell/editor restarts.
